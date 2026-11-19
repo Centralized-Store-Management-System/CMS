@@ -123,7 +123,7 @@ async function signedUrl(path: string) {
   const data = await res.json();
   const raw = data.signedURL || data.signedUrl;
   if (!raw) throw new Error("ระบบไม่สามารถสร้างลิงก์ดูเอกสารได้");
-  if (/^https?:\\/\\//i.test(raw)) return raw;
+  if (raw.startsWith("https://") || raw.startsWith("http://")) return raw;
   if (raw.startsWith("/storage/v1/")) return SUPABASE_URL + raw;
   if (raw.startsWith("/")) return SUPABASE_URL + "/storage/v1" + raw;
   return SUPABASE_URL + "/storage/v1/" + raw;
