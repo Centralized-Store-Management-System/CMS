@@ -145,10 +145,12 @@ const OWNER_PWA_LOCK = (() => {
     });
   }
   /** ถอดกุญแจแล้วขอ session จากเซิร์ฟเวอร์ — เน็ตหลุดแจ้งในหน้าเดิม ไม่ลบกุญแจ */
+  let unlockPending = null;
   function unlockFlow(msg, opts = {}) {
-    if (busyUnlock) return Promise.resolve(false);
+    // รวมคำขอปลดล็อกที่เกิดซ้อนกัน ให้ใช้หน้าปลดล็อกชุดเดียว ไม่เปิด Login ซ้ำระหว่างรอ
+    if (unlockPending) return unlockPending;
     busyUnlock = true;
-    return askUnlock(msg, { ...opts, keepOpen: async (c, ctl, done) => {
+    unlockPending = askUnlock(msg, { ...opts, keepOpen: async (c, ctl, done) => {
       try {
         const r = await call0('devUnlock', { id: c.id, secret: c.secret, code: c.pin });
         if (!r || r.role !== 'owner' || !r.token) throw new Error('บัญชีนี้ไม่ใช่ Owner');
@@ -157,7 +159,11 @@ const OWNER_PWA_LOCK = (() => {
         if (e && e.code === 'DEVICE') { close(); wipe(e.message); done({ forgot: true }); return true; }
         return e && e.code ? e.message : 'เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วใส่รหัสอีกครั้ง (รหัสยังอยู่ในเครื่อง)';
       }
-    } }).then(c => { busyUnlock = false; return !!(c && !c.forgot && S.token); });
+    } }).then(c => !!(c && !c.forgot && S.token)).finally(() => {
+      busyUnlock = false;
+      unlockPending = null;
+    });
+    return unlockPending;
   }
   async function renew() {   // session หมดอายุ: ขอใหม่เงียบๆ ถ้าจำรหัสไว้ ไม่งั้นถามรหัส
     if (renewing) return renewing;
@@ -201,9 +207,25 @@ const OWNER_PWA_LOCK = (() => {
   // หน้าจัดการร้าน (เปิดจากแอป Owner): ไม่มี session → ปลดล็อกด้วยรหัส แทนหน้าเข้าระบบ
   if (!onOwnerPage && typeof renderLogin === 'function') {
     const login0 = renderLogin;
-    let skip = false;
-    const tryUnlock = msg => unlockFlow(msg, { cancel: true }).then(ok => { if (ok) location.reload(); else skip = true; });
-    renderLogin = function (msg) { login0(msg); if (!skip && active() && !busyUnlock) tryUnlock(/หมดเวลา/.test(msg || '') ? 'หมดเวลาการใช้งาน ใส่รหัสเพื่อใช้งานต่อ' : ''); };
+    let skip = false, unlockUi = null;
+    const tryUnlock = msg => {
+      if (unlockUi) return unlockUi;
+      unlockUi = unlockFlow(msg, { cancel: true }).then(ok => {
+        if (ok) { location.reload(); return true; }
+        // แสดง Login เฉพาะเมื่อผู้ใช้เลือก "เข้าด้วยชื่อผู้ใช้ + PIN" จากหน้าปลดล็อกแล้วเท่านั้น
+        skip = true;
+        login0(msg || '');
+        return false;
+      }).finally(() => { unlockUi = null; });
+      return unlockUi;
+    };
+    renderLogin = function (msg) {
+      if (active() && !skip) {
+        tryUnlock(/หมดเวลา/.test(msg || '') ? 'หมดเวลาการใช้งาน ใส่รหัสเพื่อใช้งานต่อ' : '');
+        return; // ไม่วาดหน้า Login คั่นระหว่างกำลังปลดล็อก/ต่ออายุ session
+      }
+      login0(msg);
+    };
     if (active() && !S.token) tryUnlock('');
     // Owner เข้าหน้าจัดการร้านในแอปที่ติดตั้ง (ยังไม่มีรหัส) → ชวนตั้งรหัสหลังเข้าระบบสำเร็จ ครั้งเดียวต่อการเปิดแอป
     const it = setInterval(() => {
