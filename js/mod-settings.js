@@ -1,5 +1,5 @@
 /* ตั้งค่า (เฉพาะ Owner): สาขาและพิกัดลงเวลา สัญญาแฟรนไชส์ของแต่ละสาขา, กฎเวลาและค่าจ้าง, วันหยุด, สิทธิ์ 4 ระดับ, ไฟล์และการเชื่อมต่อ, บันทึกการใช้งาน */
-const DEFAULT_PERMS = { admin: ['users', 'admin'], hr: ['hr', 'payroll', 'approve_time', 'time', 'schedule_edit', 'schedule_view'], manager: ['time', 'schedule_edit', 'schedule_view', 'stock', 'sales'], staff: ['stock', 'schedule_view'] };
+const DEFAULT_PERMS = { admin: ['users', 'admin', 'orders', 'catalog'], hr: ['hr', 'payroll', 'approve_time', 'time', 'schedule_edit', 'schedule_view'], manager: ['time', 'schedule_edit', 'schedule_view', 'stock', 'sales', 'orders', 'catalog'], staff: ['stock', 'schedule_view', 'orders'] }; /* orders/catalog ต้องตรงกับค่าเริ่มต้นฝั่งเซิร์ฟเวอร์ (54_OrderLink.gs) */
 const PERM_ROLES = ['admin', 'hr', 'manager', 'staff'];
 const CFG = {
   shop: [['กิจการ', [{ k: 'shopName', label: 'ชื่อร้าน/กิจการ', help: 'แสดงบนหน้าลงเวลาและสลิปเงินเดือน ชื่อแต่ละสาขาตั้งที่รายการสาขาด้านล่าง' }]]],
