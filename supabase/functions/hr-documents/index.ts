@@ -76,7 +76,7 @@ async function authorize(token: string, employeeId: string) {
   if (!employee) throw new HttpError(404, "ไม่พบพนักงาน หรือไม่มีสิทธิ์เข้าถึงข้อมูลพนักงานรายนี้");
   const scope = me.scope;
   const scopeList = Array.isArray(scope) ? scope.map(String) : (typeof scope === "string" ? scope.split(",").map((x: string) => x.trim()).filter(Boolean) : []);
-  if (scope !== "*" && !scopeList.includes(String(employee.branch || ""))) {
+  if (me.role !== "owner" && scope !== "*" && !scopeList.includes(String(employee.branch || ""))) {
     throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงเอกสารของสาขานี้");
   }
   return { me, employee };
