@@ -74,7 +74,6 @@ const OWNER_PWA_LOCK = (() => {
   }
   async function enroll(token) {
     if (!standalone() || !window.crypto || !crypto.subtle) return false;
-    if (read()) return true;
     const pin = await pinDialog('ตั้ง PIN สำหรับ Owner App', 'ตั้ง PIN 6 หลักเพื่อปลดล็อกแอปบนเครื่องนี้', true);
     if (!pin) return false;
     try { await seal(token, pin); toast('ตั้ง PIN สำหรับ Owner App แล้ว'); return true; }
@@ -88,15 +87,9 @@ const OWNER_PWA_LOCK = (() => {
       const pin = await pinDialog(warning ? 'PIN ไม่ถูกต้อง' : 'ปลดล็อก Owner App',
         warning || 'กรอก PIN 6 หลักเพื่อเข้าใช้งาน', false);
       if (!pin) return false;
-      try {
-        const token = await unseal(pin);
-        const me = await API.call('me', { t: token });
-        if (!me || me.role !== 'owner') throw Object.assign(new Error('SESSION'), { code: 'SESSION' });
-        SS.set('amz.it.tok', token); S.token = token;
-        localStorage.removeItem(FAIL);
-        return true;
-      } catch (e) {
-        if (e && e.code === 'SESSION') { clear(); toast('Session หมดอายุ กรุณาเข้าสู่ระบบและยืนยันตัวตนใหม่'); return false; }
+      let token;
+      try { token = await unseal(pin); }
+      catch (_) {
         fails++;
         if (fails >= 5) {
           localStorage.setItem(FAIL, JSON.stringify({ n: 0, until: Date.now() + 30000 }));
@@ -104,6 +97,18 @@ const OWNER_PWA_LOCK = (() => {
           localStorage.removeItem(FAIL); return false;
         }
         warning = 'PIN ไม่ถูกต้อง · เหลือโอกาสอีก ' + (5 - fails) + ' ครั้ง';
+        continue;
+      }
+      try {
+        const me = await API.call('me', { t: token });
+        if (!me || me.role !== 'owner') { clear(); return false; }
+        SS.set('amz.it.tok', token); S.token = token;
+        localStorage.removeItem(FAIL);
+        return true;
+      } catch (e) {
+        if (e && e.code === 'SESSION') { clear(); toast('Session หมดอายุ กรุณาเข้าสู่ระบบและยืนยันตัวตนใหม่'); }
+        else toast('ตรวจสอบ Session ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วเข้าสู่ระบบใหม่');
+        return false;
       }
     }
   }
