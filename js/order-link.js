@@ -37,6 +37,7 @@
   }
 
   function ownerPortalView(page) {
+    document.body.classList.add('cms-owner-live-orders');
     installOwnerOrdersStyles();
     const run = ++ownerFrameRequest;
     setTimeout(() => loadOwnerPortalFrame(page, run), 0);
@@ -111,6 +112,21 @@
   }
   window.openOrder = openOrder;
   const hasRef = () => !!S.me && (S.me.role === 'owner' || !!S.me.uid);
+
+  // Toggle the embedded layout only while Owner is on either Order System route.
+  if (typeof App === 'object' && typeof App.render === 'function' && !App.__ownerOrdersRenderWrapped) {
+    const renderBase = App.render.bind(App);
+    App.render = function () {
+      const route = location.hash.replace(/^#/, '').split('/')[0];
+      if (isCmsOwner() && (route === 'orders' || route === 'catalog')) {
+        document.body.classList.add('cms-owner-live-orders');
+      } else {
+        document.body.classList.remove('cms-owner-live-orders');
+      }
+      return renderBase();
+    };
+    App.__ownerOrdersRenderWrapped = true;
+  }
 
   /* ---------- เว็บหลังร้าน ---------- */
   if (typeof defMod === 'function' && typeof GROUPS !== 'undefined') {
