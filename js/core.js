@@ -69,7 +69,7 @@ function loadCfg() {
   if (!S.cfg.apiUrl && window.AMZ_API && validUrl(window.AMZ_API)) S.cfg.apiUrl = window.AMZ_API;   // URL ของร้านจาก js/config.js
   if (window.AMZ_API && /supabase\.co/.test(window.AMZ_API) && /script\.google\.com/.test(S.cfg.apiUrl || '')) { S.cfg.apiUrl = window.AMZ_API; LS.set('amz.cfg', S.cfg); }   // ย้ายไป Supabase: เครื่องที่จำ URL เดิมสลับเอง
   const q = new URLSearchParams(location.search).get('api');
-  if (q && validUrl(q)) { S.cfg.apiUrl = q; LS.set('amz.cfg', S.cfg); }
+  if (q && validUrl(q) && !(window.AMZ_API && /supabase\.co/.test(window.AMZ_API) && /script\.google\.com/.test(q))) { S.cfg.apiUrl = q; LS.set('amz.cfg', S.cfg); }   // ลิงก์เก่า (LIFF / Rich menu / ลิงก์ลงเวลา) ที่ฝาก ?api= ของ Google ไว้: ไม่ใช้ ใช้ Supabase แทน
   S.demo = !S.cfg.apiUrl;
 }
 class ApiError extends Error { constructor(m, code) { super(m); this.code = code || ''; } }
