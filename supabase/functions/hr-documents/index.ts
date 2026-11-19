@@ -9,7 +9,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 const SIGNED_SECONDS = 300;
 const ALLOWED_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const CATEGORIES = new Set(["resume", "id_card", "education", "contract", "bank", "medical", "social_security", "pdpa", "other"]);
-const ORIGIN_ALLOW = new Set(["https://centralized-store-management.github.io"]);
+const ORIGIN_ALLOW = new Set(["https://centralized-store-management.github.io", "https://centralized-store-management-system.github.io"]);
 
 const sql = DB_URL ? postgres(DB_URL, { max: 2, idle_timeout: 10, connect_timeout: 10 }) : null;
 
