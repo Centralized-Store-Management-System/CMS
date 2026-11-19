@@ -60,3 +60,16 @@
 .oc-land .status{background:rgba(255,255,255,.12);color:#fff;border:0}
 .oc-land [data-pwa]{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.35)}
 @media (max-width:520px){.oc-land-menu{grid-template-columns:1fr}}
+
+
+/* Owner PWA PIN lock — จำกัดเฉพาะ owner.html */
+.owner-pin{text-align:center;min-width:min(300px,78vw);padding:8px 4px}
+.owner-pin-mark{width:48px;height:48px;border-radius:14px;margin:0 auto 12px;display:grid;place-items:center;background:#C29A3E;color:#10392A;font:600 18px var(--display)}
+.owner-pin h3{margin:0 0 6px;font:600 21px var(--display);color:var(--text,#19392B)}
+.owner-pin .muted{margin:0 0 18px;font-size:13px}
+.owner-pin-dots{height:34px;margin:0 auto 8px;color:#17694A;font-size:23px;letter-spacing:5px;white-space:nowrap}
+.owner-pin-msg{min-height:22px;margin:0 0 8px;color:#B0384A;font-size:12px}
+.owner-pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;max-width:280px;margin:0 auto}
+.owner-pin-pad button{height:54px;border:1px solid var(--line,#DCE5DF);border-radius:12px;background:var(--surface,#fff);color:var(--text,#19392B);font:600 21px var(--display);cursor:pointer;touch-action:manipulation}
+.owner-pin-pad button:active{background:#E3EEE7;transform:scale(.97)}
+.owner-pin-pad button[data-key="cancel"],.owner-pin-pad button[data-key="del"]{font:500 13px var(--font);color:var(--muted,#64746B)}
