@@ -60,5 +60,7 @@
 - แก้แล้ว: ไม่วาด Login ระหว่าง Owner PWA กำลังปลดล็อก, รวมคำขอปลดล็อกเป็น Promise เดียว, คงหน้าเดิมเมื่อ session/permission error, เพิ่มปุ่มเชื่อมต่อใหม่; bump `owner-pwa-lock.js` เป็น v2.1.2 ใน `owner.html` และ `index.html`
 - Function ที่เชื่อมต่อ: `login`, `auth2`, `me`, `logout`, `devReg`, `devUnlock`, `devForget`, `it` (ops: `status/dash/perf/events/authList/healAll/heal/authSet`), `staff`, `orderTicket`
 - รายงาน IT: `docs/IT-REPORT-OWNER-AUTH-FLOW.md`
-- Commits: `df2181a` (Owner PWA lock), `90bd7a0` (Owner Console session handling), `6527bee` (`owner.html` cache-bust), `702cf5a` (`index.html` cache-bust), `983a45d` (IT report)
+- Scope review รอบสอง: เทียบกับ `js/app-lock.js` พบว่า Staff/Manager lock มี guard `fromOwner`; เพิ่ม `ownerContext()` ใน `js/owner-pwa-lock.js` ให้ทำงานเฉพาะ `owner.html` หรือ Back Office ที่เปิดจาก Owner และจำกัด `renderLogin` wrapper ด้วย `fromOwner()` เพื่อไม่ให้ PWA พนักงาน/Manager ที่เปิดตรงได้รับ Owner PIN prompt
+- Cache version ล่าสุด `owner-pwa-lock.js?v=2.1.3` ทั้ง `owner.html` และ `index.html`
+- Commits: `df2181a` (Owner PWA lock), `90bd7a0` (Owner Console session handling), `d5ecd06` (scope guard Owner context), `ce3b8c7` (`owner.html` cache-bust), `6778080` (`index.html` cache-bust), `5d9840f` (IT report update), `983a45d` (IT report initial)
 - ขอบเขต: Front-end เท่านั้น ไม่แก้ Edge Function หรือ `server/gas.enc`; ยังต้องทดสอบบน iPhone/Android จริงก่อนปิดงาน
