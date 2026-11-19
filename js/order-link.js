@@ -22,7 +22,12 @@
       'body.cms-owner-live-orders .col{min-width:0;min-height:100vh}',
       'body.cms-owner-live-orders main#view{width:100%;max-width:none;height:calc(100vh - 16px);min-height:0;margin:0;padding:10px 12px 12px;overflow:hidden;display:flex;flex-direction:column}',
       'body.cms-owner-live-orders .cms-live-orders-frame{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;background:#f4f7f4;border:1px solid #dce7df;border-radius:14px;overflow:hidden}',
-      'body.cms-owner-live-orders .cms-live-orders-toolbar{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:8px 13px;background:#fff;border-bottom:1px solid #dce7df;color:#31513c;font-size:12px}',
+      'body.cms-owner-live-orders .oc-main{max-width:none;width:100%;min-width:0;min-height:calc(100dvh - 64px);display:flex;flex-direction:column;padding:12px}',
+      'body.cms-owner-live-orders .cms-owner-app-frame{min-height:calc(100dvh - 104px)}',
+      'body.cms-owner-live-orders .cms-owner-app-frame .cms-live-orders-stage{min-height:65dvh}',
+      'body.cms-owner-live-orders .cms-owner-app-frame .cms-live-orders-iframe{min-height:65dvh}',
+      'body.cms-owner-live-orders .cms-owner-app-frame .cms-live-orders-toolbar button{white-space:nowrap}',
+      'body.cms-owner-live-orders .cms-live-orders-toolbar{display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 13px;background:#fff;border-bottom:1px solid #dce7df;color:#31513c;font-size:12px}',
       'body.cms-owner-live-orders .cms-live-orders-toolbar strong{font:600 13px var(--display)}',
       'body.cms-owner-live-orders .cms-live-orders-toolbar button{border:1px solid #cfe0d3;background:#eff7f1;color:#17643e;border-radius:9px;padding:6px 11px;font:500 11px var(--font)}',
       'body.cms-owner-live-orders .cms-live-orders-stage{position:relative;display:flex;flex:1;min-width:0;min-height:0;background:#f4f7f4}',
@@ -186,14 +191,71 @@
     add();
   }
 
-  /* ---------- แอป Owner ---------- */
-  if (typeof ocLanding === 'function') {
+  /* ---------- แอป Owner (PWA: PC / Mobile) ---------- */
+  if (typeof ocLanding === 'function' && typeof OC === 'object') {
     const l0 = ocLanding;
-    const add = () => {
-      const m = document.querySelector('.oc-land-menu');
-      if (m && !m.querySelector('[data-order]')) m.insertAdjacentHTML('beforeend', `<a class="oc-big" data-order="1" href="index.html?from=owner#orders"><span class="ic">${icon('orders')}</span><b>ระบบออเดอร์</b><small>จัดการออเดอร์ LIVE · สินค้า ราคา (Web Admin Portal)</small></a>`);
+    const addOwnerOrderButtons = () => {
+      const menu = document.querySelector('.oc-land-menu');
+      if (!menu || menu.querySelector('[data-owner-order]')) return;
+      menu.insertAdjacentHTML('beforeend',
+        '<button class="oc-big" type="button" data-owner-order="orders"><span class="ic">' + icon('orders') + '</span><b>Live Orders</b><small>รับและจัดการออเดอร์แบบ Real-time</small></button>' +
+        '<button class="oc-big" type="button" data-owner-order="catalog"><span class="ic">' + icon('catalog') + '</span><b>Web Admin Portal</b><small>จัดการสินค้า หมวดหมู่ ตัวเลือก และราคา</small></button>'
+      );
     };
-    window.ocLanding = ocLanding = function () { l0.apply(this, arguments); add(); };
-    add();
+    window.ocLanding = ocLanding = function () {
+      document.body.classList.remove('cms-owner-live-orders');
+      l0.apply(this, arguments);
+      addOwnerOrderButtons();
+    };
+    addOwnerOrderButtons();
+
+    const ocGoBase = ocGo;
+    window.ocGo = ocGo = async function (view) {
+      if (view !== 'orders' && view !== 'catalog') {
+        document.body.classList.remove('cms-owner-live-orders');
+        return ocGoBase(view);
+      }
+      if (!OC.me) { OC.after = view; return ocLogin(); }
+      if (OC.me.role !== 'owner') return ocLanding('เมนูนี้ใช้ได้เฉพาะบัญชี Owner');
+      document.body.classList.add('cms-owner-live-orders');
+      installOwnerOrdersStyles();
+      OC.view = view;
+      clearInterval(OC.timer);
+      if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
+      ocShell('<p class="loading">กำลังเปิด ' + esc(PAGES[view]) + '…</p>');
+      const main = document.querySelector('.oc-main');
+      if (main) {
+        main.style.maxWidth = 'none';
+        main.style.minWidth = '0';
+        main.style.padding = '12px';
+        main.style.display = 'flex';
+        main.style.flexDirection = 'column';
+        main.style.minHeight = 'calc(100dvh - 64px)';
+      }
+      ocMain(
+        '<section class="cms-live-orders-frame cms-owner-app-frame">' +
+        '<div class="cms-live-orders-toolbar"><strong>' + esc(PAGES[view]) + ' · Café Amazon</strong>' +
+        '<button type="button" data-owner-order-back>← กลับหน้า Owner</button>' +
+        '<button type="button" data-a="orderEmbedReload" data-page="' + esc(view) + '">↻ โหลดใหม่</button></div>' +
+        '<div class="cms-live-orders-stage" id="cms-live-orders-stage">' +
+        '<div class="cms-live-orders-loading">กำลังยืนยันสิทธิ์ Owner…</div></div></section>'
+      );
+      const run = ++ownerFrameRequest;
+      setTimeout(() => loadOwnerPortalFrame(view, run), 0);
+    };
+
+    document.addEventListener('click', e => {
+      const orderButton = e.target.closest('[data-owner-order]');
+      if (orderButton) {
+        e.preventDefault();
+        const page = orderButton.dataset.ownerOrder;
+        if (!OC.me) { OC.after = page; return ocLogin(); }
+        return ocGo(page);
+      }
+      if (e.target.closest('[data-owner-order-back]')) {
+        e.preventDefault();
+        return ocLanding();
+      }
+    });
   }
 })();
