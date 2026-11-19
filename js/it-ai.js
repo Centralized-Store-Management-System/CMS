@@ -125,4 +125,3 @@ function ocAiBackgroundHtml(row) {
     <div class="actions"><button class="btn primary" type="button" data-ai-run-now>ตรวจระบบเดี๋ยวนี้</button><span class="grow"></span><span class="muted" style="font-size:12px">ประวัติเก็บ 90 วัน</span></div>
   </section>`;
 }
-}
