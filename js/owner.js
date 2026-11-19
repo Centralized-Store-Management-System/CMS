@@ -221,7 +221,13 @@ window.addEventListener('hashchange', () => { const v = location.hash.slice(1); 
   loadCfg();
   try { applyTheme(cachedTheme()); } catch (e) { /* */ }
   S.token = SS.get(OC.tok);
-  if (!S.token && typeof OWNER_PWA_LOCK !== 'undefined') await OWNER_PWA_LOCK.restore();
+  // Owner PWA: ทุกครั้งที่เปิดแอปให้ปลดล็อกด้วย PIN ก่อน แม้ sessionStorage ยังมี token ค้างอยู่
+  if (typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.standalone() && OWNER_PWA_LOCK.hasVault()) {
+    S.token = ''; SS.set(OC.tok, '');
+    await OWNER_PWA_LOCK.restore();
+  } else if (!S.token && typeof OWNER_PWA_LOCK !== 'undefined') {
+    await OWNER_PWA_LOCK.restore();
+  }
   const want = location.hash.slice(1);
   if (!S.token) { if (want && want !== 'home') { OC.after = want; return ocLogin(); } return ocLanding(); }   // หน้าหลักไม่ต้องเข้าระบบ
   try { const me = await API.call('me', { t: S.token }); if (!ocCan(me)) return ocLanding('แอปนี้ใช้ได้เฉพาะบัญชี Owner'); OC.me = me; ocGo(want || 'dash'); }
