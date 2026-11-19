@@ -77,3 +77,14 @@
 - ยังต้องทดสอบ end-to-end ด้วย HR account จริง, PDF/รูปภาพ upload-preview-delete, branch isolation, iPhone/Android และ refresh monitor 5 นาที
 - รายงาน IT: docs/IT-REPORT-HR-DOCUMENTS-AND-AI.md
 - Commits: 1ee228c (birthdays), a8481a6 (document UI), bec3f35 (register HR module), ceafff8 (document service), 6dba685 (secure URL/bucket lazy check), 0c0d9a4 (URL parser fix), 60a57ff (scope formats), 0b28b5d (transactional metadata/audit), bc8f4b5 (single auth check preview), 9436cbf (IT diagnostic engine), 12f2da3 + 2846692 (IT integration), 6c0609e (Owner script), b64d349 (IT report), d3a0299 (report update)
+
+### Always-on IT Background Monitor (19 พ.ย. 2569)
+- เพิ่ม Edge Function `it-monitor` ACTIVE v1 และ pg_cron job `it-monitor-every-5-minutes` job_id=2 schedule `*/5 * * * *` active=true — ตรวจต่อเนื่องทุก 5 นาทีแม้ Owner ปิดหน้า IT/ปิดอุปกรณ์
+- ใช้ `CRON_KEY` ที่มีอยู่ใน backoffice.kv; internal cron endpoint validates key; GET/manual run validates CMS Owner session
+- ตาราง `public.it_monitor_runs` เก็บ Risk Score, Findings, Metrics 90 วัน; RLS on, anon/authenticated privileges revoked, service_role only; advisory lock ป้องกัน job ซ้อน
+- ตรวจ Supabase heartbeat, Order heartbeat, Back Office Cron, Cron failures, outbox errors, Order Sync errors, SSO failures, orders 24h/stale >90m, active branches, HR private bucket readiness
+- Owner > ระบบ IT อ่านผลล่าสุดจาก server และปุ่ม `ตรวจระบบเดี๋ยวนี้` สั่ง run ทันที; in-page browser perf/events/incident drilldown ยังคงทำงานเพิ่มเมื่อเปิดหน้า IT
+- ทดสอบ manual cron endpoint ด้วย pg_net ได้ HTTP 200; snapshot แรก healthy / Risk 100; job ตรวจทุก 5 นาทีตั้ง active แล้ว
+- ข้อจำกัด: monitor ตรวจเฉพาะ backend/database telemetry; ไม่อาจตรวจ UI บนอุปกรณ์ที่ปิดอยู่. Engine เป็น rule-based diagnostic ไม่ใช่ LLM
+- Files: `supabase/functions/it-monitor/index.ts`, `js/it-ai.js`, `js/owner.js`, `owner.html`; report: `docs/IT-REPORT-HR-DOCUMENTS-AND-AI.md`
+- Commits: `12c3069` (monitor service), `dc931a1`/`be48f15` (background UI), `402fe3a` (manual run), `70e33f8` (cache bust), `e9ed458` (report)
