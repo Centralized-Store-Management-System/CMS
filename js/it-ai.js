@@ -85,7 +85,7 @@ function ocAiAnalyse() {
   const seen = new Set();
   insights.forEach(x => { const k = x.level + '|' + x.title; if (!seen.has(k)) { seen.add(k); unique.push(x); } });
   unique.sort((a,b) => (a.level === 'bad' ? 0 : 1) - (b.level === 'bad' ? 0 : 1));
-  return { score, insights: unique.slice(0,8), bad: bad.length, warn: warn.length, perfRows: perf.length, eventRows: errEvents.length };
+  return { score, insights: unique.slice(0,8), bad: unique.filter(x => x.level === 'bad').length, warn: unique.filter(x => x.level === 'warn').length, perfRows: perf.length, eventRows: errEvents.length };
 }
 function ocAiPanelHtml() {
   const d = OC.aiData;
