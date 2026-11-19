@@ -108,6 +108,8 @@ export function orderLink({ sql, supabaseUrl, serviceKey, portal = PORTAL }) {
       'pending', (select json_build_object('n', count(*), 'oldest', min(created_at), 'first', (array_agg(order_number order by created_at))[1]) from public.orders where order_status = 'pending' and created_at < now() - interval '10 minutes' and created_at > now() - interval '2 days'),
       'today', (select count(*) from public.orders where created_at >= (date_trunc('day', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok'))) h`;
     const out = { at: new Date().toISOString(), ...h.h, fn: prev && prev.fn };
+    try { out.lineChannels = (await sql`select b.branch_code branch, c.is_active active from public.line_channels c join public.branches b on b.id = c.branch_id`).map(r => ({ branch: r.branch, active: r.active })); }
+    catch (_) { out.lineChannels = null; }   // ตารางของ Line-Order (GPT ดูแล) — เปลี่ยนชื่อ/ยังไม่มี ไม่ให้ผลตรวจอื่นพัง
     if (!out.fn || Date.now() - Date.parse(out.fn.at) > 30 * 60000) out.fn = { at: out.at, list: await ping() };
     return out;
   }
