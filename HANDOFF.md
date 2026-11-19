@@ -98,3 +98,11 @@
 - Files: `js/mod-hr.js`, `js/hr-documents.js`, `index.html` (cache bust `mod-hr 4.5.5`, `hr-documents 1.1.0`)
 - Commits: `db0bc09` (directory/viewer), `ff2ac4b` (HR tab), `8759026` (asset cache bust)
 - ยังต้องทดสอบด้วยบัญชี HR/Owner จริงและตรวจสิทธิ์ข้ามสาขาใน production หลัง deployment; การตรวจในรอบนี้ยืนยันว่า code changes อยู่บน `main` เท่านั้น
+
+
+### HR Documents Failed to fetch / CORS fix (19 พ.ย. 2569)
+- ตรวจ Supabase Edge Logs พบ `OPTIONS | 403` สำหรับ `hr-documents?action=list` ใน Function v5 ก่อน request GET จะถูกส่ง ทำให้ browser แสดง `Failed to fetch`
+- สาเหตุ: CORS allowlist มีเฉพาะ `https://centralized-store-management.github.io` แต่หน้าที่ใช้งานจริงเปิดจาก `https://centralized-store-management-system.github.io`
+- เพิ่ม allowlist ให้รองรับทั้งสอง exact origins; ไม่ใช้ wildcard
+- Deploy `hr-documents` ACTIVE v6; source mirror `supabase/functions/hr-documents/index.ts` commit `390f36a`
+- ยืนยันจาก Supabase Function metadata ว่า v6 ACTIVE และ allowlist มีทั้งสอง origins; ต้อง reload หน้า HR เพื่อให้เกิด request ใหม่และยืนยัน end-to-end จาก browser
