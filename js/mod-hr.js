@@ -49,8 +49,15 @@ function empRow(e) {
 function pEmp() {
   const list = S.t.employees.filter(e => myEmp(e) && inBr(e.branch)).sort((a, b) => (a.status === 'ลาออก') - (b.status === 'ลาออก') || String(a.code || '').localeCompare(String(b.code || '')));
   const groups = !S.branch && multiBranch() ? myBranches().map(b => [b, list.filter(e => e.branch === b.code)]).filter(g => g[1].length) : [[null, list]];
+  const bd0 = today(), bd1 = addDays(bd0, 1), key = d => String(d || '').slice(5, 10);
+  const active = list.filter(e => e.status !== 'ลาออก' && e.birthDate);
+  const b0 = active.filter(e => key(e.birthDate) === key(bd0));
+  const b1 = active.filter(e => key(e.birthDate) === key(bd1));
+  const birthdayRow = (e, when) => `<div class="row static"><span class="avatar" aria-hidden="true">🎂</span><span class="main"><span class="t">${esc(fullName(e))}</span><span class="s">${esc(e.code || '')}${e.position ? ' · ' + esc(e.position) : ''}${multiBranch() ? ' · ' + esc(branchName(e.branch)) : ''}</span></span><span class="chip ${when === 'วันนี้' ? 'ok' : 'warn'}">${when}</span></div>`;
+  const birthdayHtml = `<h3 class="h3">🎂 วันเกิดที่กำลังจะถึง <span class="muted">วันนี้ ${b0.length} · พรุ่งนี้ ${b1.length}</span></h3><div class="group">${b0.map(e => birthdayRow(e, 'วันนี้')).join('')}${b1.map(e => birthdayRow(e, 'พรุ่งนี้')).join('')}${!b0.length && !b1.length ? empty('ไม่มีวันเกิดวันนี้หรือพรุ่งนี้') : ''}</div>`;
   return `<div class="h2">พนักงาน ${list.filter(e => e.status !== 'ลาออก').length} คน<span class="spacer"></span><button class="btn primary" data-a="newEmp">เพิ่มพนักงาน</button></div>
   ${groups.map(([b, l]) => `${b ? `<h3 class="h3">${esc(b.name)} <span class="muted">${l.filter(e => e.status !== 'ลาออก').length} คน</span></h3>` : ''}<div class="group">${l.map(empRow).join('') || empty('ยังไม่มีพนักงาน กด “เพิ่มพนักงาน” เพื่อเริ่ม')}</div>`).join('')}
+  ${birthdayHtml}
   <p class="note">พนักงานที่มีชื่อผู้ใช้ (เช่น staff_somchaij สร้างที่หน้า Users) ใช้ PIN 6 หลักที่ตั้งเองทั้งลงเวลาและเข้าระบบ คนที่ยังไม่มีใช้รหัสพนักงาน + PIN ที่ HR ตั้ง ระบบให้เห็นเฉพาะส่วนที่มีสิทธิ์ (ตั้งที่ ตั้งค่า > สิทธิ์การใช้งาน) และเฉพาะสาขาประจำ + สาขาที่ดูแลเพิ่ม กะและวันหยุดของแต่ละคนตั้งที่ ตารางงาน > รูปแบบกะ</p>`;
 }
 function openEmp(id, draft) {
