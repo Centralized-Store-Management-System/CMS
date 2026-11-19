@@ -123,7 +123,10 @@ async function signedUrl(path: string) {
   const data = await res.json();
   const raw = data.signedURL || data.signedUrl;
   if (!raw) throw new Error("ระบบไม่สามารถสร้างลิงก์ดูเอกสารได้");
-  return new URL(raw, SUPABASE_URL).toString();
+  if (/^https?:\\/\\//i.test(raw)) return raw;
+  if (raw.startsWith("/storage/v1/")) return SUPABASE_URL + raw;
+  if (raw.startsWith("/")) return SUPABASE_URL + "/storage/v1" + raw;
+  return SUPABASE_URL + "/storage/v1/" + raw;
 }
 async function audit(documentId: string | null, employeeId: string, action: string, actor: string) {
   await sql!.unsafe(
@@ -148,7 +151,6 @@ Deno.serve(async (req: Request) => {
     requireEnv();
     const token = req.headers.get("x-cms-session") || "";
     if (!token) throw new HttpError(401, "กรุณาเข้าสู่ระบบใหม่");
-    await ensurePrivateBucket();
     const url = new URL(req.url);
     const action = req.method === "GET" ? (url.searchParams.get("action") || "list") : "";
     if (req.method === "GET" && action === "list") {
@@ -163,8 +165,10 @@ Deno.serve(async (req: Request) => {
       const [doc] = await sql`select id, employee_id, object_path, mime_type from public.hr_employee_documents where id = ${id}::uuid and deleted_at is null limit 1`;
       if (!doc) throw new HttpError(404, "ไม่พบเอกสาร");
       await authorize(token, doc.employee_id);
+      const access = await authorize(token, doc.employee_id);
+      await ensurePrivateBucket();
       const link = await signedUrl(doc.object_path);
-      await audit(String(doc.id), String(doc.employee_id), "view", "hr:" + (await authorize(token, doc.employee_id)).me.role);
+      await audit(String(doc.id), String(doc.employee_id), "view", String(access.me.username || access.me.code || access.me.role));
       return json({ ok: true, url: link, expiresIn: SIGNED_SECONDS, mimeType: doc.mime_type }, 200, origin);
     }
     if (req.method === "POST") {
@@ -177,6 +181,7 @@ Deno.serve(async (req: Request) => {
         const file = form.get("file");
         if (!(file instanceof File)) throw new HttpError(400, "กรุณาเลือกไฟล์เอกสาร");
         const { me, employee } = await authorize(token, employeeId);
+        await ensurePrivateBucket();
         if (!CATEGORIES.has(category)) throw new HttpError(400, "ประเภทเอกสารไม่ถูกต้อง");
         if (!label) throw new HttpError(400, "กรุณาระบุชื่อเอกสาร");
         if (file.size <= 0 || file.size > MAX_BYTES) throw new HttpError(413, "ไฟล์ต้องมีขนาดไม่เกิน 20 MB");
@@ -206,6 +211,7 @@ Deno.serve(async (req: Request) => {
         const [doc] = await sql`select id, employee_id, object_path from public.hr_employee_documents where id = ${id}::uuid and deleted_at is null limit 1`;
         if (!doc) throw new HttpError(404, "ไม่พบเอกสาร");
         const { me } = await authorize(token, doc.employee_id);
+        await ensurePrivateBucket();
         await storageDelete(doc.object_path);
         await sql`update public.hr_employee_documents set deleted_at = now() where id = ${id}::uuid`;
         await audit(String(doc.id), String(doc.employee_id), "delete", String(me.username || me.code || me.role));
