@@ -27,6 +27,15 @@
 6. คำขอผ่าน LINE LIFF ไม่เข้า Approvals → แก้ `js/core.js` (ไม่ใช้ `?api=` ของ Google) + ย้าย 3 รายการค้าง
 7. ซิงก์ CMS ↔ Line-Order: สาขา (B0001 = สาขาตลาดทวีสมาน, เดิม PKT001), ผู้ใช้, SSO, ตรวจ IT 7 ข้อ, เปลี่ยนชื่อสาขาในแอป Owner > ระบบ IT > สาขา
 
+## Owner PWA PIN Lock (19 พ.ย. 2569)
+- เพิ่ม `js/owner-pwa-lock.js` และโหลดเฉพาะใน `owner.html`; ปรับ `js/owner.js` และ `css/owner.css` เท่านั้น
+- ทำงานเฉพาะเมื่อเปิด Owner เป็น PWA/standalone: หลัง Login + MFA เดิมสำเร็จ ให้ตั้ง PIN 6 หลัก; ครั้งถัดไปปลดล็อกด้วย PIN แล้วตรวจ token ผ่าน API `me` ก่อนเข้า Owner Console
+- Token ถูกเก็บเป็น ciphertext AES-GCM โดยใช้ key จาก PBKDF2-SHA256 (310,000 iterations), random salt/IV; มีหน่วงหลังใส่ PIN ผิด 5 ครั้ง
+- Logout ล้าง vault; Session หมดอายุ/ถูกปฏิเสธจะล้าง vault และให้ Login + MFA ใหม่
+- PC / Mobile Browser ที่ไม่ใช่ standalone, Mgr / Staff / LINE ไม่โหลดโมดูลนี้และไม่เปลี่ยน flow
+- **ข้อจำกัดด้านความปลอดภัย:** PIN 6 หลักมี entropy จำกัดและ ciphertext ในเครื่องยังเสี่ยงต่อ offline brute-force หากผู้โจมตีได้ข้อมูล storage; ฟีเจอร์นี้เป็น local session unlock เพื่อความสะดวก ไม่ใช่การแทน MFA หรือการยืนยันตัวตนฝั่งเซิร์ฟเวอร์
+- ยังต้องทดสอบบนอุปกรณ์จริง (Android PWA และ iOS Add to Home Screen): ตั้ง PIN, ปิด/เปิดแอป, PIN ผิด, logout, session หมดอายุ, offline/network error ก่อนถือว่า production-verified
+
 ## ค้าง / รอเจ้าของ
 - **อีเมล (Resend)**: เจ้าของต้องตั้ง Edge Function Secrets `RESEND_API_KEY`, `MAIL_FROM` เอง (ต้องมีโดเมนที่ verify จึงส่งถึงพนักงานได้) → แล้วตรวจข้อ IT `auth_mail`
 - (เสนอไว้) แยกสิทธิ์ orders/catalog รายคนใน Line-Order
