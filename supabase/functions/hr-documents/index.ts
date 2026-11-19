@@ -165,7 +165,6 @@ Deno.serve(async (req: Request) => {
       const id = url.searchParams.get("id") || "";
       const [doc] = await sql`select id, employee_id, object_path, mime_type from public.hr_employee_documents where id = ${id}::uuid and deleted_at is null limit 1`;
       if (!doc) throw new HttpError(404, "ไม่พบเอกสาร");
-      await authorize(token, doc.employee_id);
       const access = await authorize(token, doc.employee_id);
       await ensurePrivateBucket();
       const link = await signedUrl(doc.object_path);
