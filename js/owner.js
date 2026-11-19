@@ -206,6 +206,20 @@ function ocReport() {
 
 /* ---------- ปุ่ม ---------- */
 document.addEventListener('click', async e => {
+  const aiRunNow = e.target.closest('[data-ai-run-now]');
+  if (aiRunNow) {
+    aiRunNow.disabled = true;
+    const oldLabel = aiRunNow.textContent;
+    aiRunNow.textContent = 'กำลังตรวจระบบ…';
+    try {
+      await ocAiRunBackgroundNow();
+      OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
+      if (OC.view === 'it') ocMain(ocIt());
+      toast('ตรวจระบบเบื้องหลังและบันทึกผลแล้ว');
+    } catch (err) { toast(err.message || 'ตรวจระบบไม่สำเร็จ'); }
+    finally { aiRunNow.disabled = false; aiRunNow.textContent = oldLabel; }
+    return;
+  }
   const aiRefresh = e.target.closest('[data-ai-refresh]');
   if (aiRefresh) {
     aiRefresh.disabled = true;
