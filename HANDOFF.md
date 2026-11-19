@@ -27,14 +27,18 @@
 6. คำขอผ่าน LINE LIFF ไม่เข้า Approvals → แก้ `js/core.js` (ไม่ใช้ `?api=` ของ Google) + ย้าย 3 รายการค้าง
 7. ซิงก์ CMS ↔ Line-Order: สาขา (B0001 = สาขาตลาดทวีสมาน, เดิม PKT001), ผู้ใช้, SSO, ตรวจ IT 7 ข้อ, เปลี่ยนชื่อสาขาในแอป Owner > ระบบ IT > สาขา
 
-## Owner PWA PIN Lock (19 พ.ย. 2569)
-- เพิ่ม `js/owner-pwa-lock.js` และโหลดเฉพาะใน `owner.html`; ปรับ `js/owner.js` และ `css/owner.css` เท่านั้น
-- ทำงานเฉพาะเมื่อเปิด Owner เป็น PWA/standalone: หลัง Login + MFA เดิมสำเร็จ ให้ตั้ง PIN 6 หลัก; ครั้งถัดไปปลดล็อกด้วย PIN แล้วตรวจ token ผ่าน API `me` ก่อนเข้า Owner Console
-- Token ถูกเก็บเป็น ciphertext AES-GCM โดยใช้ key จาก PBKDF2-SHA256 (310,000 iterations), random salt/IV; มีหน่วงหลังใส่ PIN ผิด 5 ครั้ง
-- Logout ล้าง vault; Session หมดอายุ/ถูกปฏิเสธจะล้าง vault และให้ Login + MFA ใหม่
-- PC / Mobile Browser ที่ไม่ใช่ standalone, Mgr / Staff / LINE ไม่โหลดโมดูลนี้และไม่เปลี่ยน flow
-- **ข้อจำกัดด้านความปลอดภัย:** PIN 6 หลักมี entropy จำกัดและ ciphertext ในเครื่องยังเสี่ยงต่อ offline brute-force หากผู้โจมตีได้ข้อมูล storage; ฟีเจอร์นี้เป็น local session unlock เพื่อความสะดวก ไม่ใช่การแทน MFA หรือการยืนยันตัวตนฝั่งเซิร์ฟเวอร์
-- ยังต้องทดสอบบนอุปกรณ์จริง (Android PWA และ iOS Add to Home Screen): ตั้ง PIN, ปิด/เปิดแอป, PIN ผิด, logout, session หมดอายุ, offline/network error ก่อนถือว่า production-verified
+## แอป Owner ปลดล็อกด้วยรหัส 6 หลัก (19 พ.ย. 2569 รอบ 2 — Claude แทนที่รุ่นเก็บ token)
+- **สาเหตุที่รุ่นก่อนยังขึ้น Authenticator:** vault เก็บ session token ซึ่งหมดอายุใน 6 ชม. (`SESSION_SECONDS`) → เปิดแอปวันถัดไป `me` = SESSION → ลบ vault → กลับไป Login + Authenticator · และหน้า "จัดการร้าน" (index.html) ไม่ได้รับ session ต่อ
+- **ตอนนี้:** ใช้กลไกเดียวกับแอปพนักงาน (48_AppLock) — เซิร์ฟเวอร์ผูกเครื่อง `60_OwnerAppLock.gs` (ใน gas.enc): `devReg {app:'owner'}` (ต้องผ่าน Authenticator แล้ว `af` ตรงวิธีที่ตั้ง) · `devUnlock` เครื่อง uid=`owner` → ออก session Owner ใหม่ทุกครั้ง
+- หน้าเว็บ `js/owner-pwa-lock.js` (โหลดใน `owner.html` และท้าย `index.html` — ทำงานเฉพาะแอปที่ติดตั้ง/`?app=1` + เปิดจากแอป Owner + มีรหัสแล้ว)
+  - เก็บกุญแจเครื่อง `{id, secret}` แบบ AES-256-GCM (PBKDF2-SHA256 310,000 รอบ, salt/IV สุ่ม) ใน localStorage `amz.owner.pwa.v2` · ไม่เก็บรหัส
+  - เปิดแอป → หน้ารหัส → ถอดกุญแจในเครื่อง → `devUnlock` (เซิร์ฟเวอร์ตรวจรหัสอีกชั้น ผิด 5 = ล็อกเครื่อง)
+  - session หมดระหว่างใช้ → ต่ออายุเงียบ (ห่อ `API.call`) · ออกจากแอป > 1 นาที → ล็อก · เปิดหน้าจัดการร้านส่ง session ต่อ (`amz.tok`)
+  - ผิด 5 ครั้งพัก 5 นาที (จำในเครื่อง) · ผิดรวม 10 ลบกุญแจ · เน็ตหลุดไม่ลบกุญแจ · Logout = ลบกุญแจ + `devForget`
+  - Owner ยกเลิกเครื่องได้ที่ ระบบ IT > วิธีเข้าระบบ (รายการเดียวกับแอปพนักงาน)
+- ไม่กระทบ: PC/เบราว์เซอร์ปกติ (Owner ยังใช้ Authenticator), Mgr/Staff (app-lock.js เดิม), LINE
+- ทดสอบแล้ว: gasmock `test/ownerlock.test.js` 5 ข้อ + ทดสอบหน้าเว็บจริง (Chromium จำลอง iPhone) 24 ข้อ — **ยังไม่ได้ทดสอบบน iPhone / Android จริง**
+- ข้อจำกัด: ถ้าได้ไฟล์ localStorage ไป ยังเดารหัส 6 หลักแบบ offline ได้ (ช้าเพราะ PBKDF2) แต่ต้องมีกุญแจ + รหัสตรงที่เซิร์ฟเวอร์ และ Owner ยกเลิกเครื่องได้ทันที
 
 ## ค้าง / รอเจ้าของ
 - **อีเมล (Resend)**: เจ้าของต้องตั้ง Edge Function Secrets `RESEND_API_KEY`, `MAIL_FROM` เอง (ต้องมีโดเมนที่ verify จึงส่งถึงพนักงานได้) → แล้วตรวจข้อ IT `auth_mail`
