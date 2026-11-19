@@ -195,11 +195,16 @@ Deno.serve(async (req: Request) => {
         const objectPath = `${safeName(String(employee.id))}/${id}.${ext}`;
         await storageUpload(objectPath, bytes, mime);
         try {
-          const [row] = await sql`insert into public.hr_employee_documents
-            (id, employee_id, employee_branch, category, label, original_name, mime_type, size_bytes, object_path, uploaded_by)
-            values (${id}::uuid, ${String(employee.id)}, ${String(employee.branch || "")}, ${category}, ${label}, ${safeName(file.name)}, ${mime}, ${file.size}, ${objectPath}, ${String(me.username || me.code || me.role)})
-            returning id, employee_id, category, label, original_name, mime_type, size_bytes, uploaded_by, created_at`;
-          await audit(id, String(employee.id), "upload", String(me.username || me.code || me.role));
+          const actor = String(me.username || me.code || me.role);
+          const row = await sql!.begin(async (tx: typeof sql) => {
+            const [record] = await tx`insert into public.hr_employee_documents
+              (id, employee_id, employee_branch, category, label, original_name, mime_type, size_bytes, object_path, uploaded_by)
+              values (${id}::uuid, ${String(employee.id)}, ${String(employee.branch || "")}, ${category}, ${label}, ${safeName(file.name)}, ${mime}, ${file.size}, ${objectPath}, ${actor})
+              returning id, employee_id, category, label, original_name, mime_type, size_bytes, uploaded_by, created_at`;
+            await tx`insert into public.hr_employee_document_audit (document_id, employee_id, action, actor)
+              values (${id}::uuid, ${String(employee.id)}, 'upload', ${actor})`;
+            return record;
+          });
           return json({ ok: true, document: row }, 200, origin);
         } catch (e) {
           await storageDelete(objectPath).catch(() => {});
@@ -214,8 +219,12 @@ Deno.serve(async (req: Request) => {
         const { me } = await authorize(token, doc.employee_id);
         await ensurePrivateBucket();
         await storageDelete(doc.object_path);
-        await sql`update public.hr_employee_documents set deleted_at = now() where id = ${id}::uuid`;
-        await audit(String(doc.id), String(doc.employee_id), "delete", String(me.username || me.code || me.role));
+        const actor = String(me.username || me.code || me.role);
+        await sql!.begin(async (tx: typeof sql) => {
+          await tx`update public.hr_employee_documents set deleted_at = now() where id = ${id}::uuid`;
+          await tx`insert into public.hr_employee_document_audit (document_id, employee_id, action, actor)
+            values (${String(doc.id)}::uuid, ${String(doc.employee_id)}, 'delete', ${actor})`;
+        });
         return json({ ok: true }, 200, origin);
       }
     }
