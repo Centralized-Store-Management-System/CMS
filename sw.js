@@ -2,7 +2,7 @@
  * - หน้าเว็บ (html): ถามเน็ตก่อนเสมอ (ได้เวอร์ชันล่าสุด) เน็ตหลุดค่อยใช้ที่จำไว้
  * - ไฟล์ js/css/รูป ของเว็บนี้: ถามเน็ตก่อน (ได้ไฟล์ล่าสุดเสมอ) เน็ตช้าเกิน 3 วิ/หลุด ใช้ที่จำไว้
  * - ข้อมูลจาก Google (Apps Script), LINE, ฟอนต์: ไม่แตะ ไม่เก็บ (ข้อมูลสดเสมอ) */
-const CACHE = 'amz-app-v2';
+const CACHE = 'amz-app-v3';
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('amz-app-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
