@@ -58,6 +58,30 @@ export function orderLink({ sql, supabaseUrl, serviceKey, portal = PORTAL }) {
     return out;
   }
 
+  /** สาขา: ยึดหลังร้าน (Owner & IT) — ชื่อ เปิด/ปิด ที่อยู่ โทร พิกัด · สาขาใหม่สร้างให้ · สาขาที่ถูกลบในหลังร้าน = ปิดในระบบออเดอร์ */
+  async function syncBranches(list) {
+    const B = await sql`select id, branch_code, branch_name, cms_code, is_active, address, phone, latitude, longitude from public.branches`, out = {};
+    const codesOf = b => String(b.cms_code || '').split(/[,\s]+/).filter(Boolean);
+    for (const c of list) {
+      try {
+        const o = B.find(b => codesOf(b).includes(c.code)) || B.find(b => b.branch_code === c.code);
+        const want = { name: c.name, active: !!c.active, address: c.address || (o && o.address) || null, phone: c.phone || (o && o.phone) || null, lat: c.lat ?? (o && o.latitude) ?? null, lng: c.lng ?? (o && o.longitude) ?? null };
+        if (!o) {
+          await sql`insert into public.branches (branch_code, branch_name, cms_code, is_active, address, phone, latitude, longitude) values (${c.code}, ${want.name}, ${c.code}, ${want.active}, ${want.address}, ${want.phone}, ${want.lat}, ${want.lng})`;
+          out[c.code] = 'new'; continue;
+        }
+        const same = o.branch_name === want.name && o.is_active === want.active && (o.address || null) === want.address && (o.phone || null) === want.phone && Number(o.latitude) === Number(want.lat) && Number(o.longitude) === Number(want.lng) && codesOf(o).includes(c.code);
+        if (same) { out[c.code] = 'same'; continue; }
+        const cms = codesOf(o).includes(c.code) ? o.cms_code : [...codesOf(o), c.code].join(',');
+        await sql`update public.branches set branch_name = ${want.name}, is_active = ${want.active}, address = ${want.address}, phone = ${want.phone}, latitude = ${want.lat}, longitude = ${want.lng}, cms_code = ${cms} where id = ${o.id}`;
+        out[c.code] = o.branch_name !== want.name ? 'rename' : 'upd';
+      } catch (e) { out[c.code] = 'error: ' + e.message; }
+    }
+    const codes = list.map(c => c.code);
+    for (const o of B) if (o.is_active && codesOf(o).length && !codesOf(o).some(x => codes.includes(x))) { await sql`update public.branches set is_active = false where id = ${o.id}`; out[o.branch_code] = 'off'; }
+    return out;
+  }
+
   async function open(u, page) {
     await apply(await branches(), u);
     const [s] = await sql`select u.email from public.staff s join auth.users u on u.id = s.auth_user_id where s.cms_ref = ${u.ref} and s.is_active`;
@@ -86,5 +110,5 @@ export function orderLink({ sql, supabaseUrl, serviceKey, portal = PORTAL }) {
     if (!out.fn || Date.now() - Date.parse(out.fn.at) > 30 * 60000) out.fn = { at: out.at, list: await ping() };
     return out;
   }
-  return { syncAll, open, portal, health };
+  return { syncAll, syncBranches, open, portal, health };
 }
