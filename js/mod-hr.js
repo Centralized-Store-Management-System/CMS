@@ -120,7 +120,8 @@ defMod({
   key: 'hr', mod: 'hr', label: 'HR', icon: 'hr', group: 'People', desc: 'ประวัติพนักงาน รูป สิทธิ์ใช้งาน ผู้สมัคร', perm: ['hr'],
   subs: [
     { key: 'emp', label: 'Employees', view: pEmp },
-    { key: 'app', label: 'Recruitment', view: pApp }
+    { key: 'app', label: 'Recruitment', view: pApp },
+    { key: 'docs', label: 'Documents', view: () => window.HRDocuments ? window.HRDocuments.view() : '<p class="note">กำลังโหลดเมนู Documents…</p>' }
   ],
   summary: () => { const n = activeEmps().length, a = S.t.applicants.filter(x => ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์'].includes(x.status)).length; return `พนักงาน ${n} คน${a ? `, ผู้สมัครรอดำเนินการ ${a}` : ''}`; },
   acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id) }
