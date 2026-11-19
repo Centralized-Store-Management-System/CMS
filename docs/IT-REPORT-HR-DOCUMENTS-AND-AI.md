@@ -134,3 +134,12 @@ Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new
 - Background cron เดิมยังทำงานทุก 5 นาทีอิสระจาก browser/device
 - ไม่แก้ระบบ heal/repair และไม่เปลี่ยน `backoffice` Edge Function หรือแหล่งข้อมูลเดิม
 - Commits: `258cb16`, `77eebce`
+
+
+## HR Document upload 500 correction (19 พ.ย. 2569)
+- POST upload ตอบ 500; CORS preflight และ GET list ผ่านแล้ว
+- Root cause จาก runtime log: `ensurePrivateBucket()` ได้ HTTP 400 `NoSuchBucket` จาก Storage API แต่โค้ดเดิมยอมรับเฉพาะ HTTP 404 จึงไม่เข้าสู่ขั้นตอน create bucket
+- แก้เงื่อนไขให้รับเฉพาะ 400 ที่ระบุ `NoSuchBucket`/`Bucket not found` เป็น missing bucket แล้ว deploy `hr-documents` ACTIVE v7
+- สร้าง `hr-employee-documents` bucket ผ่าน migration ให้เป็น Private (`public=false`), จำกัด 20 MB และ MIME PDF/JPG/PNG/WEBP; ตรวจ record หลัง migration แล้ว
+- Source commit `87c3ef5`; migration `20261119150233_create_private_hr_employee_documents_bucket`
+- สถานะ: root cause fixed + private bucket provisioned; ต้องยืนยัน upload จริงหลัง deployment ก่อนระบุว่า end-to-end ผ่าน
