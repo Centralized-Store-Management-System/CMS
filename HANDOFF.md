@@ -64,3 +64,16 @@
 - Cache version ล่าสุด `owner-pwa-lock.js?v=2.1.3` ทั้ง `owner.html` และ `index.html`
 - Commits: `df2181a` (Owner PWA lock), `90bd7a0` (Owner Console session handling), `d5ecd06` (scope guard Owner context), `ce3b8c7` (`owner.html` cache-bust), `6778080` (`index.html` cache-bust), `5d9840f` (IT report update), `983a45d` (IT report initial)
 - ขอบเขต: Front-end เท่านั้น ไม่แก้ Edge Function หรือ `server/gas.enc`; ยังต้องทดสอบบน iPhone/Android จริงก่อนปิดงาน
+
+## HR Documents + Birthdays + Advanced IT Monitor (19 พ.ย. 2569)
+- HR Employees: เพิ่มวันเกิดวันนี้/พรุ่งนี้ใต้รายชื่อ โดยกรองเฉพาะพนักงาน active ตาม scope/branch ที่ผู้ใช้เห็น (js/mod-hr.js)
+- HR Employee Documents: เพิ่มแผงเอกสารรายบุคคล PDF/JPG/PNG/WEBP ไม่เกิน 20MB; category Resume, ID card, Education, Contract, Bank, Medical, Social Security, PDPA, Other (js/hr-documents.js)
+- เอกสารเก็บใน Private Storage bucket hr-employee-documents, Signed URL อายุ 5 นาที; Edge Function hr-documents ตรวจ CMS session ผ่าน Back Office bootstrap, permission hr/Owner และ branch scope ก่อนอ่าน/เพิ่ม/ดู/ลบ; log upload/view/delete
+- DB migration: public.hr_employee_documents, public.hr_employee_document_audit; RLS enabled; revoke client privileges (anon, authenticated); service_role only
+- Owner > ระบบ IT: js/it-ai.js + js/owner.js เพิ่ม Diagnostic Engine v1 วิเคราะห์ it/status, it/perf, it/events, it/dash(days=7); Risk Score/anomaly rules และ refresh ทุก 5 นาทีขณะเปิดหน้า IT
+- หมายเหตุ: IT Monitor v1 เป็น rule-based diagnostic ไม่ใช่ Generative AI/ChatGPT; ยังไม่มี LLM provider/API key
+- ไม่แก้ server/gas.enc, Back Office v10, Branch/Employee master, Staff/Manager App Lock, LINE/LIFF/Clock, Line-Order
+- Migration applied; RLS/privileges verified; JavaScript syntax passed; Edge Function hr-documents ACTIVE v1
+- ยังต้องทดสอบ end-to-end ด้วย HR account จริง, PDF/รูปภาพ upload-preview-delete, branch isolation, iPhone/Android และ refresh monitor 5 นาที
+- รายงาน IT: docs/IT-REPORT-HR-DOCUMENTS-AND-AI.md
+- Commits: 1ee228c (birthdays), a8481a6 (document UI), bec3f35 (register HR module), ceafff8 (document service), 6dba685 (secure URL/bucket lazy check), 0c0d9a4 (URL parser fix), 9436cbf (IT diagnostic engine), 12f2da3 + 2846692 (IT integration), 6c0609e (Owner script), b64d349 (IT report)
