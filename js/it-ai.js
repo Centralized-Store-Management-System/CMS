@@ -3,19 +3,53 @@
  * v1 is transparent rule-based/anomaly scoring; it does not call an external LLM or send data outside Supabase.
  */
 'use strict';
+const IT_MONITOR_URL = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/it-monitor';
+function ocAiJson(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch (_) { return fallback; }
+}
+async function ocAiReadBackground() {
+  const response = await fetch(IT_MONITOR_URL, {
+    method: 'GET',
+    headers: { 'x-cms-session': S.token || '' },
+    cache: 'no-store'
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || 'อ่าน Background Monitor ไม่สำเร็จ');
+  if (!payload.latest) return null;
+  return {
+    ...payload.latest,
+    findings: ocAiJson(payload.latest.findings, []),
+    metrics: ocAiJson(payload.latest.metrics, {})
+  };
+}
 async function ocAiCollect() {
   const tasks = await Promise.allSettled([
     ocCall('perf'),
     ocCall('events'),
-    ocCall('dash', { days: 7 })
+    ocCall('dash', { days: 7 }),
+    ocAiReadBackground()
   ]);
   return {
     at: new Date().toISOString(),
     perf: tasks[0].status === 'fulfilled' ? tasks[0].value : null,
     events: tasks[1].status === 'fulfilled' ? tasks[1].value : null,
     dash: tasks[2].status === 'fulfilled' ? tasks[2].value : null,
-    errors: tasks.map((x, i) => x.status === 'rejected' ? ['perf','events','dash'][i] : null).filter(Boolean)
+    background: tasks[3].status === 'fulfilled' ? tasks[3].value : null,
+    errors: tasks.map((x, i) => x.status === 'rejected' ? ['perf','events','dash','background monitor'][i] : null).filter(Boolean)
   };
+}
+async function ocAiRunBackgroundNow() {
+  const response = await fetch(IT_MONITOR_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-cms-session': S.token || '' },
+    body: JSON.stringify({ action: 'run' }),
+    cache: 'no-store'
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || 'สั่งตรวจระบบไม่สำเร็จ');
+  return payload.result;
 }
 function ocAiAnalyse() {
   const data = OC.aiData || {}, checks = (OC.status && OC.status.checks) || [];
@@ -64,7 +98,31 @@ function ocAiPanelHtml() {
     </div>
     <p class="note">${esc(status)} · วิเคราะห์จาก IT Status, Performance, Event History และ Incident 7 วัน</p>
     <div class="group">${a.insights.map(x => `<div class="row static">${ocDot(x.level)}<span class="main"><span class="t">${esc(x.title)}</span><span class="s">${esc(x.detail)} · แนวทาง: ${esc(x.action)}</span></span>${ocChip(x.level === 'bad' ? 'bad' : x.level === 'warn' ? 'warn' : 'ok')}</div>`).join('') || empty('ไม่พบความผิดปกติจากข้อมูลที่รวบรวม')}</div>
-    <div class="actions" style="margin:10px 0 0"><button class="btn" type="button" data-ai-refresh>วิเคราะห์ข้อมูลใหม่</button><span class="grow"></span><span class="muted" style="font-size:12px">อัปเดตอัตโนมัติทุก 5 นาทีขณะเปิดหน้าระบบ IT</span></div>
-    <p class="note">หมายเหตุ: รุ่นนี้เป็น Diagnostic Engine แบบวิเคราะห์กฎ/แนวโน้ม ไม่ใช่ Generative AI/ChatGPT และไม่ส่งข้อมูลพนักงานออกไปยังผู้ให้บริการ AI ภายนอก</p>
+    <div class="actions" style="margin:10px 0 0"><button class="btn" type="button" data-ai-refresh>ตรวจข้อมูลหน้า IT ใหม่</button><span class="grow"></span><span class="muted" style="font-size:12px">ข้อมูลส่วนนี้อัปเดตขณะเปิดหน้า IT</span></div>
+    <p class="note">Diagnostic Engine วิเคราะห์กฎและแนวโน้ม ไม่ใช่ Generative AI/ChatGPT และไม่ส่งข้อมูลพนักงานออกไปยังผู้ให้บริการ AI ภายนอก</p>
+  </section>${ocAiBackgroundHtml(d.background)}`;
+}
+function ocAiBackgroundHtml(row) {
+  if (!row) return `<section class="group pad" style="margin-top:12px"><div class="h2">🛰️ Background IT Monitor <span class="spacer"></span><span class="chip warn">รอรอบตรวจแรก</span></div><p class="muted">ตัวตรวจเบื้องหลังทำงานอัตโนมัติทุก 5 นาที แม้ปิดหน้า IT หรือปิดเบราว์เซอร์</p><div class="actions"><button class="btn primary" type="button" data-ai-run-now>ตรวจระบบเดี๋ยวนี้</button></div></section>`;
+  const m = row.metrics || {}, f = Array.isArray(row.findings) ? row.findings : [];
+  const status = row.status === 'critical' ? 'bad' : row.status === 'warning' ? 'warn' : 'ok';
+  const statusText = row.status === 'critical' ? 'ต้องแก้ไข' : row.status === 'warning' ? 'มีรายการต้องติดตาม' : 'ปกติ';
+  const stamp = row.checked_at ? new Date(row.checked_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+  const mins = v => v == null ? '-' : Number(v).toFixed(1) + ' นาที';
+  return `<section class="group pad" style="margin-top:12px">
+    <div class="h2">🛰️ Background IT Monitor <span class="spacer"></span><span class="chip ${status}">${statusText}</span></div>
+    <div class="h2" style="font-size:26px;margin:8px 0">Risk Score ${Number(row.risk_score ?? 0)}/100 <span class="spacer"></span><small class="muted" style="font-size:12px;font-weight:400">ตรวจล่าสุด ${esc(stamp)}</small></div>
+    <p class="note">ตรวจอัตโนมัติทุก 5 นาทีบนเซิร์ฟเวอร์ ทำงานต่อเนื่องแม้ Owner ปิดหน้า IT หรือปิดอุปกรณ์</p>
+    <div class="kpis" style="margin:8px 0 12px">
+      <div class="kpi ${m.backofficeCronActive && m.backofficeCronLastStatus === 'succeeded' ? 'ok' : 'bad'}"><b>${m.backofficeCronActive && m.backofficeCronLastStatus === 'succeeded' ? 'ปกติ' : 'ตรวจสอบ'}</b><span>Back Office Cron</span></div>
+      <div class="kpi ${(m.outboxErrors24h || 0) ? 'warn' : 'ok'}"><b>${Number(m.outboxErrors24h || 0)}</b><span>Outbox errors / 24h</span></div>
+      <div class="kpi ${(m.staleOrders || 0) ? 'warn' : 'ok'}"><b>${Number(m.staleOrders || 0)}</b><span>ออเดอร์ค้างเกิน 90 นาที</span></div>
+      <div class="kpi"><b>${Number(m.orders24h || 0)}</b><span>Orders / 24h</span></div>
+      <div class="kpi ${(m.supaHeartbeatAgeMinutes ?? 99) > 4 ? 'warn' : 'ok'}"><b>${mins(m.supaHeartbeatAgeMinutes)}</b><span>Supabase heartbeat</span></div>
+      <div class="kpi ${(m.orderHeartbeatAgeMinutes ?? 99) > 4 ? 'warn' : 'ok'}"><b>${mins(m.orderHeartbeatAgeMinutes)}</b><span>Order heartbeat</span></div>
+    </div>
+    <div class="group">${f.map(x => `<div class="row static">${ocDot(x.level === 'critical' ? 'bad' : x.level === 'warning' ? 'warn' : 'ok')}<span class="main"><span class="t">${esc(x.title || x.code)}</span><span class="s">${esc(x.detail || '')} · แนวทาง: ${esc(x.action || '')}</span></span>${ocChip(x.level === 'critical' ? 'bad' : x.level === 'warning' ? 'warn' : 'ok')}</div>`).join('') || empty('ไม่มีข้อค้นพบ')}</div>
+    <div class="actions"><button class="btn primary" type="button" data-ai-run-now>ตรวจระบบเดี๋ยวนี้</button><span class="grow"></span><span class="muted" style="font-size:12px">ประวัติเก็บ 90 วัน</span></div>
   </section>`;
+}
 }
