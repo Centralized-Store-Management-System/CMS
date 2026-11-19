@@ -117,3 +117,11 @@ Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new
 - ไม่เปลี่ยน schema, Edge Function หรือสิทธิ์การเข้าถึงเดิมในส่วนนี้
 - Commits: `db0bc09`, `ff2ac4b`, `8759026`
 - สถานะตรวจสอบ: ตรวจพบ source changes บน `main`; ยังไม่ถือว่า UAT ผ่านจนกว่าจะทดสอบจริงด้วยบัญชี Owner/HR และยืนยัน branch isolation หลัง GitHub Pages deploy
+
+
+## HR Documents API CORS correction (19 พ.ย. 2569)
+- ตรวจ logs พบ browser preflight `OPTIONS` สำหรับรายการเอกสารตอบ HTTP 403 ที่ Edge Function v5 จึงถูก browser ปิดกั้นและแสดง `Failed to fetch`
+- สาเหตุคือ GitHub Pages origin ที่ใช้งานจริง `https://centralized-store-management-system.github.io` ไม่อยู่ใน CORS allowlist เดิม
+- เพิ่ม exact origin นี้ใน allowlist โดยยังคง origin เดิมไว้และไม่เปิด wildcard
+- Deploy Edge Function `hr-documents` เป็น ACTIVE v6; GitHub source commit `390f36a`
+- ตรวจ Function metadata หลัง deploy ยืนยัน v6 ACTIVE และมี allowlist ทั้งสอง domains; รอ reload และตรวจผลจาก browser จริงเพื่อยืนยันหลังแก้ไข
