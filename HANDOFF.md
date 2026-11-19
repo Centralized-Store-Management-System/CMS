@@ -106,3 +106,13 @@
 - เพิ่ม allowlist ให้รองรับทั้งสอง exact origins; ไม่ใช้ wildcard
 - Deploy `hr-documents` ACTIVE v6; source mirror `supabase/functions/hr-documents/index.ts` commit `390f36a`
 - ยืนยันจาก Supabase Function metadata ว่า v6 ACTIVE และ allowlist มีทั้งสอง origins; ต้อง reload หน้า HR เพื่อให้เกิด request ใหม่และยืนยัน end-to-end จาก browser
+
+
+### Owner Console: dedicated AI Monitoring Advanced menu (19 พ.ย. 2569)
+- ก่อนแก้ Advanced panel ถูกฝังไว้ท้ายหน้า `ตรวจ & ซ่อมอัตโนมัติ` เท่านั้น จึงไม่ปรากฏเป็นเมนูแยกใน sidebar ตามที่ผู้ใช้คาดหวัง
+- เพิ่ม nav route `#ai` และเมนู `AI Monitoring · Advanced` ภายใต้ `2. Super Advance IT` แยกจาก `ตรวจ & ซ่อมอัตโนมัติ`
+- หน้า Advanced ดึง 4 แหล่งเดิม: IT Status, Performance, Event History และ Incident Dashboard 7 วัน; แสดงผลจาก `ocAiPanelHtml()` เดิมและ Background IT Monitor
+- เปิดหน้า AI แล้วตั้ง refresh ทุก 5 นาที; ออกจากหน้าจะ clear timer ตามกลไก `ocGo()` เดิม. Server-side pg_cron monitor ยังคงทำงานทุก 5 นาทีโดยไม่ขึ้นกับหน้าเว็บ
+- เอา AI panel ออกจากหน้า `ตรวจ & ซ่อมอัตโนมัติ` เพื่อลดความซ้ำซ้อน; ไม่แตะระบบซ่อม/คำสั่ง heal และไม่แก้ Edge Function เดิม
+- Files: `js/owner.js`, `owner.html` (cache bust owner.js 4.9.3)
+- Commit: `258cb16` (dedicated route), `77eebce` (asset cache bust)
