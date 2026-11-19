@@ -75,7 +75,19 @@ async function ocGo(view) {
     if (view === 'perf') { OC.perf = await ocCall('perf'); ocMain(ocPerf()); }
     if (view === 'events') { OC.events = (await ocCall('events')).events; ocMain(ocEvents()); }
     if (view === 'auth') { OC.auth = await ocCall('authList'); ocMain(ocAuth()); }
-  } catch (e) { if (e.code === 'SESSION' || e.code === 'PERM') { OC.after = view; return ocLogin(e.message); } ocMain(`<p class="status bad">${esc(e.message)}</p>`); }
+  } catch (e) {
+    if (e.code === 'SESSION') {
+      // คงหน้า Owner Console ไว้ ไม่เปลี่ยนไปหน้า Login อัตโนมัติระหว่างงานกำลังทำงาน
+      const isApp = typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.active();
+      ocMain(`<div class="status bad"><b>การเชื่อมต่อเซสชันสะดุด</b><p>หน้านี้ยังไม่ถูกปิด ระบบไม่ได้พาไปหน้าเข้าสู่ระบบอัตโนมัติ</p><button class="btn primary" type="button" data-oc-session-retry="${esc(view)}">${isApp ? 'ปลดล็อกและเชื่อมต่อใหม่' : 'เข้าสู่ระบบอีกครั้ง'}</button></div>`);
+      return;
+    }
+    if (e.code === 'PERM') {
+      ocMain(`<p class="status bad">บัญชีนี้ไม่มีสิทธิ์ดำเนินการในเมนูนี้ กรุณาตรวจสอบสิทธิ์กับผู้ดูแลระบบ</p>`);
+      return;
+    }
+    ocMain(`<p class="status bad">${esc(e.message)}</p>`);
+  }
 }
 const ocMain = h => { const m = $('#oc-main'); if (m) m.innerHTML = h; };
 
@@ -183,6 +195,17 @@ function ocReport() {
 
 /* ---------- ปุ่ม ---------- */
 document.addEventListener('click', async e => {
+  const sessionRetry = e.target.closest('[data-oc-session-retry]');
+  if (sessionRetry) {
+    e.preventDefault();
+    const view = sessionRetry.dataset.ocSessionRetry || OC.view || 'dash';
+    if (typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.active()) {
+      if (await OWNER_PWA_LOCK.restore()) return ocGo(view);
+      return; // ยกเลิกปลดล็อกแล้วคงหน้าเดิม
+    }
+    OC.after = view;
+    return ocLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบเพื่อทำงานต่อ');
+  }
   const land = e.target.closest('[data-land]');
   if (land) { e.preventDefault(); if (OC.me) return ocGo('dash'); if (typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.active()) { if (await OWNER_PWA_LOCK.restore()) { try { OC.me = await API.call('me', { t: S.token }); return ocGo('dash'); } catch (x) { /* */ } } return; } OC.after = 'dash'; return ocLogin(); }
   const dd = e.target.closest('[data-dday]'); if (dd) { OC.dsel = dd.dataset.dday; return ocMain(ocDash()); }
