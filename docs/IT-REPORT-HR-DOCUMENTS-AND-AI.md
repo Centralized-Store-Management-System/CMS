@@ -143,3 +143,15 @@ Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new
 - สร้าง `hr-employee-documents` bucket ผ่าน migration ให้เป็น Private (`public=false`), จำกัด 20 MB และ MIME PDF/JPG/PNG/WEBP; ตรวจ record หลัง migration แล้ว
 - Source commit `87c3ef5`; migration `20261119150233_create_private_hr_employee_documents_bucket`
 - สถานะ: root cause fixed + private bucket provisioned; ต้องยืนยัน upload จริงหลัง deployment ก่อนระบุว่า end-to-end ผ่าน
+
+
+## Follow-up: Background IT Monitor CORS + performance warning calibration (19 พ.ย. 2569)
+- Root cause of `Failed to fetch` on Background IT Monitor: preflight OPTIONS to `it-monitor` was rejected with 403 because actual GitHub Pages hostname was absent from the allowlist. Added the exact second hostname while retaining the original; deployed `it-monitor` ACTIVE v2. No wildcard CORS.
+- Tuned performance diagnosis: a small number of sampled request failures now creates a warning rather than an immediate red/bad status; critical classification reserved for sustained failure ratio (`fail >= 5` and `fail >= sample count`) or severe latency (P95 >= 15s / max >= 30s). P95 >= 8s or max >= 15s remains warning.
+- Browser-side JS syntax checked; scheduled server monitor still returns HTTP 200 after deploy. Latest front-end preflight from production domain should be confirmed after user refreshes Owner Console.
+
+## HR Documents directory controls and upload verification (19 พ.ย. 2569)
+- Filename itself is now clickable for preview. Each row shows `View | ลบ` from the Documents directory (not only inside the employee upload dialog). Delete uses authenticated API and updates the directory after success.
+- Cache bust updated: `hr-documents.js?v=1.1.1` and `it-ai.js?v=1.0.2`.
+- Production verification: function logs include HR upload POST 200, list GET 200, and preview GET 200; DB/storage consistency query found 2 active metadata records and matching objects for both. Bucket is confirmed private.
+- Commits: `2b7cd1b`, `515799f`, `d66030a`, `c04ebbb`, `e481111`.
