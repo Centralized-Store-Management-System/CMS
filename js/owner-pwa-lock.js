@@ -25,7 +25,10 @@ const OWNER_PWA_LOCK = (() => {
   const hasVault = () => !!read();
   try { if (!mobile && sessionStorage.getItem('amz.appmode') !== '1' && localStorage.getItem(KEY)) { localStorage.removeItem(KEY); localStorage.removeItem(FAIL); } } catch (_) { /* PC: ล้างรหัสที่เคยตั้งไว้ กลับไปใช้ระบบเดิม */ }
   const cryptoOk = () => !!(window.crypto && crypto.subtle);
-  const active = () => standalone() && cryptoOk() && hasVault();   // กุญแจนี้มีเฉพาะเครื่องที่ Owner ผูกไว้
+  // จำกัดกลไก Owner Lock เฉพาะ owner.html และ Back Office ที่เปิดผ่านทาง Owner เท่านั้น
+  // ป้องกันไม่ให้ PWA ของพนักงาน/Manager บนเครื่องเดียวกันถูกบังคับใช้ PIN ของ Owner
+  const ownerContext = () => onOwnerPage || fromOwner();
+  const active = () => ownerContext() && standalone() && cryptoOk() && hasVault();
   const fails = () => { try { return JSON.parse(localStorage.getItem(FAIL) || 'null') || { n: 0, until: 0 }; } catch (_) { return { n: 0, until: 0 }; } };
   const setFails = f => { try { f && (f.n || f.until) ? localStorage.setItem(FAIL, JSON.stringify(f)) : localStorage.removeItem(FAIL); } catch (_) { /* */ } };
   const devName = () => { const u = navigator.userAgent; return (/iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Windows/.test(u) ? 'Windows' : /Mac/.test(u) ? 'Mac' : 'อุปกรณ์') + ' · แอป Owner'; };
@@ -205,7 +208,7 @@ const OWNER_PWA_LOCK = (() => {
   }, true);
 
   // หน้าจัดการร้าน (เปิดจากแอป Owner): ไม่มี session → ปลดล็อกด้วยรหัส แทนหน้าเข้าระบบ
-  if (!onOwnerPage && typeof renderLogin === 'function') {
+  if (!onOwnerPage && fromOwner() && typeof renderLogin === 'function') {
     const login0 = renderLogin;
     let skip = false, unlockUi = null;
     const tryUnlock = msg => {
