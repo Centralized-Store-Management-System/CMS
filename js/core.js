@@ -63,10 +63,11 @@ function restoreBranch() {
 }
 
 /* ===== เชื่อมต่อ Apps Script (JSONP + POST) หรือโหมดทดลอง ===== */
-const validUrl = u => /^https:\/\/script\.google\.com\/(a\/macros\/[^/]+|macros)\/s\/[\w-]+\/exec$/.test(u);
+const validUrl = u => /^https:\/\/script\.google\.com\/(a\/macros\/[^/]+|macros)\/s\/[\w-]+\/exec$/.test(u) || /^https:\/\/[a-z0-9]{20}\.supabase\.co\/functions\/v1\/[\w-]+$/.test(u);   // Apps Script เดิม หรือ Supabase
 function loadCfg() {
   S.cfg = LS.get('amz.cfg', { apiUrl: '' });
   if (!S.cfg.apiUrl && window.AMZ_API && validUrl(window.AMZ_API)) S.cfg.apiUrl = window.AMZ_API;   // URL ของร้านจาก js/config.js
+  if (window.AMZ_API && /supabase\.co/.test(window.AMZ_API) && /script\.google\.com/.test(S.cfg.apiUrl || '')) { S.cfg.apiUrl = window.AMZ_API; LS.set('amz.cfg', S.cfg); }   // ย้ายไป Supabase: เครื่องที่จำ URL เดิมสลับเอง
   const q = new URLSearchParams(location.search).get('api');
   if (q && validUrl(q)) { S.cfg.apiUrl = q; LS.set('amz.cfg', S.cfg); }
   S.demo = !S.cfg.apiUrl;

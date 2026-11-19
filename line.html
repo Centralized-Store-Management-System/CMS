@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Café Amazon</title>
+<style>
+  body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;background:#F4F5F2;color:#17221C;display:grid;place-items:center;min-height:100vh}
+  .box{padding:32px 24px;text-align:center}
+  .spin{width:36px;height:36px;border:3px solid #CFE3D7;border-top-color:#17694A;border-radius:50%;margin:0 auto 14px;animation:s .8s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="box" id="box"><div class="spin" aria-hidden="true"></div><div>กำลังเปิด…</div></div>
+<script>
+/* หน้ากลางสำหรับลิงก์จากการ์ด LINE (ยืนยันด้วย PIN / อนุมัติ / ลงทะเบียน)
+ * ระบบหลังร้านอยู่บน Supabase ซึ่งส่งหน้าเว็บตรงไม่ได้ → หน้านี้ขอเนื้อหามาแสดง และส่งฟอร์มต่อให้ */
+(function () {
+  var API = (window.AMZ_API_PAGE || 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/backoffice');
+  var HOOK = '<script>(' + hook.toString() + ')(' + JSON.stringify(API) + ');<\/script>';
+  function show(r) {
+    var html = String(r.html || '');
+    html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, HOOK + '</body>') : html + HOOK;
+    document.open(); document.write(html); document.close();
+    if (r.title) document.title = r.title;
+  }
+  function fail(msg) {
+    document.getElementById('box').innerHTML = '<div style="font-size:40px">⚠️</div><b>เปิดไม่ได้</b><p style="color:#56635B">' + msg + '</p><button onclick="location.reload()" style="font:inherit;padding:10px 20px;border-radius:12px;border:0;background:#10392A;color:#fff">ลองใหม่</button>';
+  }
+  var q = location.search.replace(/^\?/, '');
+  fetch(API + '?' + q + (q ? '&' : '') + '__fmt=page', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (r) { if (r && r.html !== undefined) show(r); else fail((r && r.error) || 'ลิงก์ไม่ถูกต้อง'); })
+    .catch(function () { fail('ตรวจอินเทอร์เน็ตแล้วลองใหม่'); });
+
+  // ฝังในหน้าที่แสดง: ส่งฟอร์มผ่าน fetch แล้วแสดงผลลัพธ์ในหน้าเดิม
+  function hook(API) {
+    document.addEventListener('submit', function (ev) {
+      var f = ev.target; if (!f || f.tagName !== 'FORM') return;
+      ev.preventDefault();
+      var btn = f.querySelector('[type=submit],button'); if (btn) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'กำลังส่ง…'; }
+      var act = f.getAttribute('action') || location.href, qs = act.indexOf('?') >= 0 ? act.slice(act.indexOf('?') + 1) : '';
+      var body = new URLSearchParams(new FormData(f));
+      if (ev.submitter && ev.submitter.name) body.append(ev.submitter.name, ev.submitter.value);
+      var method = (f.getAttribute('method') || 'get').toLowerCase();
+      var req = method === 'post'
+        ? fetch(API + '?' + qs + (qs ? '&' : '') + '__fmt=page', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })
+        : fetch(API + '?' + body.toString() + '&__fmt=page', { cache: 'no-store' });
+      req.then(function (r) { return r.json(); }).then(function (r) {
+        var html = String(r.html || '');
+        html = html.replace(/<\/body>/i, '<script>(' + hook.toString() + ')(' + JSON.stringify(API) + ');<\/script></body>');
+        document.open(); document.write(html); document.close();
+      }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t; } alert('ส่งไม่สำเร็จ ลองใหม่'); });
+    }, true);
+  }
+})();
+</script>
+</body>
+</html>
