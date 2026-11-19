@@ -124,3 +124,12 @@
 - สร้าง bucket `hr-employee-documents` ผ่าน migration `20261119150233_create_private_hr_employee_documents_bucket`; ยืนยัน DB แล้วว่า `public=false`, size limit 20MB, MIME จำกัด PDF/JPG/PNG/WEBP
 - GitHub: function fix commit `87c3ef5`; migration mirror commit ด้านล่าง
 - ยังไม่ทดสอบไฟล์จริง end-to-end หลัง deployment; ให้ผู้ใช้ลอง upload ใหม่แล้วตรวจ POST result/storage object/metadata row ใน logs ก่อนปิดงาน
+
+
+### IT Monitor CORS + diagnostic severity tuning; HR Documents row actions (19 พ.ย. 2569)
+- ตรวจ screenshot/production logs: `it-monitor` browser preflight OPTIONS ถูก 403 เพราะ allowlist เดิมมีเพียง `centralized-store-management.github.io`; เพิ่ม exact origin `https://centralized-store-management-system.github.io` โดยไม่เปิด wildcard และ deploy `it-monitor` ACTIVE v2. Cron endpoint ยังคง POST 200 ตามรอบทุก 5 นาที
+- ปรับ `js/it-ai.js`: isolated/small sample failures ไม่ถูกจัดเป็นระบบผิดปกติระดับ bad อีกต่อไป; classify as warning. Critical คงไว้เมื่อ P95 >=15s, max >=30s หรือ failure count >=5 และเท่ากับ/มากกว่าจำนวน sample; 8s/15s latency เป็น warning
+- HR Documents directory: filename กดเพื่อ View ได้ทันที; แสดงปุ่ม View | ลบ ในแถวรายการ; ลบผ่าน authenticated `hr-documents` API และ update list หลัง success
+- Cache bust: `owner.html` it-ai 1.0.2; `index.html` hr-documents 1.1.1
+- Verified JS source syntax for `it-ai.js`, `hr-documents.js`, `owner.js`; verified `it-monitor` ACTIVE v2; verified document bucket private; DB check found 2 active doc rows and both have matching Storage objects (no filename/employee PII printed). Function logs show upload POST 200, document listing GET 200, and view GET 200
+- Commits: monitor CORS `2b7cd1b`; AI thresholds `515799f`; HR row actions `d66030a`; cache bust `c04ebbb` + `e481111`
