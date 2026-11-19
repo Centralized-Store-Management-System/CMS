@@ -10,7 +10,7 @@ import zlib from 'node:zlib';
 
 const SERVICES = ['SpreadsheetApp', 'PropertiesService', 'CacheService', 'LockService', 'Utilities', 'DriveApp', 'MailApp', 'UrlFetchApp', 'ScriptApp', 'ContentService', 'HtmlService', 'Logger', 'Session', 'Date', 'SUPA', 'Math'];
 const BIG_CACHE = 8 * 1024;          // ค่าแคชใหญ่กว่านี้เก็บในเครื่องอย่างเดียว (เป็นแคชข้อมูล หายได้)
-const MAX_RUNS = 25;
+const MAX_RUNS = 60;
 
 // สุ่มแบบกำหนดเมล็ด: รันซ้ำได้ค่าเดิมทุกครั้ง (ข้อความ LINE ที่ส่งไปแล้วตรงกับข้อมูลที่บันทึก)
 function rng(seed) {
@@ -78,9 +78,18 @@ export function createRuntime({ factory, store, env = {} }) {
     else if (kind === 'byname') fileMemo.set(key, store.filesByName(arg[0], arg[1]));
     else if (kind === 'bytes') fileMemo.set(key, store.fileBytes(arg));
   }
-  async function resolve(need) {
+  async function resolve(need, meta) {
     const { kind, key, arg } = need;
-    if (kind === 'sheet') { const [b, n] = arg; sheetCache.set(key, await store.loadSheet(b, n)); }
+    if (kind === 'sheet') {
+      // โหลดทุกแผ่นที่ยังไม่มี/เก่า ในคำสั่งเดียว (คำขอแรกของเครื่อง รันซ้ำแค่ 1 รอบ)
+      if (store.loadSheets && meta) {
+        const stale = meta.sheets.filter(x => { const c = sheetCache.get(x.book + '|' + x.name); return !c || c.ver < x.ver; }).map(x => [x.book, x.name]);
+        if (!stale.some(x => x[0] + '|' + x[1] === key)) stale.push(arg);
+        const got = await store.loadSheets(stale);
+        for (const k of Object.keys(got)) sheetCache.set(k, got[k]);
+        if (!got[key]) sheetCache.set(key, { ver: 0, rows: [] });
+      } else { const [b, n] = arg; sheetCache.set(key, await store.loadSheet(b, n)); }
+    }
     else if (kind === 'fetch') fetchMemo.set(key, await store.fetch(arg.url, arg.opts));
     else if (kind === 'file') fileMemo.set(key, await store.fileMeta(arg));
     else if (kind === 'byname') fileMemo.set(key, await store.filesByName(arg[0], arg[1]));
@@ -423,7 +432,7 @@ export function createRuntime({ factory, store, env = {} }) {
       const { st, value, error } = runOnce(meta, body, ctl);
       if (st.need) {
         if (++runs > MAX_RUNS) throw new Error('runtime: too many reloads (' + st.need.kind + ' ' + st.need.key + ')');
-        await resolve(st.need); continue;
+        await resolve(st.need, meta); continue;
       }
       if (st.out.line.length) {   // ส่ง LINE ที่ค้าง แล้วรันซ้ำด้วยผลจริง
         if (++runs > MAX_RUNS) throw new Error('runtime: too many LINE rounds');

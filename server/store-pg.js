@@ -41,6 +41,17 @@ export function pgStore({ postgres, dbUrl, supabaseUrl, serviceKey, resendKey, m
       for (const x of rows) { while (out.length < x.r - 1) out.push([]); out[x.r - 1] = x.vals; }
       return { ver: s ? Number(s.ver) : 0, rows: out };
     },
+    /** หลายแผ่นในคำสั่งเดียว → { 'book|name': { ver, rows } } */
+    async loadSheets(list) {
+      if (!list.length) return {};
+      const pairs = JSON.stringify(list);
+      const vs = await sql`select book, name, ver from backoffice.sheets where (book, name) in (select x->>0, x->>1 from jsonb_array_elements(${pairs}::text::jsonb) x)`;
+      const rows = await sql`select book, sheet, r, vals from backoffice.rows where (book, sheet) in (select x->>0, x->>1 from jsonb_array_elements(${pairs}::text::jsonb) x) order by book, sheet, r`;
+      const out = {};
+      for (const v of vs) out[v.book + '|' + v.name] = { ver: Number(v.ver), rows: [] };
+      for (const x of rows) { const o = out[x.book + '|' + x.sheet]; if (!o) continue; while (o.rows.length < x.r - 1) o.rows.push([]); o.rows[x.r - 1] = x.vals; }
+      return out;
+    },
     async fileMeta(id) { const [f] = await sql`select * from backoffice.files where id = ${id}`; return fileRec(f) || null; },
     async filesByName(folder, name) { return (await sql`select * from backoffice.files where folder = ${folder} and name = ${name} and not trashed order by created_at`).map(fileRec); },
     async fileBytes(rec) { return (await get(rec.shared ? 'backoffice-public' : 'backoffice', rec.id)) || (await get(rec.shared ? 'backoffice' : 'backoffice-public', rec.id)) || Buffer.alloc(0); },
