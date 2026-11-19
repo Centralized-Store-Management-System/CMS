@@ -40,6 +40,7 @@ function ocLogin(msg) {
       const r = await busy($('#oc-go'), () => API.call('login', { code, pin, from: 'Owner Console' }), 'กำลังเข้าสู่ระบบ…');
       if (!ocCan(r)) { API.call('logout', { t: r.token }).catch(() => {}); $('#oc-err').textContent = 'แอปนี้ใช้ได้เฉพาะบัญชี Owner · พนักงานใช้แอปพนักงาน (หลังร้าน / ลงเวลา / LINE)'; return; }
       S.token = r.token; OC.me = r; SS.set(OC.tok, r.token); LS.set('amz.lastCode', code);
+      if (window.OWNER_PWA_LOCK) await OWNER_PWA_LOCK.enroll(r.token);
       ocGo(OC.after || 'dash'); OC.after = '';
     } catch (e) { const el = $('#oc-err'); if (el) el.textContent = e.message; }
   };
@@ -53,7 +54,7 @@ function ocShell(main) {
     <h4>2. Super Advance IT</h4>${nav.slice(1).map(ocNav).join('')}
     <div class="who">${esc(OC.me.name)} · ${esc(OC.me.roleName || OC.me.role)}<br><button class="btn sm" id="oc-out" style="margin-top:8px">ออกจากระบบ</button></div></aside>
     <main class="oc-main" id="oc-main">${main}</main></div>`;
-  $('#oc-out').onclick = $('#oc-out2').onclick = () => { API.call('logout', { t: S.token }).catch(() => {}); S.token = ''; OC.me = null; SS.set(OC.tok, ''); ocLanding('ออกจากระบบแล้ว'); };
+  $('#oc-out').onclick = $('#oc-out2').onclick = () => { API.call('logout', { t: S.token }).catch(() => {}); if (window.OWNER_PWA_LOCK) OWNER_PWA_LOCK.clear(); S.token = ''; OC.me = null; SS.set(OC.tok, ''); ocLanding('ออกจากระบบแล้ว'); };
   function ocNav([k, l, ic, sh]) { return `<a href="#${k}" data-oc="${k}"${OC.view === k ? ' aria-current="page"' : ''}>${icon(ic)}<span class="l">${esc(l)}</span><span class="sh">${esc(sh)}</span></a>`; }
 }
 async function ocGo(view) {
@@ -220,8 +221,9 @@ window.addEventListener('hashchange', () => { const v = location.hash.slice(1); 
   loadCfg();
   try { applyTheme(cachedTheme()); } catch (e) { /* */ }
   S.token = SS.get(OC.tok);
+  if (!S.token && window.OWNER_PWA_LOCK) await OWNER_PWA_LOCK.restore();
   const want = location.hash.slice(1);
   if (!S.token) { if (want && want !== 'home') { OC.after = want; return ocLogin(); } return ocLanding(); }   // หน้าหลักไม่ต้องเข้าระบบ
   try { const me = await API.call('me', { t: S.token }); if (!ocCan(me)) return ocLanding('แอปนี้ใช้ได้เฉพาะบัญชี Owner'); OC.me = me; ocGo(want || 'dash'); }
-  catch (e) { S.token = ''; SS.set(OC.tok, ''); ocLanding(e.code === 'SESSION' ? 'หมดเวลาการใช้งาน กดเมนูเพื่อเข้าสู่ระบบใหม่' : e.message); }
+  catch (e) { S.token = ''; SS.set(OC.tok, ''); if (window.OWNER_PWA_LOCK) OWNER_PWA_LOCK.clear(); ocLanding(e.code === 'SESSION' ? 'หมดเวลาการใช้งาน กดเมนูเพื่อเข้าสู่ระบบใหม่' : e.message); }
 })();
