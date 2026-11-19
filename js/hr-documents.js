@@ -133,6 +133,80 @@
     } catch (e) { status.textContent = e.message; }
   }
 
+  // Documents tab: employee directory first, then each employee's uploads newest-first.
+  const directory = { employeeId: '', documents: [], loading: false, error: '' };
+  function renderDirectory() {
+    const employees = (S.t.employees || [])
+      .filter(e => myEmp(e) && inBr(e.branch))
+      .sort((a, b) => String(a.firstName || '').localeCompare(String(b.firstName || ''), 'th') || String(a.lastName || '').localeCompare(String(b.lastName || ''), 'th'));
+    const emp = employees.find(e => String(e.id) === String(directory.employeeId));
+    if (!emp) {
+      directory.employeeId = '';
+      return `
+        <div class="h2">Documents <span class="spacer"></span><span class="chip">${employees.length} employees</span></div>
+        <p class="note">เลือกชื่อพนักงานเพื่อดูเอกสารที่อัปโหลดไว้ เรียงจากรายการที่อัปโหลดล่าสุด</p>
+        <div class="group hr-doc-directory">
+          ${employees.map(e => `<button type="button" class="row" data-hrdocs-open="${escHtml(e.id)}">
+            ${typeof avatar === 'function' ? avatar(e) : '<span class="avatar">👤</span>'}
+            <span class="main"><span class="t">${escHtml(fullName(e))}</span><span class="s">${escHtml(e.code || '')}${e.position ? ' · ' + escHtml(e.position) : ''}${multiBranch() ? ' · ' + escHtml(branchName(e.branch)) : ''}</span></span>
+            <span class="v" aria-hidden="true">›</span>
+          </button>`).join('') || empty('ยังไม่มีรายชื่อพนักงานในขอบเขตที่คุณดูแล')}
+        </div>`;
+    }
+    return `
+      <div class="h2"><button type="button" class="btn sm" data-hrdocs-back>‹ พนักงานทั้งหมด</button><span class="spacer"></span><button type="button" class="btn primary" data-hrdocs-upload="${escHtml(emp.id)}">จัดการ / เพิ่มเอกสาร</button></div>
+      <div class="group pad" style="margin-bottom:12px">
+        <div class="row static">${typeof avatar === 'function' ? avatar(emp) : '<span class="avatar">👤</span>'}<span class="main"><span class="t">${escHtml(fullName(emp))}</span><span class="s">${escHtml(emp.code || '')}${emp.position ? ' · ' + escHtml(emp.position) : ''}${multiBranch() ? ' · ' + escHtml(branchName(emp.branch)) : ''}</span></span></div>
+      </div>
+      <div class="h2">เอกสารพนักงาน <span class="spacer"></span><span class="chip">${directory.documents.length} รายการ</span></div>
+      <p class="note">เรียงตามเวลาอัปโหลด โดยรายการล่าสุดอยู่ด้านบน · ลิงก์ดูเอกสารมีอายุ 5 นาที</p>
+      ${directory.loading ? '<div class="hr-doc-status">กำลังโหลดเอกสาร…</div>' : ''}
+      ${directory.error ? `<p class="note bad">${escHtml(directory.error)}</p>` : ''}
+      <div class="hr-doc-list">${directory.documents.map(d => `
+        <div class="hr-doc-item">
+          <span aria-hidden="true">${d.mime_type === 'application/pdf' ? '📄' : '🖼️'}</span>
+          <span class="main"><span class="t">${escHtml(d.label)}</span><span class="s">${escHtml(LABELS[d.category] || d.category)} · ${escHtml(d.original_name)} · ${fmtSize(Number(d.size_bytes))}</span><span class="s">อัปโหลด ${escHtml(fmtDate(d.created_at))}</span></span>
+          <span class="mini"><button type="button" class="btn sm" data-hrdocs-view="${escHtml(d.id)}">View</button></span>
+        </div>`).join('') || (!directory.loading ? '<div class="group pad"><p class="muted" style="margin:0">ยังไม่มีเอกสารของพนักงานคนนี้</p></div>' : '')}</div>`;
+  }
+  async function selectDirectoryEmployee(id) {
+    directory.employeeId = String(id);
+    directory.documents = [];
+    directory.loading = true;
+    directory.error = '';
+    App.render();
+    try {
+      const result = await api('?action=list&employeeId=' + encodeURIComponent(id));
+      directory.documents = (result.documents || []).slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    } catch (e) { directory.error = e.message || 'โหลดเอกสารไม่สำเร็จ'; }
+    finally { directory.loading = false; App.render(); }
+  }
+  async function previewDirectoryDocument(id) {
+    try {
+      const r = await api('?action=view&id=' + encodeURIComponent(id));
+      const d = document.createElement('div');
+      d.className = 'hr-doc-viewer';
+      const body = r.mimeType === 'application/pdf'
+        ? `<iframe title="Document preview" src="${escHtml(r.url)}#toolbar=1"></iframe>`
+        : `<img src="${escHtml(r.url)}" alt="เอกสารพนักงาน">`;
+      d.innerHTML = `<header><strong>ตัวอย่างเอกสาร</strong><a class="btn sm" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">เปิดเต็มจอ</a><button type="button" class="btn sm" data-view-close>ปิด</button></header><div class="body">${body}</div><p style="margin:0;color:#fff;text-align:center;font-size:12px">ลิงก์ดูเอกสารมีอายุ 5 นาที</p>`;
+      d.querySelector('[data-view-close]').onclick = () => d.remove();
+      d.addEventListener('click', e => { if (e.target === d) d.remove(); });
+      document.body.appendChild(d);
+    } catch (e) { toast(e.message || 'เปิดเอกสารไม่สำเร็จ'); }
+  }
+  document.addEventListener('click', async ev => {
+    const open = ev.target.closest('[data-hrdocs-open]');
+    const back = ev.target.closest('[data-hrdocs-back]');
+    const view = ev.target.closest('[data-hrdocs-view]');
+    const upload = ev.target.closest('[data-hrdocs-upload]');
+    if (open) { ev.preventDefault(); await selectDirectoryEmployee(open.dataset.hrdocsOpen); }
+    else if (back) { ev.preventDefault(); directory.employeeId = ''; directory.documents = []; directory.error = ''; App.render(); }
+    else if (view) { ev.preventDefault(); await previewDirectoryDocument(view.dataset.hrdocsView); }
+    else if (upload) { ev.preventDefault(); openEmp(upload.dataset.hrdocsUpload); }
+  });
+  window.HRDocuments = { view: renderDirectory };
+
   if (typeof openEmp === 'function') {
     const originalOpenEmp = openEmp;
     openEmp = function (id, draft) {
