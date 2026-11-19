@@ -61,10 +61,16 @@ function ocAiAnalyse() {
   bad.forEach(x => { risk += 22; insights.push({ level: 'bad', title: x.name || 'ระบบผิดปกติ', detail: x.detail || 'ตรวจพบสถานะผิดปกติ', action: 'ตรวจสอบสถานะและใช้คำสั่งซ่อมเฉพาะรายการที่ระบุ' }); });
   warn.forEach(x => { risk += 8; insights.push({ level: 'warn', title: x.name || 'ควรตรวจสอบ', detail: x.detail || 'พบสัญญาณเตือน', action: 'ติดตามผลและตรวจซ้ำหลังดำเนินการ' }); });
   perf.forEach(x => {
-    const p95 = Number(x.p95 || 0), max = Number(x.max || 0), fail = Number(x.fail || 0);
-    if (fail > 0 || p95 >= 8000 || max >= 15000) {
-      risk += Math.min(18, (fail ? 6 : 0) + (p95 >= 8000 ? 8 : 0) + (max >= 15000 ? 4 : 0));
-      insights.push({ level: fail > 0 ? 'bad' : 'warn', title: 'ประสิทธิภาพคำสั่ง ' + (x.action || 'ไม่ระบุ'), detail: 'P95 ' + (p95 / 1000).toFixed(1) + 's · สูงสุด ' + (max / 1000).toFixed(1) + 's · ผิดพลาด ' + fail, action: 'ตรวจช่วงเวลาที่ช้าและดู Event Log ของระบบที่เกี่ยวข้อง' });
+    const p95 = Number(x.p95 || 0), max = Number(x.max || 0), fail = Number(x.fail || 0), n = Number(x.n || 0);
+    // A small number of sampled transient failures is a warning, not a system outage.
+    // Reserve "bad" for sustained failure ratios or clearly severe latency.
+    const severeFailures = fail >= 5 && n > 0 && fail >= n;
+    const critical = p95 >= 15000 || max >= 30000 || severeFailures;
+    const warning = fail > 0 || p95 >= 8000 || max >= 15000;
+    if (critical || warning) {
+      risk += critical ? 12 : 3;
+      const level = critical ? 'bad' : 'warn';
+      insights.push({ level, title: 'ประสิทธิภาพคำสั่ง ' + (x.action || 'ไม่ระบุ'), detail: 'P95 ' + (p95 / 1000).toFixed(1) + 's · สูงสุด ' + (max / 1000).toFixed(1) + 's · ผิดพลาด ' + fail + (n ? ' / ตัวอย่าง ' + n : ''), action: critical ? 'ตรวจ Event Log และช่วงเวลาที่ผิดพลาดซ้ำ ก่อนดำเนินการแก้ไข' : 'เป็นสัญญาณติดตาม ไม่ถือว่าระบบล่มโดยลำพัง ให้ติดตามอัตราผิดพลาดและ P95 ในรอบถัดไป' });
     }
   });
   const errEvents = [...events, ...logs].filter(x => ['error','alert'].includes(String(x.kind || '').toLowerCase()));
