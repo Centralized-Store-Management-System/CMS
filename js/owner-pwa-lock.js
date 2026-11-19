@@ -22,7 +22,7 @@ const OWNER_PWA_LOCK = (() => {
   const read = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.v === 2 ? v : null; } catch (_) { return null; } };
   const hasVault = () => !!read();
   const cryptoOk = () => !!(window.crypto && crypto.subtle);
-  const active = () => standalone() && cryptoOk() && hasVault() && (onOwnerPage || fromOwner());
+  const active = () => standalone() && cryptoOk() && hasVault();   // กุญแจนี้มีเฉพาะเครื่องที่ Owner ผูกไว้
   const fails = () => { try { return JSON.parse(localStorage.getItem(FAIL) || 'null') || { n: 0, until: 0 }; } catch (_) { return { n: 0, until: 0 }; } };
   const setFails = f => { try { f && (f.n || f.until) ? localStorage.setItem(FAIL, JSON.stringify(f)) : localStorage.removeItem(FAIL); } catch (_) { /* */ } };
   const devName = () => { const u = navigator.userAgent; return (/iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Windows/.test(u) ? 'Windows' : /Mac/.test(u) ? 'Mac' : 'อุปกรณ์') + ' · แอป Owner'; };
@@ -195,6 +195,14 @@ const OWNER_PWA_LOCK = (() => {
     const tryUnlock = msg => unlockFlow(msg, { cancel: true }).then(ok => { if (ok) location.reload(); else skip = true; });
     renderLogin = function (msg) { login0(msg); if (!skip && active() && !busyUnlock) tryUnlock(/หมดเวลา/.test(msg || '') ? 'หมดเวลาการใช้งาน ใส่รหัสเพื่อใช้งานต่อ' : ''); };
     if (active() && !S.token) tryUnlock('');
+    // Owner เข้าหน้าจัดการร้านในแอปที่ติดตั้ง (ยังไม่มีรหัส) → ชวนตั้งรหัสหลังเข้าระบบสำเร็จ ครั้งเดียวต่อการเปิดแอป
+    const it = setInterval(() => {
+      if (!standalone() || !cryptoOk() || hasVault()) return;
+      if (!S.token || !S.me || S.me.role !== 'owner' || document.querySelector('.scrim') || document.getElementById('owner-lock')) return;
+      if (SS.get('amz.owner.ask') === '1') return clearInterval(it);
+      SS.set('amz.owner.ask', '1'); clearInterval(it);
+      enroll(S.token);
+    }, 1500);
   }
 
   /* ---------- สำหรับ owner.js ---------- */
@@ -207,7 +215,7 @@ const OWNER_PWA_LOCK = (() => {
   /** หลังเข้าด้วยชื่อผู้ใช้ + PIN + Authenticator สำเร็จ: ชวนตั้งรหัส 6 หลัก */
   async function enroll(token) {
     if (!standalone() || !cryptoOk()) return false;
-    try { if (!(await call0('devReg', { t: token, check: 1, app: 'owner' })).allowed) return false; }
+    try { if (!(await call0('devReg', { t: token, check: 1, app: 'owner' })).allowed) { if (typeof toast === 'function') toast('ยังตั้งรหัสปลดล็อกไม่ได้ (เซิร์ฟเวอร์ยังไม่อัปเดต) ลองปิดแอปแล้วเข้าใหม่'); return false; } }
     catch (e) { if (typeof toast === 'function') toast('ตั้งรหัสปลดล็อกไม่ได้: ' + (e.message || '')); return false; }
     return new Promise(resolve => {
       let first = '';
@@ -220,7 +228,7 @@ const OWNER_PWA_LOCK = (() => {
           try {
             const r = await call0('devReg', { t: token, code, device: devName(), app: 'owner' });
             await seal({ id: r.id, secret: r.secret }, code, r.name);
-            mem = { id: r.id, secret: r.secret, pin: code }; setFails(null); SS.set(UNL, '1');
+            mem = { id: r.id, secret: r.secret, pin: code }; setFails(null); setTok(token);
             close(); if (typeof toast === 'function') toast('ตั้งรหัสแล้ว ครั้งต่อไปเปิดแอปใส่รหัสนี้ได้เลย'); resolve(true); return true;
           } catch (e) { first = ''; ctl.el.querySelector('.ol-t').textContent = 'ตั้งรหัสปลดล็อกแอป Owner'; return e && e.message ? e.message : 'ตั้งรหัสไม่สำเร็จ'; }
         }
