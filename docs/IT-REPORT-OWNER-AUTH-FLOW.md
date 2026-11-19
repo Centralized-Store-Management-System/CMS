@@ -45,11 +45,13 @@ API หลักของระบบ: Supabase Edge Function `backoffice` ผ�
 1. เปลี่ยนลำดับการทำงานของตัวครอบ `renderLogin()`: หากเป็น Owner PWA ที่มี vault จะเริ่มปลดล็อกก่อน และไม่วาดหน้า Login ระหว่างรอ
 2. รวมคำขอ `unlockFlow()` ที่เกิดพร้อมกันเป็น Promise เดียว ลด race condition และการแสดงหน้าซ้ำ
 3. แก้ `ocGo()`: `PERM` แสดงข้อความแจ้งสิทธิ์ในหน้าปัจจุบัน ไม่พาไป Login; `SESSION` คง Owner Console ไว้และให้ผู้ใช้กดเชื่อมต่อ/เข้าสู่ระบบใหม่เอง
-4. เพิ่ม cache-busting version ของ `owner-pwa-lock.js` ใน `owner.html` และ `index.html` เป็น `2.1.2`
+4. จำกัด Owner lock ให้ทำงานเฉพาะ `owner.html` และหน้า Back Office ที่เปิดผ่าน Owner (`fromOwner()`); ไม่บังคับ PIN ของ Owner กับ PWA พนักงาน/Manager ที่เปิด `index.html` โดยตรง
+5. เพิ่ม cache-busting version ของ `owner-pwa-lock.js` ใน `owner.html` และ `index.html` เป็น `2.1.3`
 
 ## ขอบเขตและข้อควรทราบ
 - รอบนี้แก้เฉพาะ Front-end flow; ไม่แก้ Edge Function หรือ server source เพราะ server business logic อยู่ใน `server/gas.enc` ที่เข้ารหัส และต้นฉบับอยู่นอก repository
-- ไม่เปลี่ยนเงื่อนไขสิทธิ์, อายุ session, วิธี Authenticator, LINE/LIFF หรือระบบ Mgr/Staff
+- ไม่เปลี่ยนเงื่อนไขสิทธิ์, อายุ session, วิธี Authenticator, LINE/LIFF หรือกลไก App Lock ของ Mgr/Staff
+- เพิ่ม guard `ownerContext()` และ `fromOwner()` เพื่อไม่ให้ Owner vault ไปกระทบการใช้งาน PWA ของพนักงานบนเครื่อง/Origin เดียวกัน
 - การแก้ไขนี้ป้องกันหน้า Login แทรกขึ้นโดยไม่ตั้งใจ แต่ไม่ได้ปิดบังการหมดอายุ session จริง หากต่ออายุไม่สำเร็จ ผู้ใช้ยังสามารถเลือกเข้าสู่ระบบใหม่ได้จากปุ่มบนหน้าเดิม
 
 ## Checklist ให้ IT ทดสอบ
