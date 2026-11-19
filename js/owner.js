@@ -221,7 +221,7 @@ window.addEventListener('hashchange', () => { const v = location.hash.slice(1); 
   loadCfg();
   try { applyTheme(cachedTheme()); } catch (e) { /* */ }
   S.token = SS.get(OC.tok);
-  if (!S.token && window.OWNER_PWA_LOCK) await OWNER_PWA_LOCK.restore();
+  if (!S.token && typeof OWNER_PWA_LOCK !== 'undefined') await OWNER_PWA_LOCK.restore();
   const want = location.hash.slice(1);
   if (!S.token) { if (want && want !== 'home') { OC.after = want; return ocLogin(); } return ocLanding(); }   // หน้าหลักไม่ต้องเข้าระบบ
   try { const me = await API.call('me', { t: S.token }); if (!ocCan(me)) return ocLanding('แอปนี้ใช้ได้เฉพาะบัญชี Owner'); OC.me = me; ocGo(want || 'dash'); }
