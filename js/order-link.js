@@ -36,42 +36,57 @@
     document.head.appendChild(style);
   }
 
-  function ownerOrdersView() {
+  function ownerPortalView(page) {
     installOwnerOrdersStyles();
     const run = ++ownerFrameRequest;
-    setTimeout(() => loadOwnerOrdersFrame(run), 0);
+    setTimeout(() => loadOwnerPortalFrame(page, run), 0);
     return '<section class="cms-live-orders-frame">' +
-      '<div class="cms-live-orders-toolbar"><strong>LIVE ORDERS · Café Amazon</strong>' +
-      '<button type="button" data-a="orderEmbedReload">↻ โหลดใหม่</button></div>' +
+      '<div class="cms-live-orders-toolbar"><strong>' + esc(PAGES[page]) + ' · Café Amazon</strong>' +
+      '<button type="button" data-a="orderEmbedReload" data-page="' + esc(page) + '">↻ โหลดใหม่</button></div>' +
       '<div class="cms-live-orders-stage" id="cms-live-orders-stage">' +
-      '<div class="cms-live-orders-loading">กำลังเชื่อมต่อ LIVE ORDERS…</div></div></section>';
+      '<div class="cms-live-orders-loading">กำลังเชื่อมต่อ ' + esc(PAGES[page]) + '…</div></div></section>';
   }
 
-  async function loadOwnerOrdersFrame(run) {
+  async function loadOwnerPortalFrame(page, run) {
     const stage = document.getElementById('cms-live-orders-stage');
-    if (!stage) return;
-    stage.innerHTML = '<div class="cms-live-orders-loading">กำลังยืนยันสิทธิ์ Owner และเชื่อมต่อ LIVE ORDERS…</div>';
+    if (!stage || !PAGES[page]) return;
+    stage.innerHTML = '<div class="cms-live-orders-loading">กำลังยืนยันสิทธิ์ Owner และเชื่อมต่อ ' + esc(PAGES[page]) + '…</div>';
     try {
-      const ticket = await API.call('orderTicket', { t: S.token, page: 'orders' });
+      const ticket = await API.call('orderTicket', { t: S.token, page });
       if (run !== ownerFrameRequest || !document.getElementById('cms-live-orders-stage')) return;
-      const target = new URL(ticket.url, location.href);
+      const rawUrl = typeof ticket === 'string'
+        ? ticket
+        : (ticket && (ticket.url || ticket.href || ticket.redirect_url || ticket.redirectUrl || (ticket.data && ticket.data.url)));
+      if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
+        throw new Error('ระบบหลังร้านไม่ได้ส่ง URL สำหรับ SSO กลับมา (fields: ' + Object.keys(ticket || {}).join(', ') + ')');
+      }
+      const target = new URL(rawUrl, location.href);
       const allowedOrigins = new Set([
         'https://cafe-order-web-admin-portal.github.io',
         'https://cafe-amazon-web-admin-portal.github.io'
       ]);
-      if (!allowedOrigins.has(target.origin) ||
-          !target.pathname.endsWith('/Line-Order/orders.html') ||
-          !target.hash.startsWith('#sso=')) {
-        throw new Error('ลิงก์ SSO จากหลังร้านไม่ถูกต้อง กรุณากดโหลดใหม่');
+      const portalPath = target.pathname.includes('/Line-Order');
+      const ssoToken = target.hash.startsWith('#sso=') && target.hash.length > 8;
+      const validPage = page === 'orders'
+        ? target.pathname.endsWith('/orders.html')
+        : (target.pathname.endsWith('/Line-Order/') || target.pathname.endsWith('/Line-Order/index.html'));
+      if (!allowedOrigins.has(target.origin) || !portalPath || !validPage || !ssoToken) {
+        const reason = [
+          !allowedOrigins.has(target.origin) ? 'origin' : '',
+          !portalPath ? 'portal-path' : '',
+          !validPage ? 'page-path' : '',
+          !ssoToken ? 'missing-sso' : ''
+        ].filter(Boolean).join(', ') || 'unknown';
+        throw new Error('URL จาก CMS ตรวจสอบไม่ผ่าน (' + reason + ') · ' + target.origin + target.pathname + (ssoToken ? ' · SSO พร้อม' : ' · ไม่มี SSO Token'));
       }
       const frame = document.createElement('iframe');
       frame.className = 'cms-live-orders-iframe';
-      frame.title = 'Café Amazon LIVE ORDERS';
+      frame.title = PAGES[page];
       frame.allow = 'geolocation';
       frame.referrerPolicy = 'strict-origin-when-cross-origin';
       const loading = document.createElement('div');
       loading.className = 'cms-live-orders-loading';
-      loading.textContent = 'กำลังเปิด LIVE ORDERS และยืนยันตัวตน Owner…';
+      loading.textContent = 'กำลังเปิด ' + PAGES[page] + ' และยืนยันตัวตน Owner…';
       frame.addEventListener('load', () => {
         window.setTimeout(() => loading.remove(), 1100);
       }, { once: true });
@@ -79,14 +94,14 @@
       frame.src = target.href;
     } catch (error) {
       if (run !== ownerFrameRequest) return;
-      stage.innerHTML = '<div class="cms-live-orders-error"><b>ไม่สามารถเปิด LIVE ORDERS ในหน้านี้ได้</b><br>' +
-        esc(error.message || error) + '<br><button type="button" data-a="orderEmbedReload">ลองอีกครั้ง</button></div>';
+      stage.innerHTML = '<div class="cms-live-orders-error"><b>ไม่สามารถเปิด ' + esc(PAGES[page]) + ' ในหน้านี้ได้</b><br>' +
+        esc(error.message || error) + '<br><button type="button" data-a="orderEmbedReload" data-page="' + esc(page) + '">ลองอีกครั้ง</button></div>';
     }
   }
 
   async function openOrder(page, btn) {
     // Owner opens LIVE ORDERS inside this Back Office page, preserving its sidebar.
-    if (page === 'orders' && isCmsOwner()) { location.hash = '#orders'; return; }
+    if ((page === 'orders' || page === 'catalog') && isCmsOwner()) { location.hash = '#' + page; return; }
     const w = window.open('', '_blank');
     try { if (w) w.document.write('<p style="font:16px sans-serif;padding:24px;color:#2F7D55">กำลังเปิด ' + PAGES[page] + '…</p>'); } catch (e) { /* */ }
     try {
@@ -104,14 +119,14 @@
       : 'จัดการสินค้า หมวดหมู่ ตัวเลือก ราคาและการเปิดขายรายสาขา นำเข้าไฟล์'}</p>
       <p class="muted">ใช้บัญชีเดียวกับหลังร้าน กดแล้วเข้าระบบให้อัตโนมัติ (แท็บใหม่)</p>
       ${hasRef() ? `<button class="btn primary big" data-a="orderOpen:${page}">เปิด ${PAGES[page]}</button>` : '<p class="note bad">ต้องมีบัญชีผู้ใช้ (Users) ที่เปิดใช้งานแล้ว ติดต่อ Owner/Admin</p>'}</div>`;
-    defMod({ key: 'orders', mod: 'stock', label: 'Live Orders', icon: 'orders', desc: 'ระบบออเดอร์ · รับและจัดการออเดอร์', perm: ['orders'], noBranch: true, view: () => isCmsOwner() ? ownerOrdersView() : card('orders'), summary: () => 'รับออเดอร์ LINE / เว็บ แบบ LIVE' });
-    defMod({ key: 'catalog', mod: 'stock', label: 'Web Admin Portal', icon: 'catalog', desc: 'ระบบออเดอร์ · สินค้า ราคา เปิดขาย', perm: ['catalog'], noBranch: true, view: () => card('catalog'), summary: () => 'สินค้า หมวดหมู่ ราคา เปิดขายรายสาขา' });
+    defMod({ key: 'orders', mod: 'stock', label: 'Live Orders', icon: 'orders', desc: 'ระบบออเดอร์ · รับและจัดการออเดอร์', perm: ['orders'], noBranch: true, view: () => isCmsOwner() ? ownerPortalView('orders') : card('orders'), summary: () => 'รับออเดอร์ LINE / เว็บ แบบ LIVE' });
+    defMod({ key: 'catalog', mod: 'stock', label: 'Web Admin Portal', icon: 'catalog', desc: 'ระบบออเดอร์ · สินค้า ราคา เปิดขาย', perm: ['catalog'], noBranch: true, view: () => isCmsOwner() ? ownerPortalView('catalog') : card('catalog'), summary: () => 'สินค้า หมวดหมู่ ราคา เปิดขายรายสาขา' });
     const at = GROUPS.findIndex(g => g[0] === 'Operations');
     GROUPS.splice(at + 1, 0, ['Order System', ['orders', 'catalog']]);
     NAV_ORDER.splice(0, NAV_ORDER.length, ...GROUPS.flatMap(g => g[1]));
     Object.assign(ACT, {
       orderOpen: (a, b) => openOrder(a, b),
-      orderEmbedReload: () => loadOwnerOrdersFrame(++ownerFrameRequest)
+      orderEmbedReload: (a, b) => { const page = b?.dataset?.page || document.querySelector('[data-a="orderEmbedReload"]')?.dataset.page || 'orders'; return loadOwnerPortalFrame(page, ++ownerFrameRequest); }
     });
     // กดเมนูแล้วเปิดระบบออเดอร์เลย (หน้าในหลังร้านเป็นทางสำรอง)
     document.addEventListener('click', e => {
@@ -119,7 +134,7 @@
       if (!a || !hasRef() || e.metaKey || e.ctrlKey) return;
       const page = a.getAttribute('href').slice(1);
       // Owner lets the Back Office router render the embedded orders view in-place.
-      if (page === 'orders' && isCmsOwner()) return;
+      if ((page === 'orders' || page === 'catalog') && isCmsOwner()) return;
       e.preventDefault(); openOrder(page, null);
     }, true);
   }
