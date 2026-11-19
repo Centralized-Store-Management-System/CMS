@@ -89,4 +89,21 @@ Remaining end-to-end checks:
 5. Open Owner > System IT and confirm the four data sources populate and refresh after 5 minutes.
 6. Confirm Staff/Manager PWA, Time Clock, LINE and Line-Order continue to work.
 
+
+## 7) Always-on Background IT Monitor (เพิ่มเติม 19 พ.ย. 2569)
+ผู้ใช้ต้องการให้ระบบตรวจและวิเคราะห์ต่อเนื่องแม้ไม่ได้เปิด Owner > ระบบ IT หรือปิดอุปกรณ์ จึงเพิ่ม Monitor ฝั่ง Server แยกจากหน้าเว็บ
+
+- Edge Function ใหม่: it-monitor (ACTIVE v1; verify_jwt=false แต่ endpoint ภายในตรวจ CRON_KEY และ endpoint อ่าน/สั่งทำงานตรวจ CMS Owner session)
+- pg_cron job ใหม่: it-monitor-every-5-minutes, job_id=2, schedule */5 * * * *, active=true
+- ใช้ backoffice CRON_KEY ที่มีอยู่ ไม่เก็บ secret ไว้ใน source code
+- ทุก 5 นาที backend อ่านข้อมูลสุขภาพจาก DB, SUPA_IT, ORDER_IT, ORDER_SYNC_LAST, ORDER_SSO_LOG, Cron heartbeat, outbox errors, จำนวนออเดอร์ย้อนหลัง 24 ชั่วโมง, ออเดอร์ค้างเกิน 90 นาที และความพร้อม Private HR bucket
+- บันทึก Risk Score, Findings, Metrics ลง public.it_monitor_runs; retention 90 วัน; มี advisory lock กัน monitor ซ้อนกัน
+- หน้า Owner > ระบบ IT อ่านผลล่าสุดจาก monitor และมีปุ่ม ตรวจระบบเดี๋ยวนี้ เพื่อเรียกตรวจทันที; หน้าจอยังโหลด Performance/Event/Incident drilldown เพิ่มเติมขณะเปิดหน้า
+- ทดสอบเรียก backend cron endpoint ด้วย pg_net แล้วได้ HTTP 200 และ snapshot แรก Risk Score 100 / healthy; ขณะตรวจพบ Cron heartbeat ปกติ, outbox errors 0, order sync errors 0, stale orders 0. พบเพียง INFO ว่า HR bucket ยังไม่เริ่มสร้าง (จะสร้างเมื่ออัปโหลดครั้งแรก) และยังไม่ตั้งค่าอีเมล
+- ตรวจแล้ว cron job it-monitor-every-5-minutes active=true
+
+ขอบเขต: Background Monitor ตรวจเฉพาะข้อมูลที่ backend และฐานข้อมูลมี telemetry/heartbeat ให้ใช้ ไม่สามารถตรวจการแสดงผลใน browser/อุปกรณ์ที่ปิดอยู่โดยตรง; รายละเอียด Performance/Event/Incident ของฝั่ง Owner runtime จะถูกดึงเพิ่มเมื่อหน้า IT เปิดอยู่
+
+Commits เพิ่มเติม: 12c3069 (monitor service), dc931a1 + be48f15 (persistent monitor UI), 402fe3a (manual run), 70e33f8 (cache bust).
+
 Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new tables. This is intentional: direct client access is denied by table privileges and RLS; the server-only Edge Function accesses them with service_role. Other existing advisor findings are not part of this change.
