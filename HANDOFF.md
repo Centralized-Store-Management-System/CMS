@@ -116,3 +116,11 @@
 - เอา AI panel ออกจากหน้า `ตรวจ & ซ่อมอัตโนมัติ` เพื่อลดความซ้ำซ้อน; ไม่แตะระบบซ่อม/คำสั่ง heal และไม่แก้ Edge Function เดิม
 - Files: `js/owner.js`, `owner.html` (cache bust owner.js 4.9.3)
 - Commit: `258cb16` (dedicated route), `77eebce` (asset cache bust)
+
+
+### HR Document upload 500 correction (19 พ.ย. 2569)
+- ตรวจ Supabase logs: CORS ผ่านแล้ว (OPTIONS 200, GET list 200) แต่ POST upload ตอบ 500 เพราะ `ensurePrivateBucket()` ตรวจ storage bucket ที่ยังไม่มีอยู่ และ Storage API ตอบ HTTP 400 พร้อม `NoSuchBucket` แทน 404
+- ปรับ `supabase/functions/hr-documents/index.ts` ให้ตรวจ `NoSuchBucket` response และสร้าง bucket ได้อย่างถูกต้อง; deploy Edge Function `hr-documents` ACTIVE v7 (ไม่แก้ backoffice v10)
+- สร้าง bucket `hr-employee-documents` ผ่าน migration `20261119150233_create_private_hr_employee_documents_bucket`; ยืนยัน DB แล้วว่า `public=false`, size limit 20MB, MIME จำกัด PDF/JPG/PNG/WEBP
+- GitHub: function fix commit `87c3ef5`; migration mirror commit ด้านล่าง
+- ยังไม่ทดสอบไฟล์จริง end-to-end หลัง deployment; ให้ผู้ใช้ลอง upload ใหม่แล้วตรวจ POST result/storage object/metadata row ใน logs ก่อนปิดงาน
