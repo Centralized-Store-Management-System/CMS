@@ -40,5 +40,19 @@
       catch (x) { toast(x.message); }
     }
   });
+  // หน้าหลักแอป Owner (ก่อนเข้าระบบ): ปุ่ม "สาขา" → เข้าระบบแล้วไปหน้าสาขาเลย
+  const tile = () => {
+    const m = document.querySelector('.oc-land-menu');
+    if (m && !m.querySelector('[data-brland]')) m.insertAdjacentHTML('beforeend', `<button class="oc-big" type="button" data-brland="1"><span class="ic">${icon('branch')}</span><b>สาขา</b><small>เปลี่ยนชื่อสาขา · ซิงก์ระบบออเดอร์อัตโนมัติ</small></button>`);
+  };
+  if (typeof ocLanding === 'function') { const l0 = ocLanding; window.ocLanding = ocLanding = function () { l0.apply(this, arguments); tile(); }; tile(); }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[data-brland]')) return;
+    e.preventDefault(); e.stopPropagation();
+    if (OC.me) return ocGo('branches');
+    OC.after = 'branches'; ocLogin();
+  }, true);
+  // มือถือ: แถบเมนูล่างมี 7 ปุ่ม
+  const st = document.createElement('style'); st.textContent = '@media (max-width:860px){.oc-side{grid-template-columns:repeat(7,1fr)!important}}'; document.head.appendChild(st);
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'br-name') { const s = document.querySelector('[data-brx="save"]'); if (s) s.click(); } });
 })();
