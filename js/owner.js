@@ -50,7 +50,7 @@ function ocLogin(msg) {
   $('#oc-go').onclick = go; $('#oc-pin').onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 function ocShell(main) {
-  const nav = [['home', 'ทางเข้าระบบร้าน', 'dash', 'หน้าร้าน'], ['dash', 'แดชบอร์ดปัญหารายวัน', 'acct', 'แดชบอร์ด'], ['it', 'ตรวจ & ซ่อมอัตโนมัติ', 'admin', 'ตรวจ/ซ่อม'], ['perf', 'ความเร็ว', 'time', 'ความเร็ว'], ['events', 'เหตุการณ์', 'notify', 'เหตุการณ์'], ['auth', 'วิธีเข้าระบบ', 'users', 'เข้าระบบ']];
+  const nav = [['home', 'ทางเข้าระบบร้าน', 'dash', 'หน้าร้าน'], ['dash', 'แดชบอร์ดปัญหารายวัน', 'acct', 'แดชบอร์ด'], ['it', 'ตรวจ & ซ่อมอัตโนมัติ', 'admin', 'ตรวจ/ซ่อม'], ['ai', 'AI Monitoring · Advanced', 'admin', 'AI Monitor'], ['perf', 'ความเร็ว', 'time', 'ความเร็ว'], ['events', 'เหตุการณ์', 'notify', 'เหตุการณ์'], ['auth', 'วิธีเข้าระบบ', 'users', 'เข้าระบบ']];
   const cur = nav.find(n => n[0] === OC.view) || nav[0];
   $('#root').innerHTML = `<div class="oc"><header class="oc-top"><span class="logo">${icon('cup')}</span><span class="t"><small>Owner Console</small><b>${esc(cur[1])}</b></span><button class="oc-top-out" id="oc-out2" aria-label="ออกจากระบบ">${icon('out')}</button></header><aside class="oc-side"><div class="brand"><span class="logo">${icon('cup')}</span><span><b>Owner Console</b><small>${esc((S.settings && S.settings.shopName) || 'Café Amazon')}</small></span></div>
     <h4>1. ระบบเข้าร้าน</h4>${nav.slice(0, 1).map(ocNav).join('')}
@@ -79,6 +79,19 @@ async function ocGo(view) {
           OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
           if (OC.view === 'it') ocMain(ocIt());
         } catch (e) { /* คงข้อมูลเดิมไว้เมื่อระบบสะดุด */ }
+      }, 300000);
+    }
+    if (view === 'ai') {
+      OC.status = await ocCall('status');
+      OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
+      if (OC.view === 'ai') ocMain(ocAiPage());
+      OC.timer = setInterval(async () => {
+        if (document.hidden || OC.view !== 'ai' || OC.busy) return;
+        try {
+          OC.status = await ocCall('status');
+          OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
+          if (OC.view === 'ai') ocMain(ocAiPage());
+        } catch (e) { /* keep last successful snapshot */ }
       }, 300000);
     }
     if (view === 'dash') { OC.dash = await ocCall('dash', { days: OC.days || 30 }); ocMain(ocDash()); }
@@ -124,7 +137,10 @@ function ocIt() {
     <button class="btn primary" data-heal="__all">ซ่อมทั้งหมดอัตโนมัติ</button><button class="btn" data-oc="it">ตรวจใหม่</button><button class="btn" data-heal="warm">เร่งความเร็ว (อุ่นแคช)</button><button class="btn" data-heal="cacheReset">ล้างแคชทั้งหมด</button></div></div></div>
   ${areas.map(a => `<h3 class="h3">${esc(a)}</h3><div class="group">${s.checks.filter(c => c.area === a).map(c => `<div class="row static">${ocDot(c.status)}<span class="main"><span class="t">${esc(c.name)}</span><span class="s">${esc(c.detail)}</span></span>${ocChip(c.status)}${c.fix && c.status !== 'ok' ? `<button class="btn sm" data-heal="${esc(c.fix.code)}"${c.fix.arg ? ` data-arg='${esc(JSON.stringify(c.fix.arg))}'` : ''}>${esc(c.fix.label)}</button>` : ''}</div>`).join('')}</div>`).join('')}
   <h3 class="h3">เหตุการณ์ล่าสุด</h3>${ocEventList(s.events)}
-  ${typeof ocAiPanelHtml === 'function' ? ocAiPanelHtml() : ''}`;
+  `;
+}
+function ocAiPage() {
+  return '<h1>🧠 AI Monitoring · Advanced</h1><p class="muted">วิเคราะห์สุขภาพระบบจาก 4 แหล่งข้อมูล: IT Status, Performance, Event History และ Incident Dashboard ย้อนหลัง 7 วัน · รีเฟรชอัตโนมัติทุก 5 นาทีขณะเปิดหน้านี้</p>' + (typeof ocAiPanelHtml === 'function' ? ocAiPanelHtml() : '<p class="status bad">ไม่พบ Diagnostic Engine</p>');
 }
 function ocEventList(L) {
   return `<div class="group">${(L || []).map(e => `<div class="row static">${ocDot(e.kind === 'alert' ? 'bad' : e.kind === 'heal' ? 'ok' : 'warn')}<span class="main"><span class="t">${esc(e.title)}</span><span class="s">${esc(e.at)}${e.auto ? ' · อัตโนมัติ' : ''}${e.detail ? ' · ' + esc(e.detail) : ''}</span></span></div>`).join('') || empty('ยังไม่มีเหตุการณ์')}</div>`;
@@ -214,7 +230,7 @@ document.addEventListener('click', async e => {
     try {
       await ocAiRunBackgroundNow();
       OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
-      if (OC.view === 'it') ocMain(ocIt());
+      if (OC.view === 'ai') ocMain(ocAiPage()); else if (OC.view === 'it') ocMain(ocIt());
       toast('ตรวจระบบเบื้องหลังและบันทึกผลแล้ว');
     } catch (err) { toast(err.message || 'ตรวจระบบไม่สำเร็จ'); }
     finally { aiRunNow.disabled = false; aiRunNow.textContent = oldLabel; }
@@ -225,7 +241,7 @@ document.addEventListener('click', async e => {
     aiRefresh.disabled = true;
     try {
       OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
-      if (OC.view === 'it') ocMain(ocIt());
+      if (OC.view === 'ai') ocMain(ocAiPage()); else if (OC.view === 'it') ocMain(ocIt());
       toast('วิเคราะห์ข้อมูลระบบล่าสุดแล้ว');
     } catch (err) { toast(err.message || 'วิเคราะห์ข้อมูลไม่สำเร็จ'); }
     return;
