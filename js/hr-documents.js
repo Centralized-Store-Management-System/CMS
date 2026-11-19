@@ -165,8 +165,8 @@
       <div class="hr-doc-list">${directory.documents.map(d => `
         <div class="hr-doc-item">
           <span aria-hidden="true">${d.mime_type === 'application/pdf' ? '📄' : '🖼️'}</span>
-          <span class="main"><span class="t">${escHtml(d.label)}</span><span class="s">${escHtml(LABELS[d.category] || d.category)} · ${escHtml(d.original_name)} · ${fmtSize(Number(d.size_bytes))}</span><span class="s">อัปโหลด ${escHtml(fmtDate(d.created_at))}</span></span>
-          <span class="mini"><button type="button" class="btn sm" data-hrdocs-view="${escHtml(d.id)}">View</button></span>
+          <span class="main"><span class="t"><button type="button" class="linkbtn" data-hrdocs-view="${escHtml(d.id)}" style="padding:0;text-align:left;font-weight:600">${escHtml(d.original_name)}</button></span><span class="s">${escHtml(d.label)} · ${escHtml(LABELS[d.category] || d.category)} · ${fmtSize(Number(d.size_bytes))}</span><span class="s">อัปโหลด ${escHtml(fmtDate(d.created_at))}</span></span>
+          <span class="mini"><button type="button" class="btn sm" data-hrdocs-view="${escHtml(d.id)}">View</button><button type="button" class="btn sm danger" data-hrdocs-delete="${escHtml(d.id)}">ลบ</button></span>
         </div>`).join('') || (!directory.loading ? '<div class="group pad"><p class="muted" style="margin:0">ยังไม่มีเอกสารของพนักงานคนนี้</p></div>' : '')}</div>`;
   }
   async function selectDirectoryEmployee(id) {
@@ -199,10 +199,21 @@
     const open = ev.target.closest('[data-hrdocs-open]');
     const back = ev.target.closest('[data-hrdocs-back]');
     const view = ev.target.closest('[data-hrdocs-view]');
+    const del = ev.target.closest('[data-hrdocs-delete]');
     const upload = ev.target.closest('[data-hrdocs-upload]');
     if (open) { ev.preventDefault(); await selectDirectoryEmployee(open.dataset.hrdocsOpen); }
     else if (back) { ev.preventDefault(); directory.employeeId = ''; directory.documents = []; directory.error = ''; App.render(); }
     else if (view) { ev.preventDefault(); await previewDirectoryDocument(view.dataset.hrdocsView); }
+    else if (del) {
+      ev.preventDefault();
+      if (!confirm('ยืนยันลบเอกสารนี้? ไฟล์จะถูกลบจาก Private Storage ด้วย')) return;
+      try {
+        await api('', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: del.dataset.hrdocsDelete }) });
+        directory.documents = directory.documents.filter(d => String(d.id) !== String(del.dataset.hrdocsDelete));
+        App.render();
+        toast('ลบเอกสารเรียบร้อยแล้ว');
+      } catch (e) { toast(e.message || 'ลบเอกสารไม่สำเร็จ'); }
+    }
     else if (upload) { ev.preventDefault(); openEmp(upload.dataset.hrdocsUpload); }
   });
   window.HRDocuments = { view: renderDirectory };
