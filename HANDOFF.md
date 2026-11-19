@@ -76,4 +76,4 @@
 - Migration applied; RLS/privileges verified; JavaScript syntax passed; Edge Function hr-documents ACTIVE v1
 - ยังต้องทดสอบ end-to-end ด้วย HR account จริง, PDF/รูปภาพ upload-preview-delete, branch isolation, iPhone/Android และ refresh monitor 5 นาที
 - รายงาน IT: docs/IT-REPORT-HR-DOCUMENTS-AND-AI.md
-- Commits: 1ee228c (birthdays), a8481a6 (document UI), bec3f35 (register HR module), ceafff8 (document service), 6dba685 (secure URL/bucket lazy check), 0c0d9a4 (URL parser fix), 9436cbf (IT diagnostic engine), 12f2da3 + 2846692 (IT integration), 6c0609e (Owner script), b64d349 (IT report)
+- Commits: 1ee228c (birthdays), a8481a6 (document UI), bec3f35 (register HR module), ceafff8 (document service), 6dba685 (secure URL/bucket lazy check), 0c0d9a4 (URL parser fix), 60a57ff (scope formats), 0b28b5d (transactional metadata/audit), bc8f4b5 (single auth check preview), 9436cbf (IT diagnostic engine), 12f2da3 + 2846692 (IT integration), 6c0609e (Owner script), b64d349 (IT report), d3a0299 (report update)
