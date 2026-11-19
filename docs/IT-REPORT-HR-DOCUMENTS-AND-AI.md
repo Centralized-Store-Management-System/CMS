@@ -125,3 +125,12 @@ Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new
 - เพิ่ม exact origin นี้ใน allowlist โดยยังคง origin เดิมไว้และไม่เปิด wildcard
 - Deploy Edge Function `hr-documents` เป็น ACTIVE v6; GitHub source commit `390f36a`
 - ตรวจ Function metadata หลัง deploy ยืนยัน v6 ACTIVE และมี allowlist ทั้งสอง domains; รอ reload และตรวจผลจาก browser จริงเพื่อยืนยันหลังแก้ไข
+
+
+## Owner Console — Dedicated AI Monitoring · Advanced menu (19 พ.ย. 2569)
+- ผู้ใช้ไม่เห็นเมนู Advanced ใน sidebar เพราะเวอร์ชันก่อนฝัง panel ไว้ท้ายหน้า `ตรวจ & ซ่อมอัตโนมัติ` แต่ยังไม่ได้สร้าง route/menu แยก
+- เพิ่มเมนูชัดเจน `AI Monitoring · Advanced` ภายใต้ `2. Super Advance IT` และ route `#ai`; แยกหน้าจาก `ตรวจ & ซ่อมอัตโนมัติ`
+- หน้าใหม่รวบรวมข้อมูลจาก IT Status, Performance, Event History และ Incident Dashboard 7 วัน พร้อม Background IT Monitor; refresh ขณะเปิดหน้า AI ทุก 5 นาที
+- Background cron เดิมยังทำงานทุก 5 นาทีอิสระจาก browser/device
+- ไม่แก้ระบบ heal/repair และไม่เปลี่ยน `backoffice` Edge Function หรือแหล่งข้อมูลเดิม
+- Commits: `258cb16`, `77eebce`
