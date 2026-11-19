@@ -66,19 +66,36 @@
         'https://cafe-order-web-admin-portal.github.io',
         'https://cafe-amazon-web-admin-portal.github.io'
       ]);
-      const ssoToken = ticketTarget.hash.startsWith('#sso=') && ticketTarget.hash.length > 8;
-      if (!allowedOrigins.has(ticketTarget.origin) || !ssoToken) {
+
+      // CMS orderTicket can return either a final portal SSO URL or the
+      // one-time Back Office exchange URL (?__order=...). In the latter case
+      // the browser must navigate the iframe to Supabase so it can perform
+      // the redirect; the URL is not itself the final portal origin.
+      const configuredApi = new URL((S.cfg && S.cfg.apiUrl) || window.AMZ_API || '');
+      const isTicketHandoff =
+        ticketTarget.origin === configuredApi.origin &&
+        ticketTarget.pathname === configuredApi.pathname &&
+        ticketTarget.searchParams.has('__order');
+      const isFinalPortal =
+        allowedOrigins.has(ticketTarget.origin) &&
+        ticketTarget.hash.startsWith('#sso=') &&
+        ticketTarget.hash.length > 8;
+
+      let frameUrl = '';
+      if (isTicketHandoff) {
+        frameUrl = ticketTarget.href;
+      } else if (isFinalPortal) {
+        const portalBase = new URL('/Line-Order/', ticketTarget.origin);
+        const finalTarget = new URL(page === 'orders' ? 'orders.html' : '', portalBase);
+        finalTarget.hash = ticketTarget.hash;
+        frameUrl = finalTarget.href;
+      } else {
         const reason = [
-          !allowedOrigins.has(ticketTarget.origin) ? 'origin' : '',
-          !ssoToken ? 'missing-sso' : ''
+          ticketTarget.searchParams.has('__order') ? '' : 'missing-order-ticket',
+          ticketTarget.hash.startsWith('#sso=') ? '' : 'missing-sso'
         ].filter(Boolean).join(', ') || 'unknown';
-        throw new Error('Ticket จาก CMS ตรวจสอบไม่ผ่าน (' + reason + ') · ' + ticketTarget.origin + (ssoToken ? ' · SSO พร้อม' : ' · ไม่มี SSO Token'));
+        throw new Error('Ticket จาก CMS ไม่ใช่ลิงก์ SSO หรือ Back Office handoff ที่ถูกต้อง (' + reason + ') · ' + ticketTarget.origin + ticketTarget.pathname);
       }
-      // Use canonical Line-Order paths. The backend controls the one-time SSO
-      // hash; ignore any stale/legacy path in the returned URL.
-      const portalBase = new URL('/Line-Order/', ticketTarget.origin);
-      const target = new URL(page === 'orders' ? 'orders.html' : '', portalBase);
-      target.hash = ticketTarget.hash;
       const frame = document.createElement('iframe');
       frame.className = 'cms-live-orders-iframe';
       frame.title = PAGES[page];
@@ -91,7 +108,7 @@
         window.setTimeout(() => loading.remove(), 1100);
       }, { once: true });
       stage.replaceChildren(frame, loading);
-      frame.src = target.href;
+      frame.src = frameUrl;
     } catch (error) {
       if (run !== ownerFrameRequest) return;
       stage.innerHTML = '<div class="cms-live-orders-error"><b>ไม่สามารถเปิด ' + esc(PAGES[page]) + ' ในหน้านี้ได้</b><br>' +
