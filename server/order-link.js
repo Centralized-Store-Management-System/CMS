@@ -67,5 +67,24 @@ export function orderLink({ sql, supabaseUrl, serviceKey, portal = PORTAL }) {
     if (!hash) throw new Error('สร้างลิงก์เข้าระบบไม่ได้');
     return portal + (page === 'catalog' ? '' : 'orders.html') + '#sso=' + encodeURIComponent(hash);
   }
-  return { syncAll, open, portal };
+  /** ผลตรวจสำหรับระบบ IT (55_OrderIT.gs อ่านจาก props ORDER_IT) — เบา รันทุกนาที · ping ฟังก์ชันทุก 30 นาที */
+  const FNS = ['create-order', 'line-webhook', 'update-order-status', 'my-orders', 'line-login', 'share-customer-location'];
+  async function ping() {
+    return Promise.all(FNS.map(async name => {
+      const t0 = Date.now();
+      try { const r = await fetch(supabaseUrl + '/functions/v1/' + name, { method: 'OPTIONS', headers: { origin: 'https://cafe-order-web-admin-portal.github.io', 'access-control-request-method': 'POST' }, signal: AbortSignal.timeout(8000) }); await r.body?.cancel(); return { name, code: r.status, ms: Date.now() - t0 }; }
+      catch (e) { return { name, code: 0, ms: Date.now() - t0, err: String(e.message || e).slice(0, 80) }; }
+    }));
+  }
+  async function health(prev) {
+    const [h] = await sql`select json_build_object(
+      'staff', (select coalesce(json_agg(json_build_object('ref', s.cms_ref, 'name', s.staff_name, 'role', s.role, 'active', s.is_active, 'branch', b.branch_code, 'banned', coalesce(u.banned_until > now(), false), 'auth', u.id is not null)), '[]') from public.staff s left join public.branches b on b.id = s.branch_id left join auth.users u on u.id = s.auth_user_id),
+      'branches', (select coalesce(json_agg(json_build_object('code', branch_code, 'name', branch_name, 'cms', cms_code, 'active', is_active)), '[]') from public.branches),
+      'pending', (select json_build_object('n', count(*), 'oldest', min(created_at), 'first', (array_agg(order_number order by created_at))[1]) from public.orders where order_status = 'pending' and created_at < now() - interval '10 minutes' and created_at > now() - interval '2 days'),
+      'today', (select count(*) from public.orders where created_at >= (date_trunc('day', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok'))) h`;
+    const out = { at: new Date().toISOString(), ...h.h, fn: prev && prev.fn };
+    if (!out.fn || Date.now() - Date.parse(out.fn.at) > 30 * 60000) out.fn = { at: out.at, list: await ping() };
+    return out;
+  }
+  return { syncAll, open, portal, health };
 }
