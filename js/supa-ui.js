@@ -19,9 +19,20 @@
     [/ทั้งฝั่ง Google และที่หน้าเว็บรอจริง/g, 'ทั้งฝั่งเซิร์ฟเวอร์และที่หน้าเว็บรอจริง'],
     [/เปิด Apps Script แล้วรัน /g, 'ให้ผู้ดูแลระบบรันคำสั่ง '],
     [/เชื่อมต่อ Apps Script ไม่ได้/g, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'],
-    [/เชื่อม Google Sheet แล้ว 6 ไฟล์/g, 'เชื่อม Supabase แล้ว']
+    [/เชื่อม Google Sheet แล้ว 6 ไฟล์/g, 'เชื่อม Supabase แล้ว'],
+    /* เพิ่ม 19 พ.ย. (รอบ 2): ข้อความจากเซิร์ฟเวอร์ / หน้า Admin / Owner IT */
+    [/(?:ยังไม่ได้ตั้งรหัส Owner: )?รัน setOwnerPin ใน Apps Script/g, 'ยังไม่ได้ตั้งรหัส Owner (ให้ผู้ดูแลระบบตั้ง setOwnerPin)'],
+    [/เปลี่ยนที่ Apps Script \(setOwnerPin\)/g, 'เปลี่ยนได้ที่ผู้ดูแลระบบ (setOwnerPin)'],
+    [/ให้รัน setup ใน Apps Script ก่อน/g, 'ให้ผู้ดูแลระบบรัน setup ก่อน'],
+    [/Apps Script นี้ไม่รองรับ/g, 'เซิร์ฟเวอร์นี้ไม่รองรับ'],
+    [/URL ต้องเป็นลิงก์ Web App ของ Apps Script ที่ลงท้ายด้วย \/exec/g, 'ที่อยู่ระบบไม่ถูกต้อง (ต้องเป็นที่อยู่ Supabase /functions/v1/…)'],
+    [/เก็บที่ฝั่ง Google ไม่แสดงในหน้าเว็บ/g, 'เก็บที่เซิร์ฟเวอร์ ไม่แสดงในหน้าเว็บ'],
+    [/ตรวจใน Google Drive/g, 'ตรวจในที่เก็บไฟล์ (Supabase)'],
+    [/ย้ายไป Drive/g, 'ย้ายไปที่เก็บไฟล์'],
+    [/^Google$/g, 'เซิร์ฟเวอร์'],
+    [/ชีต/g, 'ตาราง']   // ข้อมูลอยู่ในตารางของ Supabase แล้ว (ชื่อตารางเดิมคงไว้)
   ];
-  const HINT = /Google|Apps Script/;
+  const HINT = /Google|Apps Script|ชีต|Drive/;
   function fixNode(n) {
     if (n.nodeType === 3) { if (!HINT.test(n.nodeValue)) return; let v = n.nodeValue; REP.forEach(([a, b]) => { v = v.replace(a, b); }); if (v !== n.nodeValue) n.nodeValue = v; return; }
     if (n.nodeType !== 1 || n.closest('script,style,textarea,input,[contenteditable]')) return;
