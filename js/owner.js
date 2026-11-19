@@ -77,7 +77,7 @@ async function ocGo(view) {
         try {
           OC.status = await ocCall('status');
           OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
-          ocMain(ocIt());
+          if (OC.view === 'it') ocMain(ocIt());
         } catch (e) { /* คงข้อมูลเดิมไว้เมื่อระบบสะดุด */ }
       }, 300000);
     }
