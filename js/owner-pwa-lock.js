@@ -4,7 +4,7 @@
 const OWNER_PWA_LOCK = (() => {
   const KEY = 'amz.owner.pwa.v1';
   const FAIL = 'amz.owner.pwa.fail.v1';
-  const standalone = () => !!(window.PWA && PWA.standalone) ||
+  const standalone = () => (typeof PWA !== 'undefined' && !!PWA.standalone) ||
     (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ||
     navigator.standalone === true;
   const b64 = a => btoa(String.fromCharCode(...new Uint8Array(a)));
@@ -121,5 +121,5 @@ const OWNER_PWA_LOCK = (() => {
       }
     }
   }
-  return { standalone, enroll, restore, clear };
+  return { standalone, hasVault: () => !!read(), enroll, restore, clear };
 })();
