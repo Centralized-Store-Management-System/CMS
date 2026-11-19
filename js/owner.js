@@ -68,8 +68,18 @@ async function ocGo(view) {
     if (view === 'home') { if (!OC.branches.length) { try { OC.branches = ((await API.call('staff', {})).branches || []); } catch (e) { /* */ } } ocMain(ocHome()); }
     if (view === 'it') {
       try { const c = JSON.parse(localStorage.getItem('amz.it.st') || 'null'); if (c && c.checks) { OC.status = c; ocMain(ocIt() + '<p class="muted">กำลังตรวจล่าสุด…</p>'); } } catch (e) { /* */ }
-      OC.status = await ocCall('status'); try { localStorage.setItem('amz.it.st', JSON.stringify(OC.status)); } catch (e) { /* */ } if (OC.view === 'it') ocMain(ocIt());
-      OC.timer = setInterval(async () => { if (document.hidden || OC.view !== 'it' || OC.busy) return; try { OC.status = await ocCall('status'); ocMain(ocIt()); } catch (e) { /* */ } }, 300000);
+      OC.status = await ocCall('status'); try { localStorage.setItem('amz.it.st', JSON.stringify(OC.status)); } catch (e) { /* */ }
+      if (OC.view === 'it') ocMain(ocIt());
+      OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
+      if (OC.view === 'it') ocMain(ocIt());
+      OC.timer = setInterval(async () => {
+        if (document.hidden || OC.view !== 'it' || OC.busy) return;
+        try {
+          OC.status = await ocCall('status');
+          OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
+          ocMain(ocIt());
+        } catch (e) { /* คงข้อมูลเดิมไว้เมื่อระบบสะดุด */ }
+      }, 300000);
     }
     if (view === 'dash') { OC.dash = await ocCall('dash', { days: OC.days || 30 }); ocMain(ocDash()); }
     if (view === 'perf') { OC.perf = await ocCall('perf'); ocMain(ocPerf()); }
@@ -113,7 +123,8 @@ function ocIt() {
     <div><b style="font:600 18px var(--display)">${bad ? `ผิดปกติ ${bad} · ` : ''}${warn ? `ควรดู ${warn} · ` : ''}ปกติ ${s.checks.length - bad - warn} รายการ</b><div class="actions" style="margin:10px 0 0">
     <button class="btn primary" data-heal="__all">ซ่อมทั้งหมดอัตโนมัติ</button><button class="btn" data-oc="it">ตรวจใหม่</button><button class="btn" data-heal="warm">เร่งความเร็ว (อุ่นแคช)</button><button class="btn" data-heal="cacheReset">ล้างแคชทั้งหมด</button></div></div></div>
   ${areas.map(a => `<h3 class="h3">${esc(a)}</h3><div class="group">${s.checks.filter(c => c.area === a).map(c => `<div class="row static">${ocDot(c.status)}<span class="main"><span class="t">${esc(c.name)}</span><span class="s">${esc(c.detail)}</span></span>${ocChip(c.status)}${c.fix && c.status !== 'ok' ? `<button class="btn sm" data-heal="${esc(c.fix.code)}"${c.fix.arg ? ` data-arg='${esc(JSON.stringify(c.fix.arg))}'` : ''}>${esc(c.fix.label)}</button>` : ''}</div>`).join('')}</div>`).join('')}
-  <h3 class="h3">เหตุการณ์ล่าสุด</h3>${ocEventList(s.events)}`;
+  <h3 class="h3">เหตุการณ์ล่าสุด</h3>${ocEventList(s.events)}
+  ${typeof ocAiPanelHtml === 'function' ? ocAiPanelHtml() : ''}`;
 }
 function ocEventList(L) {
   return `<div class="group">${(L || []).map(e => `<div class="row static">${ocDot(e.kind === 'alert' ? 'bad' : e.kind === 'heal' ? 'ok' : 'warn')}<span class="main"><span class="t">${esc(e.title)}</span><span class="s">${esc(e.at)}${e.auto ? ' · อัตโนมัติ' : ''}${e.detail ? ' · ' + esc(e.detail) : ''}</span></span></div>`).join('') || empty('ยังไม่มีเหตุการณ์')}</div>`;
@@ -195,6 +206,16 @@ function ocReport() {
 
 /* ---------- ปุ่ม ---------- */
 document.addEventListener('click', async e => {
+  const aiRefresh = e.target.closest('[data-ai-refresh]');
+  if (aiRefresh) {
+    aiRefresh.disabled = true;
+    try {
+      OC.aiData = typeof ocAiCollect === 'function' ? await ocAiCollect() : null;
+      if (OC.view === 'it') ocMain(ocIt());
+      toast('วิเคราะห์ข้อมูลระบบล่าสุดแล้ว');
+    } catch (err) { toast(err.message || 'วิเคราะห์ข้อมูลไม่สำเร็จ'); }
+    return;
+  }
   const sessionRetry = e.target.closest('[data-oc-session-retry]');
   if (sessionRetry) {
     e.preventDefault();
