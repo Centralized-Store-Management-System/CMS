@@ -83,29 +83,27 @@ const OWNER_PWA_LOCK = (() => {
   async function restore() {
     if (!standalone() || !read()) return false;
     if (!window.crypto || !crypto.subtle) { clear(); return false; }
-    const f = (() => { try { return JSON.parse(localStorage.getItem(FAIL) || '{"n":0,"until":0}'); } catch (_) { return { n: 0, until: 0 }; } })();
-    if (f.until > Date.now()) {
-      const wait = Math.ceil((f.until - Date.now()) / 1000);
-      await pinDialog('Owner App ถูกพักชั่วคราว', 'ลองใหม่ในอีก ' + wait + ' วินาที', false);
-      return false;
-    }
+    let fails = 0, warning = '';
     for (;;) {
-      const pin = await pinDialog('ปลดล็อก Owner App', 'กรอก PIN 6 หลักเพื่อเข้าใช้งาน', false);
+      const pin = await pinDialog(warning ? 'PIN ไม่ถูกต้อง' : 'ปลดล็อก Owner App',
+        warning || 'กรอก PIN 6 หลักเพื่อเข้าใช้งาน', false);
       if (!pin) return false;
       try {
         const token = await unseal(pin);
         const me = await API.call('me', { t: token });
-        if (!me || me.role !== 'owner') throw new Error('SESSION');
+        if (!me || me.role !== 'owner') throw Object.assign(new Error('SESSION'), { code: 'SESSION' });
         SS.set('amz.it.tok', token); S.token = token;
         localStorage.removeItem(FAIL);
         return true;
       } catch (e) {
-        const n = (f.n || 0) + 1, until = n >= 5 ? Date.now() + 30000 : 0;
-        localStorage.setItem(FAIL, JSON.stringify({ n: n >= 5 ? 0 : n, until }));
         if (e && e.code === 'SESSION') { clear(); toast('Session หมดอายุ กรุณาเข้าสู่ระบบและยืนยันตัวตนใหม่'); return false; }
-        const msg = document.querySelector('.scrim [data-pin-msg]');
-        if (msg) msg.textContent = until ? 'ใส่ผิดหลายครั้ง พัก 30 วินาที' : 'PIN ไม่ถูกต้อง กรุณาลองอีกครั้ง';
-        if (until) { await new Promise(r => setTimeout(r, 30000)); localStorage.removeItem(FAIL); return false; }
+        fails++;
+        if (fails >= 5) {
+          localStorage.setItem(FAIL, JSON.stringify({ n: 0, until: Date.now() + 30000 }));
+          await pinDialog('พักการปลดล็อก 30 วินาที', 'ใส่ PIN ไม่ถูกต้อง 5 ครั้ง กรุณารอสักครู่', false);
+          localStorage.removeItem(FAIL); return false;
+        }
+        warning = 'PIN ไม่ถูกต้อง · เหลือโอกาสอีก ' + (5 - fails) + ' ครั้ง';
       }
     }
   }
