@@ -133,3 +133,5 @@
 - Cache bust: `owner.html` it-ai 1.0.2; `index.html` hr-documents 1.1.1
 - Verified JS source syntax for `it-ai.js`, `hr-documents.js`, `owner.js`; verified `it-monitor` ACTIVE v2; verified document bucket private; DB check found 2 active doc rows and both have matching Storage objects (no filename/employee PII printed). Function logs show upload POST 200, document listing GET 200, and view GET 200
 - Commits: monitor CORS `2b7cd1b`; AI thresholds `515799f`; HR row actions `d66030a`; cache bust `c04ebbb` + `e481111`
+
+- ปรับ KPI counts ให้สรุปจำนวน Finding ระดับ critical/warning ตามรายการวิเคราะห์จริง รวม performance warnings ด้วย; commit `288fc37`, Owner cache bust `it-ai.js?v=1.0.3`.
