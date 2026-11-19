@@ -41,7 +41,10 @@ function ocLogin(msg) {
       if (!ocCan(r)) { API.call('logout', { t: r.token }).catch(() => {}); $('#oc-err').textContent = 'แอปนี้ใช้ได้เฉพาะบัญชี Owner · พนักงานใช้แอปพนักงาน (หลังร้าน / ลงเวลา / LINE)'; return; }
       S.token = r.token; OC.me = r; SS.set(OC.tok, r.token); LS.set('amz.lastCode', code);
       if (typeof OWNER_PWA_LOCK !== 'undefined') await OWNER_PWA_LOCK.enroll(r.token);
-      ocGo(OC.after || 'dash'); OC.after = '';
+      const af = OC.after; OC.after = '';
+      if (af === '__land') return ocLanding();   // แอป: ครั้งแรก → ตั้งรหัสแล้วกลับหน้าหลัก
+      if (af === '__shop') { SS.set('amz.tok', r.token); location.href = 'index.html?from=owner'; return; }
+      ocGo(af || 'dash');
     } catch (e) { const el = $('#oc-err'); if (el) el.textContent = e.message; }
   };
   $('#oc-go').onclick = go; $('#oc-pin').onkeydown = e => { if (e.key === 'Enter') go(); };
@@ -54,7 +57,7 @@ function ocShell(main) {
     <h4>2. Super Advance IT</h4>${nav.slice(1).map(ocNav).join('')}
     <div class="who">${esc(OC.me.name)} · ${esc(OC.me.roleName || OC.me.role)}<br><button class="btn sm" id="oc-out" style="margin-top:8px">ออกจากระบบ</button></div></aside>
     <main class="oc-main" id="oc-main">${main}</main></div>`;
-  $('#oc-out').onclick = $('#oc-out2').onclick = () => { API.call('logout', { t: S.token }).catch(() => {}); if (typeof OWNER_PWA_LOCK !== 'undefined') OWNER_PWA_LOCK.clear(); S.token = ''; OC.me = null; SS.set(OC.tok, ''); ocLanding('ออกจากระบบแล้ว'); };
+  $('#oc-out').onclick = $('#oc-out2').onclick = () => { API.call('logout', { t: S.token }).catch(() => {}); if (typeof OWNER_PWA_LOCK !== 'undefined') OWNER_PWA_LOCK.logout(); S.token = ''; OC.me = null; SS.set(OC.tok, ''); ocLanding('ออกจากระบบแล้ว'); };
   function ocNav([k, l, ic, sh]) { return `<a href="#${k}" data-oc="${k}"${OC.view === k ? ' aria-current="page"' : ''}>${icon(ic)}<span class="l">${esc(l)}</span><span class="sh">${esc(sh)}</span></a>`; }
 }
 async function ocGo(view) {
@@ -181,7 +184,7 @@ function ocReport() {
 /* ---------- ปุ่ม ---------- */
 document.addEventListener('click', async e => {
   const land = e.target.closest('[data-land]');
-  if (land) { e.preventDefault(); if (OC.me) return ocGo('dash'); OC.after = 'dash'; return ocLogin(); }
+  if (land) { e.preventDefault(); if (OC.me) return ocGo('dash'); if (typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.active()) { if (await OWNER_PWA_LOCK.restore()) { try { OC.me = await API.call('me', { t: S.token }); return ocGo('dash'); } catch (x) { /* */ } } return; } OC.after = 'dash'; return ocLogin(); }
   const dd = e.target.closest('[data-dday]'); if (dd) { OC.dsel = dd.dataset.dday; return ocMain(ocDash()); }
   const dm = e.target.closest('[data-dmenu]'); if (dm) { OC.dmenu = dm.dataset.dmenu; return ocMain(ocDash()); }
   if (e.target.closest('[data-dall]')) { OC.dall = !OC.dall; return ocMain(ocDash()); }
@@ -224,7 +227,9 @@ window.addEventListener('hashchange', () => { const v = location.hash.slice(1); 
   // แอป Owner ที่ตั้งรหัสปลดล็อกแล้ว: เปิดแอปใส่รหัส 6 หลักก่อน (owner-pwa-lock.js) ไม่ต้องเข้าระบบ/Authenticator ซ้ำ
   if (typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.active()) await OWNER_PWA_LOCK.boot();
   const want = location.hash.slice(1);
+  const app = typeof OWNER_PWA_LOCK !== 'undefined' && OWNER_PWA_LOCK.standalone();
+  if (!S.token && app && OWNER_PWA_LOCK.needSetup()) { OC.after = '__land'; return ocLogin('ครั้งแรกบนเครื่องนี้: เข้าสู่ระบบ แล้วตั้งรหัส 6 หลัก ครั้งต่อไปใช้รหัสอย่างเดียว'); }
   if (!S.token) { if (want && want !== 'home') { OC.after = want; return ocLogin(); } return ocLanding(); }   // หน้าหลักไม่ต้องเข้าระบบ
-  try { const me = await API.call('me', { t: S.token }); if (!ocCan(me)) return ocLanding('แอปนี้ใช้ได้เฉพาะบัญชี Owner'); OC.me = me; ocGo(want || 'dash'); }
+  try { const me = await API.call('me', { t: S.token }); if (!ocCan(me)) return ocLanding('แอปนี้ใช้ได้เฉพาะบัญชี Owner'); OC.me = me; if (app && !want) return ocLanding(); ocGo(want || 'dash'); }
   catch (e) { S.token = ''; SS.set(OC.tok, ''); ocLanding(e.code === 'SESSION' ? 'หมดเวลาการใช้งาน กดเมนูเพื่อเข้าสู่ระบบใหม่' : e.message); }
 })();

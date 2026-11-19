@@ -186,7 +186,14 @@ const OWNER_PWA_LOCK = (() => {
     askUnlock('', { title: 'แอปถูกล็อก' }).then(c => { if (c && c.forgot) { setTok(''); location.reload(); } else if (c) mem = c; });
   });
   // หน้า Owner → จัดการร้าน: ส่ง session ไปด้วย ไม่ต้องเข้าระบบซ้ำ
-  if (onOwnerPage) document.addEventListener('click', e => { const a = e.target.closest('a[href^="index.html"]'); if (a && S.token && SS.get(UNL) === '1') SS.set('amz.tok', S.token); }, true);
+  if (onOwnerPage) document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="index.html"]'); if (!a) return;
+    if (S.token) { SS.set('amz.tok', S.token); return; }
+    if (!standalone()) return;   // เบราว์เซอร์ปกติ: ตามเดิม
+    e.preventDefault(); e.stopPropagation();
+    if (active()) { unlockFlow('', { cancel: true }).then(ok => { if (ok) location.href = a.getAttribute('href'); }); return; }
+    if (typeof ocLogin === 'function') { OC.after = '__shop'; ocLogin('เข้าสู่ระบบครั้งแรกบนเครื่องนี้ แล้วตั้งรหัส 6 หลัก'); }
+  }, true);
 
   // หน้าจัดการร้าน (เปิดจากแอป Owner): ไม่มี session → ปลดล็อกด้วยรหัส แทนหน้าเข้าระบบ
   if (!onOwnerPage && typeof renderLogin === 'function') {
@@ -237,6 +244,9 @@ const OWNER_PWA_LOCK = (() => {
   }
   /** ออกจากระบบ: ลบกุญแจในเครื่อง + ยกเลิกเครื่องที่เซิร์ฟเวอร์ */
   function clear() { wipe(''); }
+  /** ปุ่มออกจากระบบในแอป: จบ session แต่เก็บรหัสไว้ (เข้าใหม่ใช้รหัสอย่างเดียว) · ล้างทั้งหมดใช้ "ลืมรหัส" ที่หน้ารหัส */
+  function logout() { if (!active()) return wipe(''); mem = null; setTok(''); }
+  const needSetup = () => standalone() && cryptoOk() && !hasVault();
   const restore = () => unlockFlow('', { cancel: true });
-  return { standalone, hasVault, active, boot, enroll, restore, clear };
+  return { standalone, hasVault, active, needSetup, boot, enroll, restore, clear, logout };
 })();
