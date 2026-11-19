@@ -83,6 +83,15 @@ const OWNER_PWA_LOCK = (() => {
     if (!standalone() || !read()) return false;
     if (!window.crypto || !crypto.subtle) { clear(); return false; }
     let fails = 0, warning = '';
+    try {
+      const lockout = JSON.parse(localStorage.getItem(FAIL) || 'null');
+      if (lockout && lockout.until > Date.now()) {
+        const seconds = Math.ceil((lockout.until - Date.now()) / 1000);
+        await pinDialog('พักการปลดล็อกชั่วคราว', 'ใส่ PIN ผิดหลายครั้ง กรุณารออีก ' + seconds + ' วินาทีแล้วเปิดแอปใหม่', false);
+        return false;
+      }
+      if (lockout) localStorage.removeItem(FAIL);
+    } catch (_) {}
     for (;;) {
       const pin = await pinDialog(warning ? 'PIN ไม่ถูกต้อง' : 'ปลดล็อก Owner App',
         warning || 'กรอก PIN 6 หลักเพื่อเข้าใช้งาน', false);
@@ -93,8 +102,8 @@ const OWNER_PWA_LOCK = (() => {
         fails++;
         if (fails >= 5) {
           localStorage.setItem(FAIL, JSON.stringify({ n: 0, until: Date.now() + 30000 }));
-          await pinDialog('พักการปลดล็อก 30 วินาที', 'ใส่ PIN ไม่ถูกต้อง 5 ครั้ง กรุณารอสักครู่', false);
-          localStorage.removeItem(FAIL); return false;
+          await pinDialog('พักการปลดล็อก 30 วินาที', 'ใส่ PIN ไม่ถูกต้อง 5 ครั้ง กรุณารอ 30 วินาทีแล้วเปิดแอปใหม่', false);
+          return false;
         }
         warning = 'PIN ไม่ถูกต้อง · เหลือโอกาสอีก ' + (5 - fails) + ' ครั้ง';
         continue;
