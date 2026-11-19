@@ -88,3 +88,13 @@
 - ข้อจำกัด: monitor ตรวจเฉพาะ backend/database telemetry; ไม่อาจตรวจ UI บนอุปกรณ์ที่ปิดอยู่. Engine เป็น rule-based diagnostic ไม่ใช่ LLM
 - Files: `supabase/functions/it-monitor/index.ts`, `js/it-ai.js`, `js/owner.js`, `owner.html`; report: `docs/IT-REPORT-HR-DOCUMENTS-AND-AI.md`
 - Commits: `12c3069` (monitor service), `dc931a1`/`be48f15` (background UI), `402fe3a` (manual run), `70e33f8` (cache bust), `e9ed458` (report)
+
+
+### HR Documents Directory tab (19 พ.ย. 2569)
+- เพิ่มแท็บ `Documents` ใน HR navigation ต่อจาก Employees และ Recruitment (`#hr/docs`)
+- หน้าแรกแสดงรายชื่อพนักงานในขอบเขตสาขาที่ผู้ใช้มีสิทธิ์; กดชื่อเพื่อดูเอกสารของพนักงานคนนั้น
+- รายการเอกสารเรียงตาม `created_at` จากใหม่ไปเก่า (อัปโหลดล่าสุดอยู่ด้านบน); View ใช้ signed URL อายุ 5 นาทีเหมือนเดิม
+- ปุ่ม `จัดการ / เพิ่มเอกสาร` เปิด Employee form เดิมซึ่งมีส่วนอัปโหลดเอกสารอยู่แล้ว; ไม่เปลี่ยน schema/API/ระบบอื่น
+- Files: `js/mod-hr.js`, `js/hr-documents.js`, `index.html` (cache bust `mod-hr 4.5.5`, `hr-documents 1.1.0`)
+- Commits: `db0bc09` (directory/viewer), `ff2ac4b` (HR tab), `8759026` (asset cache bust)
+- ยังต้องทดสอบด้วยบัญชี HR/Owner จริงและตรวจสิทธิ์ข้ามสาขาใน production หลัง deployment; การตรวจในรอบนี้ยืนยันว่า code changes อยู่บน `main` เท่านั้น
