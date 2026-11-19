@@ -4,7 +4,7 @@ const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const DB_URL = Deno.env.get("SUPABASE_DB_URL") || "";
 const BACKOFFICE_URL = SUPABASE_URL + "/functions/v1/backoffice";
-const ALLOWED_ORIGIN = "https://centralized-store-management.github.io";
+const ALLOWED_ORIGINS = new Set(["https://centralized-store-management.github.io", "https://centralized-store-management-system.github.io"]);
 const sql = DB_URL ? postgres(DB_URL, { max: 2, idle_timeout: 10, connect_timeout: 10 }) : null;
 
 class HttpError extends Error {
@@ -134,7 +134,7 @@ async function latestRun() {
 }
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
-  if (origin && origin !== ALLOWED_ORIGIN) return response({ok:false,error:"origin_not_allowed"},403);
+  if (origin && !ALLOWED_ORIGINS.has(origin)) return response({ok:false,error:"origin_not_allowed"},403);
   if (req.method === "OPTIONS") return new Response("ok",{headers:{...(origin?{"access-control-allow-origin":origin}:{}),"access-control-allow-headers":"content-type, x-cms-session","access-control-allow-methods":"GET, POST, OPTIONS","access-control-max-age":"600","vary":"Origin"}});
   try {
     if (!SUPABASE_URL || !SERVICE_KEY || !sql) throw new HttpError(503,"IT monitor is not configured");
