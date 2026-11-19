@@ -107,3 +107,13 @@ Remaining end-to-end checks:
 Commits เพิ่มเติม: 12c3069 (monitor service), dc931a1 + be48f15 (persistent monitor UI), 402fe3a (manual run), 70e33f8 (cache bust).
 
 Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new tables. This is intentional: direct client access is denied by table privileges and RLS; the server-only Edge Function accesses them with service_role. Other existing advisor findings are not part of this change.
+
+
+## HR Documents directory tab (19 พ.ย. 2569)
+- เพิ่มเมนูย่อย `HR > Documents` หลัง Employees และ Recruitment
+- แสดงรายชื่อพนักงานเฉพาะตาม scope/branch ที่ผู้ใช้มีสิทธิ์; เลือกชื่อพนักงานแล้วจึงแสดงเอกสารของบุคคลนั้น
+- เอกสารเรียง `created_at DESC` เพื่อให้รายการที่อัปโหลดล่าสุดอยู่ด้านบน พร้อมชื่อไฟล์ ประเภท ขนาด และวันเวลาอัปโหลด
+- ปุ่ม View ขอ signed URL จาก `hr-documents` ขณะเปิดดูเท่านั้น (อายุ 5 นาที); ปุ่มจัดการ/เพิ่มเอกสารเปิด Employee form เดิมเพื่อใช้งาน upload workflow เดิม
+- ไม่เปลี่ยน schema, Edge Function หรือสิทธิ์การเข้าถึงเดิมในส่วนนี้
+- Commits: `db0bc09`, `ff2ac4b`, `8759026`
+- สถานะตรวจสอบ: ตรวจพบ source changes บน `main`; ยังไม่ถือว่า UAT ผ่านจนกว่าจะทดสอบจริงด้วยบัญชี Owner/HR และยืนยัน branch isolation หลัง GitHub Pages deploy
