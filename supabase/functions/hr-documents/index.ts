@@ -89,7 +89,14 @@ async function ensurePrivateBucket() {
     if (bucket.public !== false) throw new Error("HR documents bucket must remain private");
     return;
   }
-  if (check.status !== 404) throw new Error("Cannot verify private HR document bucket: " + check.status);
+  // Storage API may encode a missing bucket as HTTP 400 with code NoSuchBucket,
+  // rather than HTTP 404. Treat only that explicit response as "create it".
+  let lookupError: Record<string, unknown> = {};
+  try { lookupError = await check.json(); } catch (_) { /* no body */ }
+  const missingBucket = check.status === 404 ||
+    (check.status === 400 && (lookupError.code === "NoSuchBucket" ||
+      String(lookupError.error || "").toLowerCase() === "bucket not found"));
+  if (!missingBucket) throw new Error("Cannot verify private HR document bucket: " + check.status);
   const create = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
     method: "POST", headers: { ...headers, "content-type": "application/json" },
     body: JSON.stringify({ id: BUCKET, name: BUCKET, public: false, file_size_limit: MAX_BYTES, allowed_mime_types: [...ALLOWED_MIME] }),
