@@ -66,7 +66,11 @@ Project: CMS / Supabase `ytxbnqosenolojifeikf`
 - `js/owner.js` — integrate AI monitor and 5-minute collection
 - `index.html`, `owner.html` — script registration / cache version
 
-Edge Function `hr-documents`: ACTIVE, version 1, `verify_jwt=false` because it validates the CMS custom session header inside the function.
+Edge Function `hr-documents`: ACTIVE, version 4, `verify_jwt=false` because it validates the CMS custom session header inside the function. The bucket is created/verified as Private lazily on the first authorized file operation; it had not yet been exercised with a real HR token during this review.
+
+Latest backend hardening commits: `60a57ff` (accept scope array or string), `0b28b5d` (transactional metadata/audit writes), `bc8f4b5` (remove duplicate authorization call on preview).
+
+Database migration: `20261119143656_hr_employee_documents_secure_storage`.
 
 ## 6) Test / Remaining
 Verified:
@@ -74,7 +78,7 @@ Verified:
 - RLS enabled on both new tables
 - Anon and authenticated have no SELECT privileges; service_role has SELECT
 - JavaScript syntax passed for `mod-hr.js`, `hr-documents.js`, `it-ai.js`, `owner.js`
-- Edge Function bundled and deployed successfully
+- Edge Function bundled and deployed successfully (version 4)
 - Front-end scripts registered in the correct HTML entrypoints
 
 Remaining end-to-end checks:
