@@ -5,7 +5,7 @@
  * - ไม่หมดเวลา: session หมดอายุระหว่างใช้ → ขอใหม่เงียบๆ ด้วยรหัสที่ใส่ไว้ (ถ้าเปลี่ยนหน้าแล้วไม่มีในหน่วยความจำ → ถามรหัสอีกครั้ง)
  * - ออกจากแอปเกิน 1 นาทีแล้วกลับมา → ล็อก · ผิด 5 ครั้ง พัก 5 นาที · ผิดรวม 10 ครั้ง ลบกุญแจในเครื่อง (เข้าด้วยชื่อผู้ใช้ใหม่)
  * - เน็ตหลุด: แจ้งเตือน ไม่ลบกุญแจ · Owner ยกเลิกเครื่องได้ที่ ระบบ IT > วิธีเข้าระบบ
- * ทำงานเฉพาะแอปที่ติดตั้ง (หรือ ?app=1 ทดสอบบนคอม): owner.html และหน้า "จัดการร้าน" ที่เปิดจากแอป Owner · เว็บปกติ / Staff / Mgr / LINE ไม่เปลี่ยน */
+ * ทำงานเฉพาะแอปที่ติดตั้งบนมือถือ/แท็บเล็ต (PC ใช้ระบบเดิม แม้ติดตั้งเป็นแอป · ?app=1 ทดสอบบนคอม): owner.html และหน้า "จัดการร้าน" ที่เปิดจากแอป Owner · เว็บปกติ / Staff / Mgr / LINE ไม่เปลี่ยน */
 'use strict';
 const OWNER_PWA_LOCK = (() => {
   const KEY = 'amz.owner.pwa.v2', OLD = 'amz.owner.pwa.v1', FAIL = 'amz.owner.pwa.fail.v2', UNL = 'amz.owner.unlocked';
@@ -14,13 +14,16 @@ const OWNER_PWA_LOCK = (() => {
   try { if (/[?&]app=1/.test(location.search)) sessionStorage.setItem('amz.appmode', '1'); } catch (_) { /* */ }
   const onOwnerPage = /owner\.html$/.test(location.pathname);
   const fromOwner = () => { try { return sessionStorage.getItem('amz.fromOwner') === '1' || /[?&]from=owner/.test(location.search); } catch (_) { return false; } };
+  // มือถือ/แท็บเล็ตเท่านั้น (iPadOS แจ้งตัวเป็น Mac แต่มีจอสัมผัส) · แอปที่ติดตั้งบน PC ใช้ระบบเดิม
+  const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   const standalone = () => { try { if (sessionStorage.getItem('amz.appmode') === '1') return true; } catch (_) { /* */ }
-    return (typeof PWA !== 'undefined' && !!PWA.standalone) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; };
+    return mobile && ((typeof PWA !== 'undefined' && !!PWA.standalone) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true); };
   const b64 = a => btoa(String.fromCharCode(...new Uint8Array(a)));
   const un64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   const enc = new TextEncoder(), dec = new TextDecoder();
   const read = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.v === 2 ? v : null; } catch (_) { return null; } };
   const hasVault = () => !!read();
+  try { if (!mobile && sessionStorage.getItem('amz.appmode') !== '1' && localStorage.getItem(KEY)) { localStorage.removeItem(KEY); localStorage.removeItem(FAIL); } } catch (_) { /* PC: ล้างรหัสที่เคยตั้งไว้ กลับไปใช้ระบบเดิม */ }
   const cryptoOk = () => !!(window.crypto && crypto.subtle);
   const active = () => standalone() && cryptoOk() && hasVault();   // กุญแจนี้มีเฉพาะเครื่องที่ Owner ผูกไว้
   const fails = () => { try { return JSON.parse(localStorage.getItem(FAIL) || 'null') || { n: 0, until: 0 }; } catch (_) { return { n: 0, until: 0 }; } };
