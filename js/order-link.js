@@ -61,25 +61,24 @@
       if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
         throw new Error('ระบบหลังร้านไม่ได้ส่ง URL สำหรับ SSO กลับมา (fields: ' + Object.keys(ticket || {}).join(', ') + ')');
       }
-      const target = new URL(rawUrl, location.href);
+      const ticketTarget = new URL(rawUrl, location.href);
       const allowedOrigins = new Set([
         'https://cafe-order-web-admin-portal.github.io',
         'https://cafe-amazon-web-admin-portal.github.io'
       ]);
-      const portalPath = target.pathname.includes('/Line-Order');
-      const ssoToken = target.hash.startsWith('#sso=') && target.hash.length > 8;
-      const validPage = page === 'orders'
-        ? target.pathname.endsWith('/orders.html')
-        : (target.pathname.endsWith('/Line-Order/') || target.pathname.endsWith('/Line-Order/index.html'));
-      if (!allowedOrigins.has(target.origin) || !portalPath || !validPage || !ssoToken) {
+      const ssoToken = ticketTarget.hash.startsWith('#sso=') && ticketTarget.hash.length > 8;
+      if (!allowedOrigins.has(ticketTarget.origin) || !ssoToken) {
         const reason = [
-          !allowedOrigins.has(target.origin) ? 'origin' : '',
-          !portalPath ? 'portal-path' : '',
-          !validPage ? 'page-path' : '',
+          !allowedOrigins.has(ticketTarget.origin) ? 'origin' : '',
           !ssoToken ? 'missing-sso' : ''
         ].filter(Boolean).join(', ') || 'unknown';
-        throw new Error('URL จาก CMS ตรวจสอบไม่ผ่าน (' + reason + ') · ' + target.origin + target.pathname + (ssoToken ? ' · SSO พร้อม' : ' · ไม่มี SSO Token'));
+        throw new Error('Ticket จาก CMS ตรวจสอบไม่ผ่าน (' + reason + ') · ' + ticketTarget.origin + (ssoToken ? ' · SSO พร้อม' : ' · ไม่มี SSO Token'));
       }
+      // Use canonical Line-Order paths. The backend controls the one-time SSO
+      // hash; ignore any stale/legacy path in the returned URL.
+      const portalBase = new URL('/Line-Order/', ticketTarget.origin);
+      const target = new URL(page === 'orders' ? 'orders.html' : '', portalBase);
+      target.hash = ticketTarget.hash;
       const frame = document.createElement('iframe');
       frame.className = 'cms-live-orders-iframe';
       frame.title = PAGES[page];
