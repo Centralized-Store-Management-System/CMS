@@ -236,7 +236,7 @@
         '<section class="cms-live-orders-frame cms-owner-app-frame">' +
         '<div class="cms-live-orders-toolbar"><strong>' + esc(PAGES[view]) + ' · Café Amazon</strong>' +
         '<button type="button" data-owner-order-back>← กลับหน้า Owner</button>' +
-        '<button type="button" data-a="orderEmbedReload" data-page="' + esc(view) + '">↻ โหลดใหม่</button></div>' +
+        '<button type="button" data-owner-order-reload data-page="' + esc(view) + '">↻ โหลดใหม่</button></div>' +
         '<div class="cms-live-orders-stage" id="cms-live-orders-stage">' +
         '<div class="cms-live-orders-loading">กำลังยืนยันสิทธิ์ Owner…</div></div></section>'
       );
@@ -245,6 +245,12 @@
     };
 
     document.addEventListener('click', e => {
+      const reloadButton = e.target.closest('[data-owner-order-reload]');
+      if (reloadButton) {
+        e.preventDefault();
+        const page = reloadButton.dataset.page || OC.view || 'orders';
+        return loadOwnerPortalFrame(page, ++ownerFrameRequest);
+      }
       const orderButton = e.target.closest('[data-owner-order]');
       if (orderButton) {
         e.preventDefault();
