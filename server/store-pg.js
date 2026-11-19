@@ -70,7 +70,7 @@ export function pgStore({ postgres, dbUrl, supabaseUrl, serviceKey, resendKey, m
           await tx`select pg_advisory_xact_lock(${LOCK_KEY})`;
           const want = ch.sheets.map(s => [s.book, s.oldName || s.name, s]).concat(ch.deleteSheets.map(s => [s.book, s.name, s]));
           if (want.length) {
-            const cur = await tx`select book, name, ver from backoffice.sheets where (book, name) in (select x->>0, x->>1 from jsonb_array_elements(${JSON.stringify(want.map(w => [w[0], w[1]]))}::jsonb) x)`;
+            const cur = await tx`select book, name, ver from backoffice.sheets where (book, name) in (select x->>0, x->>1 from jsonb_array_elements(${JSON.stringify(want.map(w => [w[0], w[1]]))}::text::jsonb) x)`;
             const m = new Map(cur.map(c => [c.book + '|' + c.name, Number(c.ver)]));
             const conflict = [];
             for (const [b, n, s] of want) { const v = m.get(b + '|' + n); if (s.fresh ? v !== undefined : (v === undefined ? s.ver !== 0 : v !== s.ver)) conflict.push(b + '|' + s.name); }
@@ -82,7 +82,7 @@ export function pgStore({ postgres, dbUrl, supabaseUrl, serviceKey, resendKey, m
             if (s.oldName) await tx`update backoffice.sheets set name = ${s.name} where book = ${s.book} and name = ${s.oldName}`;
             if (s.fresh) await tx`insert into backoffice.sheets (book, name, ord) values (${s.book}, ${s.name}, ${s.ord}) on conflict (book, name) do nothing`;
             if (s.rows.length) await tx`insert into backoffice.rows (book, sheet, r, vals)
-              select ${s.book}, ${s.name}, (x->>0)::int, x->1 from jsonb_array_elements(${JSON.stringify(s.rows)}::jsonb) x
+              select ${s.book}, ${s.name}, (x->>0)::int, x->1 from jsonb_array_elements(${JSON.stringify(s.rows)}::text::jsonb) x
               on conflict (book, sheet, r) do update set vals = excluded.vals`;
             await tx`delete from backoffice.rows where book = ${s.book} and sheet = ${s.name} and r > ${s.nrows}`;
             const [u] = await tx`update backoffice.sheets set ver = ver + 1, nrows = ${s.nrows}, updated_at = now() where book = ${s.book} and name = ${s.name} returning ver`;
@@ -94,9 +94,9 @@ export function pgStore({ postgres, dbUrl, supabaseUrl, serviceKey, resendKey, m
             else await tx`insert into backoffice.kv (ns, k, v) values ('props', ${k}, ${v}) on conflict (ns, k) do update set v = excluded.v`;
           }
           const cDel = ch.cache.filter(c => c.v === null).map(c => c.k), cPut = ch.cache.filter(c => c.v !== null);
-          if (cDel.length) await tx`delete from backoffice.kv where ns = 'cache' and k in (select jsonb_array_elements_text(${JSON.stringify(cDel)}::jsonb))`;
+          if (cDel.length) await tx`delete from backoffice.kv where ns = 'cache' and k in (select jsonb_array_elements_text(${JSON.stringify(cDel)}::text::jsonb))`;
           if (cPut.length) await tx`insert into backoffice.kv (ns, k, v, exp)
-            select 'cache', x->>'k', x->>'v', (x->>'exp')::timestamptz from jsonb_array_elements(${JSON.stringify(cPut)}::jsonb) x
+            select 'cache', x->>'k', x->>'v', (x->>'exp')::timestamptz from jsonb_array_elements(${JSON.stringify(cPut)}::text::jsonb) x
             on conflict (ns, k) do update set v = excluded.v, exp = excluded.exp`;
           for (const f of ch.folders) await tx`insert into backoffice.folders (id, name, parent) values (${f.id}, ${f.name}, ${f.parent || null}) on conflict (id) do nothing`;
           for (const op of ch.files) {
@@ -105,8 +105,8 @@ export function pgStore({ postgres, dbUrl, supabaseUrl, serviceKey, resendKey, m
             else await tx`update backoffice.files set shared = ${!!r.shared}, trashed = ${!!r.trashed}, folder = ${r.folder || null} where id = ${r.id}`;
           }
           if (ch.triggers) {
-            await tx`delete from backoffice.triggers where id not in (select jsonb_array_elements_text(${JSON.stringify(ch.triggers.map(t => t.id).concat(['-']))}::jsonb))`;
-            for (const t of ch.triggers) await tx`insert into backoffice.triggers (id, fn, spec) values (${t.id}, ${t.fn}, ${JSON.stringify(t.spec || {})}::jsonb) on conflict (id) do update set fn = excluded.fn, spec = excluded.spec`;
+            await tx`delete from backoffice.triggers where id not in (select jsonb_array_elements_text(${JSON.stringify(ch.triggers.map(t => t.id).concat(['-']))}::text::jsonb))`;
+            for (const t of ch.triggers) await tx`insert into backoffice.triggers (id, fn, spec) values (${t.id}, ${t.fn}, ${JSON.stringify(t.spec || {})}::text::jsonb) on conflict (id) do update set fn = excluded.fn, spec = excluded.spec`;
           }
           await tx`delete from backoffice.kv where ns = 'cache' and exp < now() - interval '1 minute' and random() < 0.05`;
           return out;
