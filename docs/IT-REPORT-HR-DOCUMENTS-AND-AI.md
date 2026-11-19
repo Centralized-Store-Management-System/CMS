@@ -155,3 +155,5 @@ Supabase Security Advisor reports INFO `rls_enabled_no_policy` for these two new
 - Cache bust updated: `hr-documents.js?v=1.1.1` and `it-ai.js?v=1.0.2`.
 - Production verification: function logs include HR upload POST 200, list GET 200, and preview GET 200; DB/storage consistency query found 2 active metadata records and matching objects for both. Bucket is confirmed private.
 - Commits: `2b7cd1b`, `515799f`, `d66030a`, `c04ebbb`, `e481111`.
+
+- ปรับ KPI counts ให้สรุปจำนวน Finding ระดับ critical/warning ตามรายการวิเคราะห์จริง รวม performance warnings ด้วย; commit `288fc37`, Owner cache bust `it-ai.js?v=1.0.3`.
