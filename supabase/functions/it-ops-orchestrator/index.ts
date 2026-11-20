@@ -22,29 +22,29 @@ const SAFE_ACTIONS:Record<string,{title:string,risk:"low"|"medium",why:string}>=
 };
 async function runCycle(){
  if(!sql)throw new HttpError(503,"Database connection ไม่พร้อม");
- const [run]=await sql\`select id,checked_at,risk_score,status,findings,metrics from public.it_monitor_runs order by checked_at desc limit 1\`;
+ const [run]=await sql`select id,checked_at,risk_score,status,findings,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
  if(!run)throw new HttpError(409,"ยังไม่มีผลตรวจจาก IT Monitor");
  const findings=Array.isArray(run.findings)?run.findings:[];
  let upserts=0,proposals=0;
  for(const f of findings){
   const code=String(f.code||"UNKNOWN").slice(0,60),level=["critical","warning","info"].includes(f.level)?f.level:"info";
   const title=String(f.title||code).slice(0,160),detail=String(f.detail||"").slice(0,500),recommendation=String(f.action||"").slice(0,300),fingerprint=code.toLowerCase();
-  const [incident]=await sql\`insert into public.it_ops_incidents(fingerprint,severity,code,title,detail,recommendation,source_monitor_run_id,evidence)
-   values(\${fingerprint},\${level},\${code},\${title},\${detail},\${recommendation},\${run.id},\${JSON.stringify({riskScore:run.risk_score,monitorStatus:run.status,checkedAt:run.checked_at})}::jsonb)
+  const [incident]=await sql`insert into public.it_ops_incidents(fingerprint,severity,code,title,detail,recommendation,source_monitor_run_id,evidence)
+   values(${fingerprint},${level},${code},${title},${detail},${recommendation},${run.id},${JSON.stringify({riskScore:run.risk_score,monitorStatus:run.status,checkedAt:run.checked_at})}::jsonb)
    on conflict(fingerprint) do update set severity=excluded.severity,title=excluded.title,detail=excluded.detail,recommendation=excluded.recommendation,last_seen_at=now(),occurrence_count=public.it_ops_incidents.occurrence_count+1,source_monitor_run_id=excluded.source_monitor_run_id,evidence=excluded.evidence,updated_at=now()
-   returning id,fingerprint,status\`;
+   returning id,fingerprint,status`;
   upserts++;
   const safe=SAFE_ACTIONS[code];
   if(safe && incident.status!=="muted" && incident.status!=="resolved"){
    const idem=code.toLowerCase()+":"+String(run.id);
-   const [q]=await sql\`insert into public.it_ops_action_queue(incident_id,action_code,title,rationale,risk_level,status,requires_owner_approval,proposed_by,idempotency_key)
-    values(\${incident.id},\${"inspect_"+code.toLowerCase()},\${safe.title},\${safe.why},\${safe.risk},'pending_approval',true,'system',\${idem})
-    on conflict(idempotency_key) do nothing returning id\`;
+   const [q]=await sql`insert into public.it_ops_action_queue(incident_id,action_code,title,rationale,risk_level,status,requires_owner_approval,proposed_by,idempotency_key)
+    values(${incident.id},${"inspect_"+code.toLowerCase()},${safe.title},${safe.why},${safe.risk},'pending_approval',true,'system',${idem})
+    on conflict(idempotency_key) do nothing returning id`;
    if(q)proposals++;
   }
  }
- await sql\`update public.it_ops_incidents set status='resolved',updated_at=now() where status in ('open','acknowledged') and last_seen_at < \${run.checked_at} - interval '15 minutes'\`;
- await sql\`insert into public.it_ops_audit(actor,event_type,entity_type,details) values('system','monitor_triaged','monitor_run',\${JSON.stringify({runId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,mode:'observe_only'})}::jsonb)\`;
+ await sql`update public.it_ops_incidents set status='resolved',updated_at=now() where status in ('open','acknowledged') and last_seen_at < ${run.checked_at} - interval '15 minutes'`;
+ await sql`insert into public.it_ops_audit(actor,event_type,entity_type,details) values('system','monitor_triaged','monitor_run',${JSON.stringify({runId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,mode:'observe_only'})}::jsonb)`;
  return {monitorRunId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,mode:"observe_only"};
 }
 Deno.serve(async(req:Request)=>{
@@ -56,24 +56,24 @@ Deno.serve(async(req:Request)=>{
   if(req.method==="POST"){
    const body=await req.json().catch(()=>({}));
    if(new URL(req.url).searchParams.get("__cron")==="1"){
-    const [k]=await sql\`select v from backoffice.kv where ns='props' and k='CRON_KEY'\`;
+    const [k]=await sql`select v from backoffice.kv where ns='props' and k='CRON_KEY'`;
     if(!k?.v||body.k!==k.v)throw new HttpError(403,"Invalid scheduler key");
     return out({ok:true,result:await runCycle()},200,origin);
    }
    const actor=await owner(req.headers.get("x-cms-session")||""),id=Number(body.id),decision=String(body.decision||"");
    if(!Number.isSafeInteger(id)||id<=0||!["approve","reject"].includes(decision))throw new HttpError(400,"คำขอไม่ถูกต้อง");
    const next=decision==="approve"?"approved":"rejected";
-   const rows=await sql\`update public.it_ops_action_queue set status=\${next},reviewed_by=\${actor},reviewed_at=now() where id=\${id} and status='pending_approval' and expires_at>now() returning id,action_code,status\`;
+   const rows=await sql`update public.it_ops_action_queue set status=${next},reviewed_by=${actor},reviewed_at=now() where id=${id} and status='pending_approval' and expires_at>now() returning id,action_code,status`;
    if(!rows.length)throw new HttpError(409,"รายการนี้ถูกดำเนินการแล้วหรือหมดอายุ");
-   await sql\`insert into public.it_ops_audit(actor,event_type,entity_type,entity_id,details) values(\${actor},\${"approval_"+decision},'action_queue',\${id},\${JSON.stringify({actionCode:rows[0].action_code,note:"อนุมัติสำหรับแผนปฏิบัติงานโดยคนเท่านั้น; ไม่มีการรัน action อัตโนมัติ"})}::jsonb)\`;
+   await sql`insert into public.it_ops_audit(actor,event_type,entity_type,entity_id,details) values(${actor},${"approval_"+decision},'action_queue',${id},${JSON.stringify({actionCode:rows[0].action_code,note:"อนุมัติสำหรับแผนปฏิบัติงานโดยคนเท่านั้น; ไม่มีการรัน action อัตโนมัติ"})}::jsonb)`;
    return out({ok:true,item:rows[0],message:decision==="approve"?"อนุมัติแผนสำหรับดำเนินการโดยผู้ดูแลแล้ว (ยังไม่มีการรันคำสั่ง)":"ปฏิเสธรายการแล้ว"},200,origin);
   }
   if(req.method==="GET"){
    await owner(req.headers.get("x-cms-session")||"");
    const [incidents,queue,audit]=await Promise.all([
-    sql\`select id,fingerprint,severity,code,title,detail,recommendation,status,first_seen_at,last_seen_at,occurrence_count from public.it_ops_incidents order by case severity when 'critical' then 0 when 'warning' then 1 else 2 end,last_seen_at desc limit 40\`,
-    sql\`select q.id,q.incident_id,q.action_code,q.title,q.rationale,q.risk_level,q.status,q.requires_owner_approval,q.created_at,q.expires_at,i.code as incident_code from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id order by q.created_at desc limit 40\`,
-    sql\`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30\`
+    sql`select id,fingerprint,severity,code,title,detail,recommendation,status,first_seen_at,last_seen_at,occurrence_count from public.it_ops_incidents order by case severity when 'critical' then 0 when 'warning' then 1 else 2 end,last_seen_at desc limit 40`,
+    sql`select q.id,q.incident_id,q.action_code,q.title,q.rationale,q.risk_level,q.status,q.requires_owner_approval,q.created_at,q.expires_at,i.code as incident_code from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id order by q.created_at desc limit 40`,
+    sql`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30`
    ]);
    return out({ok:true,mode:"observe_only",incidents,queue,audit},200,origin);
   }
