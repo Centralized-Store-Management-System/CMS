@@ -151,3 +151,13 @@
 - Phase D: Authentication policy draft stored independently per scope. `auth_enforcement_enabled=false` for all scopes; no existing login, Authenticator, Owner PIN, Staff App Lock, or LINE login behavior changed.
 - Verification query: 16 scopes total; 5 Owner Theme scopes ON; 11 non-Owner scopes rollout-locked; 0 auth enforcement enabled.
 - Pending QA: live authenticated Owner GET/POST, audit log end-to-end, physical device visual review, browser regression. Do not enable auth enforcement or unlock non-Owner rollout until QA and explicit approval.
+
+
+## Staff Theme isolation / restore (20 พ.ย. 2569)
+- เจ้าของยืนยันให้ Staff กลับไปใช้ Theme เดิมทั้งหมด จนกว่าจะเปิดระบบ Theme ใหม่หรืออนุมัติรูปแบบแยกตามอุปกรณ์
+- แก้ `clock.html`: ถอด `css/prototype-theme.css?v=1.7.0` ออกจากหน้า Staff Time Clock; คง `css/app.css` และ `css/theme-b.css` ตามเดิม เพื่อให้ระบบใช้ Theme เดิม/ค่ารูปแบบเดิมที่ตั้งไว้
+- ครอบคลุมหน้า Staff Time Clock ที่เปิดผ่าน PC, Mobile Web, iPhone/Android PWA และ iPad Web/PWA เพราะทั้งหมดใช้ `clock.html` และ responsive layout ชุดเดียวกัน
+- ไม่แก้ `index.html` / Back Office Theme, `owner.html` / Owner Theme, JavaScript, Login, สิทธิ์, API, ข้อมูล หรือ workflow
+- ยังไม่เปลี่ยน Theme ภายในหน้าที่ Staff เปิดผ่าน Back Office (`index.html`); การแก้ครั้งนี้จำกัดเฉพาะ Staff Time Clock/PWA เพื่อไม่กระทบ Back Office ทั้งระบบ
+- Commit: `d39c8d739390a10c7517ee5a60eacdc31f45c348`
+- หลัง deploy ให้ทดสอบ PC, iPhone/Android PWA และ iPad; บนเครื่องที่ติดตั้งแอปอาจต้องปิด/เปิดแอปใหม่ขณะออนไลน์เพื่อดึง HTML เวอร์ชันล่าสุด
