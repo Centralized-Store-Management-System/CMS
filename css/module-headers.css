@@ -1,0 +1,29 @@
+/* Distinct module header artwork — visual-only layer; navigation and module content stay untouched. */
+.mhead{position:relative;isolation:isolate;overflow:hidden;min-height:116px;padding:18px 24px;margin:8px 0 18px;border:1px solid #dce9df;border-radius:22px;background:linear-gradient(100deg,#fbfdfb 0%,rgba(249,252,247,.98) 42%,rgba(249,252,247,.68) 68%,rgba(249,252,247,.2) 100%);box-shadow:0 8px 22px rgba(16,61,43,.045)}
+.mhead:after{content:"";position:absolute;z-index:-1;inset:0 0 0 auto;width:52%;background-position:center right;background-size:cover;background-repeat:no-repeat;opacity:.95;mask-image:linear-gradient(90deg,transparent 0%,#000 30%)}
+.mhead .mi,.mhead h1,.mhead input,.mhead select{position:relative;z-index:1}
+.mhead h1{font-size:26px!important}
+.mhead .mi{box-shadow:0 5px 12px rgba(12,70,48,.12)}
+.topbar{position:relative;isolation:isolate;overflow:hidden}
+.topbar:after{content:"";position:absolute;z-index:0;right:0;top:0;bottom:0;width:48%;background-position:center right;background-size:cover;background-repeat:no-repeat;opacity:.72;mask-image:linear-gradient(90deg,transparent 0%,#000 36%)}
+.topbar>*{position:relative;z-index:1}
+.topbar .ttl{max-width:70%}
+.mhead[data-header="today"]:after,.topbar[data-header="today"]:after{background-image:url("../assets/headers/today.svg")}
+.mhead[data-header="dash"]:after,.topbar[data-header="dash"]:after{background-image:url("../assets/headers/dash.svg")}
+.mhead[data-header="approve"]:after,.topbar[data-header="approve"]:after{background-image:url("../assets/headers/approve.svg")}
+.mhead[data-header="hr"]:after,.topbar[data-header="hr"]:after{background-image:url("../assets/headers/hr.svg")}
+.mhead[data-header="sched"]:after,.topbar[data-header="sched"]:after{background-image:url("../assets/headers/sched.svg")}
+.mhead[data-header="time"]:after,.topbar[data-header="time"]:after{background-image:url("../assets/headers/time.svg")}
+.mhead[data-header="stock"]:after,.topbar[data-header="stock"]:after{background-image:url("../assets/headers/stock.svg")}
+.mhead[data-header="acct"]:after,.topbar[data-header="acct"]:after{background-image:url("../assets/headers/acct.svg")}
+.mhead[data-header="pay"]:after,.topbar[data-header="pay"]:after{background-image:url("../assets/headers/pay.svg")}
+.mhead[data-header="users"]:after,.topbar[data-header="users"]:after{background-image:url("../assets/headers/users.svg")}
+.mhead[data-header="admin"]:after,.topbar[data-header="admin"]:after,.mhead[data-header="set"]:after,.topbar[data-header="set"]:after{background-image:url("../assets/headers/admin.svg")}
+.mhead[data-header="notify"]:after,.topbar[data-header="notify"]:after{background-image:url("../assets/headers/notify.svg")}
+.mhead[data-header="design"]:after,.topbar[data-header="design"]:after{background-image:url("../assets/headers/design.svg")}
+@media(min-width:960px){.mhead{display:flex;align-items:center;gap:14px}.mhead:after{width:48%}}
+@media(max-width:959px){.topbar{background:linear-gradient(100deg,#f8fbf8 0%,#f5f8f4 60%,#edf5ee 100%)}.topbar .ttl h1{font-weight:700}.topbar:after{width:44%;opacity:.55}}
+@media(max-width:520px){.topbar:after{width:38%;opacity:.38}.topbar .ttl{max-width:76%}}
+/* Today owner greeting uses the same approved visual language with its own banner art. */
+#view:has(.kpis.exec) .hello{background-image:linear-gradient(90deg,rgba(250,253,247,.97) 0%,rgba(250,253,247,.9) 48%,rgba(250,253,247,.12) 100%),url("../assets/headers/today.svg")!important;background-position:center,right center!important;background-size:cover,cover!important}
+#view:has(.kpis.exec) .hello:after{content:none!important}
