@@ -64,11 +64,50 @@ async function simulateApprovedAction(id:number,actor:string){
  return {run:saved,preflight,simulation,rollback,mode:"dry_run"};
 }
 
+
+function metricValue(m:Record<string,any>,key:string){const n=Number(m?.[key]);return Number.isFinite(n)?n:null;}
+function buildDiagnosis(findings:any[],metrics:Record<string,any>,history:any[]){
+ const causes:any[]=[];
+ const codes=new Set(findings.map(x=>String(x.code||"")));
+ const add=(code:string,title:string,evidence:string[],next:string,confidence:"high"|"medium"|"low")=>causes.push({code,title,evidence,next,confidence});
+ if(codes.has("OUTBOX_ERRORS")){
+  const n=metricValue(metrics,"outboxErrors24h");
+  add("OUTBOX_ERRORS","ความผิดพลาดเกิดใน Outbox / ช่องทางส่งข้อความ",["พบ Outbox errors "+(n??"ไม่ทราบ")+" รายการใน 24 ชั่วโมง","ยังไม่มีหลักฐานยืนยันว่าเป็นปัญหาผู้ให้บริการหรือการตั้งค่า SMTP"],"ตรวจ error category และ provider response แบบปกปิดข้อมูลผู้รับ ก่อนแก้ credential หรือ retry",n!==null&&n>0?"medium":"low");
+ }
+ if(codes.has("MAIL_NOT_CONFIGURED"))add("MAIL_NOT_CONFIGURED","การตั้งค่าอีเมลยังไม่ครบ",["Monitor ระบุว่า mail=false / ไม่พบ Resend configuration"],"ยืนยันผู้ให้บริการ, MAIL_FROM และ secret ใน Supabase ก่อนเปิดใช้งาน; อย่าส่งทดสอบไปยังลูกค้าจริง","high");
+ if(codes.has("CRON_DISABLED")||codes.has("CRON_STALE")||codes.has("CRON_LAST_FAILED")||codes.has("CRON_FAILURES"))add("CRON_HEALTH","งานเบื้องหลังมีความเสี่ยงจาก scheduler หรือปลายทาง",["พบ Cron finding: "+[...codes].filter(x=>x.startsWith("CRON_")).join(", ")],"เทียบ job schedule, run history และ Edge Function logs เพื่อแยก scheduler failure จาก function failure","medium");
+ if(codes.has("ORDER_HEARTBEAT_STALE")||codes.has("ORDER_SYNC_ERRORS")||codes.has("STALE_ORDERS"))add("ORDER_PIPELINE","Order pipeline อาจติดขัดที่ heartbeat, sync หรือขั้นตอนสถานะ",["พบ Order finding: "+[...codes].filter(x=>x.startsWith("ORDER_")||x==="STALE_ORDERS").join(", ")],"ตรวจ orderTick, sync cursor และอายุสถานะออเดอร์แบบ read-only ก่อนพิจารณา retry","medium");
+ if(codes.has("SUPA_HEARTBEAT_STALE"))add("SUPABASE_HEARTBEAT","ข้อมูล heartbeat ของ Supabase ไม่สดใหม่",["supaHeartbeatAgeMinutes="+String(metrics.supaHeartbeatAgeMinutes??"unknown")],"ตรวจ scheduled health task, DB connectivity และ function logs โดยไม่ restart อัตโนมัติ","medium");
+ const keys=["outboxErrors24h","staleOrders","supaHeartbeatAgeMinutes","orderHeartbeatAgeMinutes","orderSyncErrors","orderSsoFailures24h"];
+ const trends=keys.map(key=>{
+  const vals=history.map(x=>metricValue(asJson(x.metrics,{}),key)).filter((v:any)=>v!==null);
+  const cur=metricValue(metrics,key);
+  if(cur===null)return {metric:key,current:null,trend:"unknown",samples:vals.length,change:null};
+  const prev=vals.length?vals[vals.length-1]:null;
+  return {metric:key,current:cur,previous:prev,trend:prev===null?"baseline":cur>prev?"increasing":cur<prev?"decreasing":"stable",change:prev===null?null:Number((cur-prev).toFixed(2)),samples:vals.length+1};
+ });
+ const forecasts=trends.filter(x=>x.metric==="outboxErrors24h"||x.metric==="staleOrders").map(x=>({metric:x.metric,nextCheckEstimate:x.current,method:"latest-value baseline only",confidence:"low",warning:"ไม่ใช่การพยากรณ์เชิงสถิติ; ต้องมีข้อมูลหลายรอบก่อนประเมินแนวโน้ม"}));
+ return {rootCauses:causes,trends,forecast:forecasts,confidence:causes.some(x=>x.confidence==="high")?"medium":causes.length?"low":"low"};
+}
+async function analyzeRun(run:any){
+ const metrics=asJson(run.metrics,{}), findings=asJson(run.findings,[]);
+ await sql`insert into public.it_ops_metric_history(monitor_run_id,captured_at,status,risk_score,metrics)
+ values(${run.id},${run.checked_at},${run.status},${run.risk_score},${JSON.stringify(metrics)}::jsonb)
+ on conflict(monitor_run_id) do nothing`;
+ const history=await sql`select metrics,captured_at from public.it_ops_metric_history where monitor_run_id<>${run.id} order by captured_at desc limit 5`;
+ const analysis=buildDiagnosis(Array.isArray(findings)?findings:[],metrics,history);
+ await sql`insert into public.it_ops_diagnostics(monitor_run_id,overall_status,root_causes,trends,forecast,confidence)
+ values(${run.id},${run.status},${JSON.stringify(analysis.rootCauses)}::jsonb,${JSON.stringify(analysis.trends)}::jsonb,${JSON.stringify(analysis.forecast)}::jsonb,${analysis.confidence})
+ on conflict(monitor_run_id) do update set overall_status=excluded.overall_status,root_causes=excluded.root_causes,trends=excluded.trends,forecast=excluded.forecast,confidence=excluded.confidence`;
+ return analysis;
+}
+
 async function runCycle(){
  if(!sql)throw new HttpError(503,"Database connection ไม่พร้อม");
  const [run]=await sql`select id,checked_at,risk_score,status,findings,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
  if(!run)throw new HttpError(409,"ยังไม่มีผลตรวจจาก IT Monitor");
  const parsedFindings=asJson(run.findings,[]); const findings=Array.isArray(parsedFindings)?parsedFindings:[];
+ const diagnosis=await analyzeRun(run);
  let upserts=0,proposals=0;
  for(const f of findings){
   const code=String(f.code||"UNKNOWN").slice(0,60); if(code==="ALL_CLEAR") continue; const level=["critical","warning","info"].includes(f.level)?f.level:"info";
@@ -89,7 +128,7 @@ async function runCycle(){
  }
  await sql`update public.it_ops_incidents set status='resolved',updated_at=now() where status in ('open','acknowledged') and last_seen_at < ${run.checked_at} - interval '15 minutes'`;
  await sql`insert into public.it_ops_audit(actor,event_type,entity_type,details) values('system','monitor_triaged','monitor_run',${JSON.stringify({runId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,mode:'observe_only'})}::jsonb)`;
- return {monitorRunId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,mode:"observe_only"};
+ return {monitorRunId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,diagnosis,mode:"observe_only"};
 }
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get("origin")||"";
@@ -119,13 +158,15 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==="GET"){
    await owner(req.headers.get("x-cms-session")||"");
-   const [incidents,queue,audit,actionRuns]=await Promise.all([
+   const [incidents,queue,audit,actionRuns,diagnostics,metricHistory]=await Promise.all([
     sql`select id,fingerprint,severity,code,title,detail,recommendation,status,first_seen_at,last_seen_at,occurrence_count from public.it_ops_incidents order by case severity when 'critical' then 0 when 'warning' then 1 else 2 end,last_seen_at desc limit 40`,
     sql`select q.id,q.incident_id,q.action_code,q.title,q.rationale,q.risk_level,q.status,q.requires_owner_approval,q.created_at,q.expires_at,i.code as incident_code from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id order by q.created_at desc limit 40`,
     sql`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30`,
-    sql`select id,action_queue_id,action_code,status,executed_by,preflight,simulation,rollback_check,created_at from public.it_ops_action_runs order by created_at desc limit 20`
+    sql`select id,action_queue_id,action_code,status,executed_by,preflight,simulation,rollback_check,created_at from public.it_ops_action_runs order by created_at desc limit 20`,
+    sql`select id,monitor_run_id,overall_status,root_causes,trends,forecast,confidence,created_at from public.it_ops_diagnostics order by created_at desc limit 12`,
+    sql`select monitor_run_id,captured_at,status,risk_score,metrics from public.it_ops_metric_history order by captured_at desc limit 12`
    ]);
-   return out({ok:true,mode:"dry_run_only",incidents,queue,audit,actionRuns},200,origin);
+   return out({ok:true,mode:"phase_2_2_read_only",incidents,queue,audit,actionRuns,diagnostics,metricHistory},200,origin);
   }
   throw new HttpError(405,"Method not allowed");
  }catch(e){const status=e instanceof HttpError?e.status:500;if(!(e instanceof HttpError))console.error("it-ops-orchestrator",String(e).slice(0,240));return out({ok:false,error:e instanceof HttpError?e.message:"IT Ops Orchestrator error"},status,origin);}
