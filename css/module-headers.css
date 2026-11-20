@@ -61,3 +61,37 @@
  .mhead:has(.monthpick:not([hidden])) .monthpick{grid-column:2;grid-row:2;justify-self:start;max-width:165px}
  .mhead:has(.monthpick:not([hidden])):after{width:22%!important;opacity:.42!important}
 }
+
+/* Mobile header refinement — prevent month picker and alert bell from wrapping or overflowing. */
+@media(max-width:680px){
+ .topbar{
+  display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
+  gap:8px!important;padding:7px 12px!important;min-height:68px!important;
+  padding-top:7px!important;padding-bottom:7px!important;
+ }
+ .topbar .mi{width:36px!important;height:36px!important;flex:0 0 36px!important}
+ .topbar .ttl{flex:1 1 auto!important;min-width:0!important;max-width:none!important}
+ .topbar .ttl small{font-size:11px!important;line-height:1.25!important}
+ .topbar h1{font-size:18px!important;line-height:1.18!important}
+ .topbar .tools{
+  display:flex!important;flex:0 0 auto!important;align-items:center!important;
+  justify-content:flex-end!important;gap:6px!important;min-width:0!important;
+ }
+ .topbar .tools #tb-br{display:none!important}
+ .topbar .monthpick{
+  display:block!important;flex:0 1 auto!important;width:clamp(104px,31vw,132px)!important;
+  min-width:0!important;max-width:132px!important;height:38px!important;min-height:38px!important;
+  padding:5px 6px!important;font-size:12px!important;border-radius:12px!important;
+ }
+ .topbar .monthpick[hidden]{display:none!important}
+ .topbar .bellbtn{
+  width:38px!important;height:38px!important;min-width:38px!important;flex:0 0 38px!important;
+  display:grid!important;place-items:center!important;font-size:17px!important;
+  border-radius:13px!important;background:#fff!important;
+ }
+ .topbar:after{width:28%!important;opacity:.28!important}
+}
+/* Slightly reduce the visual offset below the iPhone status area without entering the safe area. */
+@media(max-width:680px){
+ .topbar{scroll-margin-top:env(safe-area-inset-top,0px)}
+}
