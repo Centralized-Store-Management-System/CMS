@@ -60,6 +60,22 @@
        Native mobile app and customer LINE/LIFF layouts are intentionally untouched. */
     '@media(min-width:960px){html.embed body{background-color:#f2f6f2;background-image:radial-gradient(ellipse at 92% 8%,rgba(255,128,110,.12),transparent 27%),radial-gradient(ellipse at 4% 92%,rgba(7,115,79,.09),transparent 30%),linear-gradient(135deg,#f4f8f4,#eef4ef)}html.embed .clock-shell.cux{max-width:1120px!important;padding:14px 22px 28px!important}html.embed .cux-hi{margin:4px 2px 12px}html.embed .cux-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.82fr);align-items:center;gap:12px 16px;padding:18px 20px!important;border-radius:22px!important;background:radial-gradient(ellipse at 100% 0%,rgba(255,255,255,.12),transparent 34%),linear-gradient(125deg,#073f30 0%,#07583f 56%,#0d684b 100%)!important;box-shadow:0 12px 26px rgba(7,88,63,.14)!important;position:relative;overflow:hidden}html.embed .cux-top,html.embed .cux-tiles,html.embed .cux-done,html.embed .cux-hero .selfie-box,html.embed .cux-hero .field.check{grid-column:1/-1}html.embed .cux-top{align-items:center;margin-bottom:0}html.embed .cux-top b{font-size:27px!important}html.embed .cux-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}html.embed .cux-tile{min-height:78px;padding:10px 14px!important;border-radius:14px!important}html.embed .cux-tile b{font-size:23px!important}html.embed .cux-gps{grid-column:1;min-height:48px;padding:10px 12px;font-size:13px}html.embed .cux-go{grid-column:2;height:58px!important;border-radius:15px!important;font-size:21px!important}html.embed .cux-go svg{width:25px;height:25px}html.embed .cux-hero #ck-msg{grid-column:1/-1;text-align:left;font-size:12px;padding-left:2px}html.embed .cux-acts{max-width:none;gap:12px;margin:14px 0!important}html.embed .cux-act{min-height:82px;padding:10px!important;border-radius:16px!important;flex-direction:row;justify-content:flex-start;gap:12px;text-align:left;font-size:14px}html.embed .cux-act span{width:42px!important;height:42px!important;border-radius:13px!important}html.embed .cux-seg{margin:12px 0 8px}html.embed .cux .group,html.embed .cux .group.pad,html.embed .cux .stats>div{border-radius:16px!important;box-shadow:0 5px 16px rgba(16,61,45,.045)!important}html.embed .cux .row{min-height:52px;padding:10px 14px}html.embed .cux .group.pad{padding:14px!important}}',
     '@media(min-width:960px) and (max-width:1200px){html.embed .clock-shell.cux{padding-left:14px!important;padding-right:14px!important}html.embed .cux-hero{grid-template-columns:minmax(0,1fr) minmax(220px,.8fr);padding:16px!important}}',
+
+    /* Contrast and visual polish: keep every label readable on every state */
+    '.cux-hero .cux-top small,.cux-hero .cux-top b,.cux-hero .cux-top strong{color:#fff!important}',
+    '.cux-hero .cux-top small{color:#d7eee3!important}',
+    '.cux-hero .cux-pill{color:#fff!important}',
+    '.cux-hero .cux-tile:not(.on),.cux-hero .cux-tile:not(.on) *{color:#f4fff8!important}',
+    '.cux-hero .cux-tile.on,.cux-hero .cux-tile.on *{color:#10392a!important}',
+    '.cux-hero .cux-gps,.cux-hero .cux-gps span,.cux-hero .cux-gps b{color:#f4fff8!important}',
+    '.cux-hero #ck-msg{color:#e7f5ed!important}',
+    '.cux-hi b,.cux-hi small,.cux-seg a,.cux-act{ text-shadow:none!important}',
+    '.cux .group,.cux .group.pad,.cux .stats>div{color:#17211e}',
+    '.cux .group small,.cux .group .muted,.cux .stats small{color:#61736a}',
+    '.cux input,.cux select,.cux textarea{color:#17211e;background:#fff;border-color:#d8e5dc}',
+    '.cux input::placeholder,.cux textarea::placeholder{color:#78877f;opacity:1}',
+    '.cux-card,.cux-card *{color:#17211e}.cux-card h2{color:#07583f!important}.cux-card p{color:#61736a!important}',
+    '@media(min-width:960px){html.embed .cux{position:relative}html.embed .cux:after{content:"CAFÉ AMAZON  •  STORE OPERATIONS";display:block;margin:18px 2px 0;padding:18px 22px;border-radius:18px;background:linear-gradient(110deg,#e4f1e8,#f8f4ed 58%,#f7e8e2);border:1px solid #e1eae2;color:#557365;font:600 12px var(--display);letter-spacing:2px;text-align:right}html.embed .cux-hi{padding:8px 4px 10px}html.embed .cux-hero{min-height:0}html.embed .cux-hero:after{content:"";position:absolute;right:-54px;bottom:-92px;width:220px;height:220px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 24px rgba(255,255,255,.025),0 0 0 48px rgba(255,255,255,.02);pointer-events:none}html.embed .cux-hero>*{position:relative;z-index:1}}',
   ].join('');
   document.head.appendChild(st);
 
