@@ -343,3 +343,261 @@ Supabase Project ที่เชื่อมกับ CMS: `ytxbnqosenolojifeikf
 - ไม่แตะ Customer Order / Customer LINE OA / Customer LIFF flows
 
 เหตุผล: ต้องจบ Inventory + Data Dictionary + Dependency Map ก่อน เพื่อป้องกันการแยกแอปแล้วข้อมูลซ้ำ สิทธิ์หลุด หรือ workflow เดิมเสีย
+
+
+---
+
+# Architecture Addendum — LINE OA, LIFF, Live Orders & Product Operations
+
+วันที่เพิ่มเติม: 20 พ.ย. 2569  
+สถานะ: เพิ่มขอบเขตตามคำสั่งผู้ใช้ / Blueprint เท่านั้น ยังไม่แก้ Production
+
+## 13. ขอบเขตระบบที่เพิ่มเข้ามา
+
+นอกเหนือจาก 5 แอปตามบทบาท ให้แยกช่องทางและระบบปฏิบัติการต่อไปนี้เป็น Application/Module ที่มี Source Code, UI, release, test และการตั้งค่าของตัวเอง โดยเชื่อมข้อมูลผ่าน Shared API และฐานข้อมูลกลางเดียวกัน
+
+1. **LINE OA — Order Channel:** จัดการ OA สำหรับรับคำสั่งซื้อ เมนู Rich Menu, Messaging, Webhook, Template/ข้อความ, Channel Settings, Token/Connection Status และการติดตามเหตุการณ์
+2. **LINE OA — Staff Channel:** จัดการ OA/ช่องทางสื่อสารพนักงาน แยกจาก Order OA ทั้ง Channel ID, Rich Menu, Webhook, Messaging Rules, Notification และสิทธิ์ผู้ดูแล
+3. **Customer Order LIFF:** หน้าสั่งซื้อของลูกค้าผ่าน LINE LIFF รวม Login/Identity Mapping, Catalog, Cart, Checkout, Order Status และการเลือกสาขา
+4. **Staff LIFF:** หน้าสำหรับพนักงานผ่าน LINE LIFF เช่น Today, Schedule, Clock/Attendance, Leave/OT Request, Notifications และ Profile โดยใช้ Staff Identity กลาง
+5. **Live Order Management:** ระบบรับออเดอร์แบบ real-time, Order Queue, สถานะ, การรับงาน, การจัดเตรียม, พร้อมรับ/ส่งมอบ, ยกเลิก, ประวัติ และการติดตามปัญหา
+6. **Product Management:** จัดการ Product Master, หมวดหมู่, รูปภาพ, ราคา, ตัวเลือก/Modifiers, Availability, สถานะขาย, การผูกสินค้าเข้ากับสาขา และประวัติการเปลี่ยนแปลง
+7. **Channel & Integration Management:** หน้าจัดการการเชื่อมต่อ LINE OA/LIFF, webhook endpoints, channel mapping, event delivery, retry queue, health check และ audit
+
+Customer Order LIFF และ LINE OA Order ที่ระบุข้างต้นเป็นส่วนหนึ่งของขอบเขตงานแล้ว ไม่ถือเป็นระบบที่ยกเว้นอีกต่อไป
+
+## 14. โครงสร้าง Application ใหม่
+
+โครงสร้างเป้าหมายขยายจาก 5 role apps เป็นชุดแอปที่ deploy และแก้ไขแยกกัน:
+
+```
+apps/
+  owner/
+  manager/
+  hr/
+  staff/
+  super-admin/
+
+  order-liff/            # Customer ordering LIFF
+  staff-liff/            # Staff LIFF
+  live-orders/           # Live Order operations console
+  product-management/    # Product/catalog operations
+  line-order-admin/      # LINE OA Order management
+  line-staff-admin/      # LINE OA Staff management
+  integration-center/    # LINE/LIFF/webhook integration console
+
+packages/
+  api-client/
+  contracts/
+  identity/
+  permissions/
+  domain-types/
+  audit-client/
+  event-client/
+  ui-foundation/
+  line-sdk-adapter/
+  liff-sdk-adapter/
+  order-contracts/
+  catalog-contracts/
+
+services/
+  api-gateway/
+  domains/
+    identity/
+    organization/
+    employee/
+    schedule/
+    attendance/
+    leave/
+    approval/
+    product-catalog/
+    inventory/
+    order/
+    order-fulfillment/
+    payroll/
+    accounting/
+    notification/
+    documents/
+    reporting/
+    line-channel/
+    liff-session/
+    webhook-ingestion/
+  integrations/
+    line-order/
+    line-staff/
+    external-systems/
+
+supabase/
+  migrations/
+  functions/
+    backoffice/
+    order-api/
+    line-order-webhook/
+    line-staff-webhook/
+    liff-session/
+    hr-documents/
+    it-monitor/
+```
+
+โครงสร้างนี้เป็น logical target ไม่ได้หมายความว่าต้องสร้าง Edge Function ทุกตัวทันที บริการใดควรแยกเป็น function หรือยังคงอยู่ใน backoffice เดิมต้องตัดสินจาก inventory, security boundary, traffic และ dependency จริง
+
+## 15. หน้าที่และขอบเขตของระบบ Order / Product / LINE
+
+### 15.1 Customer Order LIFF
+- ลูกค้าเข้าสู่ LIFF และผูก LINE identity กับ customer record ตามกติกาความยินยอม
+- เลือกสาขาและดูเฉพาะสินค้าที่เปิดขายในสาขานั้น
+- แสดงราคา ตัวเลือกสินค้า และ availability จาก Catalog API กลาง
+- สร้าง Cart และส่งคำสั่งซื้อผ่าน Order API กลาง
+- แสดงเลขคำสั่งซื้อและสถานะจาก Order Lifecycle กลาง
+- ป้องกันการกดสั่งซ้ำด้วย idempotency key
+- ไม่เก็บ catalog/order state แยกไว้ใน LIFF เป็นแหล่งข้อมูลจริง
+
+### 15.2 Live Order Management
+- แสดงคิวออเดอร์แบบ real-time ตามสาขาและสิทธิ์
+- กำหนดสถานะมาตรฐาน เช่น received, accepted, preparing, ready, completed, cancelled (ต้องเทียบกับสถานะเดิมก่อนใช้จริง)
+- เก็บ Order Status History ทุก transition
+- แจ้งสถานะกลับไปยัง Customer LIFF/LINE OA ผ่าน Notification/Event Service
+- รองรับ reconnect, retry และ reconciliation เมื่อ realtime หลุด
+- แยกสิทธิ์ดู/รับงาน/เปลี่ยนสถานะ/ยกเลิกตาม Role และ Branch Scope
+- การเปลี่ยนสถานะต้องทำผ่าน server-side transition validation เท่านั้น
+
+### 15.3 Product Management
+- Product Master กลางเป็นแหล่งข้อมูลจริง
+- จัดการ Category, Product Options, Option Groups และ Combinations
+- แยกข้อมูลระดับสินค้าออกจากการเปิดขายรายสาขา เช่น branch_products
+- รองรับราคาและสถานะที่มีผลตามสาขา หากระบบเดิมมีข้อกำหนดดังกล่าว
+- จัดการรูปภาพผ่าน Storage และใช้ stable asset reference
+- เก็บ Product Change Audit และผู้แก้ไข
+- Order ต้องบันทึก snapshot ชื่อสินค้า ราคา ตัวเลือก และข้อมูลที่จำเป็น ณ เวลาสั่งซื้อ เพื่อรักษาประวัติ แม้ Catalog ภายหลังเปลี่ยนไป
+
+### 15.4 LINE OA Order Administration
+- จัดการการเชื่อมต่อ OA Order โดยใช้ Channel ID กลาง
+- ตั้งค่า Rich Menu / Menu Version / URI / LIFF destination
+- จัดการข้อความตอบกลับและ template ตามสิทธิ์
+- ตรวจสอบ webhook delivery, error, retry และ duplicate event
+- ผูก LINE user กับ Customer ID ตามกติกา Identity Mapping
+- ห้ามแสดง Channel Access Token หรือ Channel Secret ใน UI/log และห้ามเก็บใน Source Code
+
+### 15.5 LINE OA Staff Administration
+- แยก Channel Configuration และ Rich Menu จาก Order OA โดยเด็ดขาด
+- จัดการข้อความประกาศและ notification พนักงาน
+- ผูก LINE identity กับ Staff ID โดยผ่านขั้นตอนยืนยันตัวตน
+- ตรวจสอบสถานะ webhook, push delivery และข้อผิดพลาด
+- จำกัดผู้ดูแลตาม Role และบันทึก Audit ทุกการเปลี่ยนค่า
+
+### 15.6 Staff LIFF
+- ใช้ Staff Identity กลางเดียวกับ Staff App
+- ตารางงาน เวลาเข้าออก คำขอลา/OT และ notification ต้องอ่านจาก Domain API เดียวกัน
+- ห้ามสร้าง Employee/Attendance/Schedule record ซ้ำเฉพาะใน LIFF
+- คงกติกาพนักงานยื่น OT เอง และ flow การอนุมัติเดิม
+
+## 16. Data Ownership และการเชื่อมโยงข้ามระบบ
+
+| Domain / ข้อมูล | Source of Truth | ผู้สร้าง/แก้ไขตามสิทธิ์ | ผู้ใช้ข้อมูล |
+|---|---|---|---|
+| Customer Identity | Customer Domain | ระบบ/ผู้ได้รับอนุญาต | Order LIFF, LINE OA Order, Live Orders, Owner |
+| LINE Identity Mapping | Identity Integration Domain | ระบบหลังยืนยันตัวตน/ผู้ดูแลที่ได้รับอนุญาต | Customer LIFF, Staff LIFF, OA integrations |
+| LINE Channel Config | Channel Integration Domain | Super Admin/ผู้ดูแล Channel | LINE OA Order, LINE OA Staff, LIFF |
+| Product / Category / Options | Product Catalog Domain | Product Admin/ผู้ได้รับอนุญาต | Order LIFF, Live Orders, Owner, Manager |
+| Branch Product Availability | Branch Catalog Domain | ผู้ดูแลสินค้า/สาขาตามสิทธิ์ | Customer LIFF, Live Orders, Manager |
+| Order / Order Items | Order Domain | Customer LIFF สร้าง; ระบบ/ผู้มีสิทธิ์เปลี่ยนสถานะ | Live Orders, Owner, Manager, LINE OA |
+| Order Status History | Order Domain | Order workflow service เท่านั้น | ทุกแอปที่มีสิทธิ์ |
+| Fulfillment / Preparation | Fulfillment Domain | พนักงาน/ผู้จัดการตามสิทธิ์ | Live Orders, Customer LIFF, LINE OA |
+| Staff Identity | Employee/Identity Domain | HR/Super Admin ตามสิทธิ์ | Staff App, Staff LIFF, Mgr, HR, Owner |
+| Staff Schedule/Attendance | Workforce Domain | Staff/Mgr/HR ตาม workflow | Staff LIFF, Staff App, Mgr, HR, Owner |
+| Notifications | Notification Domain | Event consumers | ทุกแอปและ LINE channels ตาม permission |
+
+**ข้อห้าม:** ห้ามให้ LINE OA, LIFF หรือ Live Orders ทำสำเนาสินค้า/ราคา/ออเดอร์เป็นฐานข้อมูลหลักของตัวเอง ทุกช่องทางต้องอ้างอิง Product ID, Branch ID, Customer ID และ Order ID ชุดเดียวกัน
+
+## 17. Event Flow ที่ต้องทำงานเชื่อมโยงกัน
+
+### Order Flow
+```
+Customer LINE OA
+      ↓ open LIFF
+Customer Order LIFF
+      ↓ Catalog API
+Shared Product / Branch Catalog
+      ↓ create order
+Shared Order API + PostgreSQL
+      ↓ OrderCreated Event
+Live Order Management
+      ↓ status transition
+Order Status History
+      ↓ OrderStatusChanged Event
+Customer LIFF + LINE OA Notification
+      ↓
+Customer sees the same order status
+```
+
+### Staff Flow
+```
+HR Employee Master
+      ↓
+Shared Staff Identity
+      ↓
+Staff App  ↔  Staff LIFF
+      ↓              ↓
+Schedule / Attendance / Leave / OT APIs
+      ↓
+Approval Workflow (Mgr / HR / Owner as authorized)
+      ↓
+Shared Status + Audit + Notification
+      ↓
+All authorized apps show the same current state
+```
+
+### Product Update Flow
+```
+Product Management
+      ↓
+Product Catalog Domain
+      ↓
+Branch Availability / Price / Options
+      ↓ CatalogChanged Event
+Customer Order LIFF + Live Orders + Owner + Manager
+      ↓
+All channels read the current catalog from the same API
+```
+
+ทุก Event ต้องมี event_id, aggregate_id, aggregate_version, occurred_at, source_app, actor_id และ correlation_id; consumer ต้อง idempotent และมี retry/dead-letter/reconciliation
+
+## 18. LINE / LIFF Security & Reliability Requirements
+
+- Verify LINE webhook signature ฝั่ง server ก่อนประมวลผล
+- แยก secrets ของ Order OA และ Staff OA; จัดเก็บใน Secret Store/Environment ที่ปลอดภัยเท่านั้น
+- ไม่ส่ง Channel Secret, Access Token หรือข้อมูลลับลง browser, repository, logs หรือ error message
+- LIFF ต้องตรวจสอบ session/token ฝั่ง server และผูก user identity ตาม flow ที่กำหนด
+- ตรวจสิทธิ์ทุก API request ไม่เชื่อค่า role หรือ branch จาก client
+- ป้องกัน webhook replay/duplicate ด้วย event identity และ idempotency
+- แยก webhook endpoint หรือ routing namespace ระหว่าง Order OA กับ Staff OA
+- บันทึก webhook receipt, processing result, retry count และ correlation ID โดยไม่บันทึกข้อมูลลับ
+- จำกัดข้อมูลลูกค้าและข้อมูลพนักงานตามวัตถุประสงค์และสิทธิ์
+- มีระบบตรวจ health ของ OA/LIFF, callback, API, realtime และ notification delivery
+
+## 19. การแยก Release และการทดสอบเพิ่มเติม
+
+แต่ละ Application ต้องมี pipeline ของตนเอง:
+- Owner, Manager, HR, Staff, Super Admin
+- Customer Order LIFF, Staff LIFF
+- Live Order Management, Product Management
+- LINE OA Order Admin, LINE OA Staff Admin, Integration Center
+
+การเปลี่ยน Shared API หรือ Database Contract ต้องมี:
+1. Contract version / migration plan
+2. Compatibility test กับ client ทุกตัวที่ใช้งาน
+3. Integration test สำหรับ Order → Live Order → Notification → LIFF
+4. Integration test สำหรับ Product → Branch Availability → Order LIFF
+5. Integration test สำหรับ HR/Staff → Staff LIFF → Attendance/Leave/OT → Approval
+6. Webhook signature, duplicate event, retry และ recovery test
+7. Branch/Role isolation test
+8. Rollback plan ที่ไม่ทำให้ order history หรือ audit สูญหาย
+
+## 20. ปรับขอบเขตการดำเนินงาน
+
+- รวม Customer Order LIFF, LINE OA Order และ Staff LIFF/LINE OA Staff ไว้ในแผนแยกระบบอย่างเป็นทางการ
+- รวม Live Order Management และ Product Management เป็นแอป/โมดูลที่มีขอบเขต Source Code ชัดเจน
+- ไม่แยกฐานข้อมูลธุรกิจตามแอป และไม่สร้าง Product/Order/Staff/Branch master ซ้ำ
+- ใช้ Supabase Project เดิมเป็นฐานข้อมูลกลางในระยะแรก
+- คง customer ordering workflow และ staff workflow เดิม จนกว่าจะทำ inventory และ regression test ผ่าน
+- ยังไม่เปลี่ยน schema, RLS, webhook, LIFF settings, LINE OA credentials หรือ production endpoints ในรอบเอกสารนี้
