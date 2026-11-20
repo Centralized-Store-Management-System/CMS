@@ -20,7 +20,50 @@ const SAFE_ACTIONS:Record<string,{title:string,risk:"low"|"medium",why:string}>=
  ORDER_SSO_FAILURES:{title:"ตรวจสอบ Order SSO failures",risk:"low",why:"ตรวจ authentication logs และสิทธิ์โดยไม่เปลี่ยนสิทธิ์"},
  STALE_ORDERS:{title:"ตรวจสอบออเดอร์ค้าง",risk:"low",why:"ตรวจสถานะและ timeline ไม่แก้สถานะออเดอร์"}
 };
-async function runCycle(){
+
+const DRY_RUN_ALLOWLIST = new Set([
+ "inspect_outbox_errors","inspect_cron_disabled","inspect_cron_stale",
+ "inspect_cron_last_failed","inspect_cron_failures","inspect_supa_heartbeat",
+ "inspect_order_heartbeat","inspect_order_sync_errors","inspect_order_sso_failures"
+]);
+async function simulateApprovedAction(id:number,actor:string){
+ const [item]=await sql`select q.id,q.incident_id,q.action_code,q.status,q.expires_at,i.code as incident_code
+  from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id
+  where q.id=${id} limit 1`;
+ if(!item)throw new HttpError(404,"ไม่พบรายการ");
+ if(item.status!=="approved")throw new HttpError(409,"ต้องอนุมัติรายการก่อนจึงจำลองได้");
+ if(new Date(item.expires_at).getTime()<=Date.now())throw new HttpError(409,"รายการอนุมัติหมดอายุแล้ว");
+ if(!DRY_RUN_ALLOWLIST.has(item.action_code))throw new HttpError(403,"Action นี้ยังไม่อยู่ใน Dry-run Allowlist");
+ const [recent]=await sql`select id,created_at from public.it_ops_action_runs where action_queue_id=${id} and created_at>now()-interval '30 minutes' order by created_at desc limit 1`;
+ if(recent)throw new HttpError(429,"รายการนี้อยู่ในช่วง Cooldown 30 นาที");
+ let simulation:Record<string,unknown>={};
+ if(item.action_code==="inspect_outbox_errors"){
+  const [counts]=await sql`select count(*)::int as total_24h,count(*) filter(where kind='mail')::int as mail_24h,count(*) filter(where kind<>'mail')::int as other_24h from backoffice.outbox_errors where at>=now()-interval '24 hours'`;
+  const groups=await sql`select kind,count(*)::int as count from backoffice.outbox_errors where at>=now()-interval '24 hours' group by kind order by count desc`;
+  simulation={description:"ตรวจเฉพาะจำนวน Outbox errors แบบ aggregate; ไม่อ่านผู้รับหรือเนื้อหาข้อความ",counts,groups};
+ } else if(["inspect_cron_disabled","inspect_cron_stale","inspect_cron_last_failed","inspect_cron_failures"].includes(item.action_code)){
+  const jobs=await sql`select jobname,active,schedule from cron.job where jobname in ('backoffice-tick','it-monitor-every-5-minutes','it-o
+ps-orchestrator-every-5-minutes') order by jobname`;
+  const failures=await sql`select jobid,count(*)::int as failures,max(start_time) as latest_failure from cron.job_run_details where start_time>=now()-interval '24 hours' and status<>'succeeded' group by jobid order by failures desc`;
+  const last=await sql`select jobid,status,start_time,return_message from cron.job_run_details where start_time>=now()-interval '24 hours' order by start_time desc limit 10`;
+  simulation={description:"ตรวจสถานะ Cron และประวัติการรันแบบอ่านอย่างเดียว",jobs,failures,lastRuns:last};
+ } else {
+  const [latest]=await sql`select id,checked_at,status,risk_score,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
+  const metrics=latest?.metrics||{};
+  const map:Record<string,string>={inspect_supa_heartbeat:"supaHeartbeatAgeMinutes",inspect_order_heartbeat:"orderHeartbeatAgeMinutes",inspect_order_sync_errors:"orderSyncErrors",inspect_order_sso_failures:"orderSsoFailures24h"};
+  simulation={description:"ใช้เฉพาะตัวชี้วัดสรุปจาก IT Monitor ล่าสุด ไม่อ่านข้อมูลลูกค้าหรือข้อมูลพนักงาน",monitorRunId:latest?.id??null,checkedAt:latest?.checked_at??null,monitorStatus:latest?.status??"unknown",riskScore:latest?.risk_score??null,metric:map[item.action_code]||"unknown",value:metrics[map[item.action_code]]??null};
+ }
+ const preflight={ownerAuthenticated:true,approved:item.status==="approved",notExpired:true,allowlisted:true,cooldownPassed:true,readOnly:true,productionMutation:false};
+ const rollback={required:false,readiness:"not_applicable",reason:"Dry-run ไม่มีการเปลี่ยนแปลง Production จึงไม่มี state ให้ rollback",futureGate:"ก่อนเปิด remediation จริงต้องมี snapshot/backup, rollback command ที่ทดสอบแล้ว และ post-check"};
+ const idempotencyKey="dryrun:"+id+":"+new Date().toISOString().slice(0,16);
+ const [saved]=await sql`insert into public.it_ops_action_runs(action_queue_id,incident_id,mode,action_code,status,executed_by,idempotency_key,preflight,simulation,rollback_check)
+  values(${id},${item.incident_id},'dry_run','${item.action_code}','passed',${actor},${idempotencyKey},${JSON.stringify(preflight)}::jsonb,${JSON.stringify(simulation)}::jsonb,${JSON.stringify(rollback)}::jsonb)
+  returning id,created_at,status,action_code`;
+ await sql`insert into public.it_ops_audit(actor,event_type,entity_type,entity_id,details)
+  values(${actor},'dry_run_completed','action_queue',${id},${JSON.stringify({actionRunId:saved.id,actionCode:item.action_code,mode:"dry_run",productionMutation:false})}::jsonb)`;
+ return {run:saved,preflight,simulation,rollback,mode:"dry_run"};
+}
+\nasync function runCycle(){
  if(!sql)throw new HttpError(503,"Database connection ไม่พร้อม");
  const [run]=await sql`select id,checked_at,risk_score,status,findings,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
  if(!run)throw new HttpError(409,"ยังไม่มีผลตรวจจาก IT Monitor");
@@ -60,7 +103,12 @@ Deno.serve(async(req:Request)=>{
     if(!k?.v||body.k!==k.v)throw new HttpError(403,"Invalid scheduler key");
     return out({ok:true,result:await runCycle()},200,origin);
    }
-   const actor=await owner(req.headers.get("x-cms-session")||""),id=Number(body.id),decision=String(body.decision||"");
+   const actor=await owner(req.headers.get("x-cms-session")||"");
+   if(new URL(req.url).searchParams.get("dry_run")==="1"){
+    const id=Number(body.id); if(!Number.isSafeInteger(id)||id<=0)throw new HttpError(400,"รหัสรายการไม่ถูกต้อง");
+    return out({ok:true,result:await simulateApprovedAction(id,actor)},200,origin);
+   }
+   const id=Number(body.id),decision=String(body.decision||"");
    if(!Number.isSafeInteger(id)||id<=0||!["approve","reject"].includes(decision))throw new HttpError(400,"คำขอไม่ถูกต้อง");
    const next=decision==="approve"?"approved":"rejected";
    const rows=await sql`update public.it_ops_action_queue set status=${next},reviewed_by=${actor},reviewed_at=now() where id=${id} and status='pending_approval' and expires_at>now() returning id,action_code,status`;
@@ -70,7 +118,7 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==="GET"){
    await owner(req.headers.get("x-cms-session")||"");
-   const [incidents,queue,audit]=await Promise.all([
+   const [incidents,queue,audit,actionRuns]=await Promise.all([
     sql`select id,fingerprint,severity,code,title,detail,recommendation,status,first_seen_at,last_seen_at,occurrence_count from public.it_ops_incidents order by case severity when 'critical' then 0 when 'warning' then 1 else 2 end,last_seen_at desc limit 40`,
     sql`select q.id,q.incident_id,q.action_code,q.title,q.rationale,q.risk_level,q.status,q.requires_owner_approval,q.created_at,q.expires_at,i.code as incident_code from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id order by q.created_at desc limit 40`,
     sql`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30`
