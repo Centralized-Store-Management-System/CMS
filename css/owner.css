@@ -240,3 +240,7 @@
 .oc-ops-queue-card button[data-ops-dryrun]{margin-top:9px;border:0;border-radius:9px;padding:8px 13px;background:#0b6848;color:#fff;font:inherit;font-size:12px}
 
 .oc-ops-forecast-note{display:block;margin:7px 0;padding:9px 11px;border-radius:9px;background:#f4f8f5;color:#68786f;font-size:11px;line-height:1.6}
+
+/* Super Advance IT Phase 2.3 */
+.oc-ops-queue-card button[data-ops-feedback]{margin:7px 6px 0 0;border:1px solid #cfe2d5;border-radius:9px;padding:7px 10px;background:#fff;color:#176447;font:inherit;font-size:11px}
+.oc-ops-queue-card button[data-ops-feedback="false_positive"]{color:#8a4b20;border-color:#ead7c6}
