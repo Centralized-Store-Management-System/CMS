@@ -1,0 +1,82 @@
+/* Café Amazon Prototype UI — shared visual layer for Back Office, Owner and Staff.
+   Visual-only overrides. Authentication, routes, permissions, API and business rules remain unchanged. */
+:root{
+ --bg:#f3f7f4;--surface:#fff;--sunk:#eaf2ec;--ink:#17211e;--muted:#718079;--line:#e7eee9;
+ --brand:#07583f;--on-brand:#fff;--focus:#16865e;--ok:#16824f;--warn:#ad6b12;--bad:#d65e50;
+ --side:#064b37;--side2:#073d30;--side-ink:#d7e8df;--side-mute:#9bc3b0;--gold:#ff806e;
+ --m-dash:#07583f;--m-approve:#ff806e;--m-hr:#16865e;--m-time:#16865e;--m-sched:#16865e;--m-pay:#16865e;--m-stock:#16865e;--m-acct:#16865e;--m-set:#07583f;
+ --font:"IBM Plex Sans Thai","Inter","Segoe UI",Arial,sans-serif;
+ --display:"Prompt","IBM Plex Sans Thai","Inter","Segoe UI",sans-serif;
+ --shadow:0 12px 30px rgba(16,61,45,.09);
+ color-scheme:light;
+}
+html,body{background-color:var(--bg);color:var(--ink)}
+body{background-image:radial-gradient(ellipse at 95% 0%,rgba(255,128,110,.13),transparent 28%),radial-gradient(ellipse at 0% 100%,rgba(36,153,105,.08),transparent 32%);background-attachment:fixed}
+button,input,select,textarea{font-family:var(--font)}
+h1,h2,h3,.mhead h1,.topbar h1{font-family:var(--display)}
+/* Back Office shell + navigation */
+@media(min-width:960px){
+ html .shell{grid-template-columns:244px minmax(0,1fr)}
+ html .side{background:linear-gradient(180deg,#064b37,#073d30);color:#d7e8df;border:0;padding:22px 14px;box-shadow:5px 0 24px rgba(6,63,48,.07)}
+}
+.side .brand{padding:0 8px 22px;margin:0 0 12px;border-bottom:1px solid #ffffff24}
+.side .brand .logo{width:46px;height:46px;border-radius:15px;background:linear-gradient(145deg,#08734f,#06412f);box-shadow:var(--shadow)}
+.side .brand b{color:#fff;font:600 16px/1.2 var(--display)}
+.side .brand small{color:#b9d8c9}
+.side .nav{gap:4px}
+.side .nav h4{color:#9bc3b0;font-size:10px;letter-spacing:1.5px;font-weight:800;padding:10px 12px 4px}
+.side .nav a{padding:11px 13px;border-radius:12px;color:#d7e8df;font-size:13px;font-weight:700}
+.side .nav a:hover,.side .nav a[aria-current="page"]{background:#ffffff20;color:#fff}
+.side .nav a[aria-current="page"]{box-shadow:inset 3px 0 var(--gold)}
+.side .nav a .ic{background:#ffffff16;color:#b9d8c9;border-radius:9px}
+.side .nav a[aria-current="page"] .ic{background:var(--gold);color:#fff}
+.side .userbox{border-color:#ffffff24;color:#fff}
+.side .userbox .s{color:#b9d8c9}
+.topbar{background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .mi{background:var(--brand);border-radius:12px}
+main{max-width:1500px;padding-top:22px}
+.mhead{margin:8px 0 18px}
+.mhead h1{color:var(--ink);letter-spacing:-.4px}
+.tabs{background:rgba(255,255,255,.8);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.tabs a{border-radius:12px}
+.group,.tile,.card,.panel,.kpi,.oc-card,.oc-main .box,.oc-main .group{border-radius:18px;box-shadow:var(--shadow)}
+.tile{border:1px solid rgba(255,255,255,.95)}
+.btn{border-radius:12px}
+.btn.primary{background:var(--brand);border-color:var(--brand)}
+.field input,.field select,.field textarea,input,select,textarea{border-radius:11px}
+table th{background:#f3f8f4}
+table tbody tr:hover{background:#f8fbf8}
+.login{background:linear-gradient(145deg,#e9f4ed,#f7faf8 60%,#fceeea)}
+.login-card{border-radius:24px;box-shadow:var(--shadow)}
+#toast{border-radius:14px;background:#173d30}
+.bottom{background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid #e6eee8;box-shadow:0 -8px 26px rgba(14,55,37,.07)}
+.bottom a[aria-current="page"]{color:var(--brand);background:#e8f4ec}
+/* Owner console and Owner PWA */
+.oc{background:transparent}
+.oc-side{background:linear-gradient(180deg,#064b37,#073d30);color:#d7e8df;padding:22px 14px}
+.oc-side .brand{border-bottom:1px solid #ffffff24;padding:0 8px 20px}
+.oc-side .brand b{color:#fff}.oc-side .brand small,.oc-side h4{color:#9bc3b0}
+.oc-side a{border-radius:12px;color:#d7e8df;padding:11px 13px;font-size:13px;font-weight:700}
+.oc-side a:hover,.oc-side a[aria-current="page"]{background:#ffffff20;color:#fff}
+.oc-side a[aria-current="page"]{box-shadow:inset 3px 0 var(--gold)}
+.oc-main{max-width:1500px;padding:24px clamp(16px,3vw,40px)}
+.oc-main h1{color:var(--ink)}
+.oc-card{border-color:rgba(255,255,255,.95);background:rgba(255,255,255,.92);padding:19px}
+.oc-ring{box-shadow:var(--shadow)}
+.oc-top{background:rgba(255,255,255,.94);backdrop-filter:blur(14px)}
+.oc-top .t b{color:var(--brand)}
+.oc-top .logo,.oc-land-head .logo,.owner-pin-mark{background:var(--brand);color:#fff}
+.oc-land{background:linear-gradient(145deg,#064b37,#08734f)}
+.oc-big{border-radius:20px;box-shadow:var(--shadow)}
+.oc-big .ic{background:#e2f2e9;color:var(--brand)}
+.owner-pin-pad button{border-radius:14px}
+@media(max-width:860px){
+ .oc-main{padding:17px 15px calc(88px + env(safe-area-inset-bottom))}
+ .oc-side{background:rgba(255,255,255,.97);backdrop-filter:blur(14px);box-shadow:0 -8px 26px rgba(14,55,37,.08)}
+ .oc-side a[aria-current="page"]:before{background:var(--gold)}
+}
+@media(max-width:620px){
+ main{padding:15px 13px calc(100px + env(safe-area-inset-bottom))}
+ .group,.tile,.card,.panel,.kpi{border-radius:17px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
