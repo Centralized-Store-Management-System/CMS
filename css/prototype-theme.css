@@ -80,3 +80,23 @@ table tbody tr:hover{background:#f8fbf8}
  .group,.tile,.card,.panel,.kpi{border-radius:17px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+
+/* Prototype card system — actual CMS components */
+.group,.tile,.kpi,.sumbox,.today-card,.stats>div,.brgrid>.tilebtn,.oc-card{border:1px solid #e5eee8!important;border-radius:20px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 8px 24px rgba(16,61,45,.065)!important}
+.group{overflow:hidden;margin:0 0 16px}.group.pad{padding:18px}
+.row{min-height:62px;padding:13px 16px}.row+.row{border-top-color:#edf2ee}.row:hover{background:#f5faf6}
+.tile{padding:17px!important;gap:14px;align-items:center;min-height:100px}.tile .mi{width:48px;height:48px;border-radius:15px;background:#e5f3ea;color:#07583f}.tile b{font:600 15px var(--display)}
+.kpi{padding:18px!important}.h2{font-size:19px;margin:12px 2px}.h3{color:#07583f;font-weight:700;margin:24px 4px 10px}
+.clock-shell{max-width:680px!important;padding:18px 16px calc(36px + env(safe-area-inset-bottom))!important}
+.clock-top{padding:10px 12px;margin:0 -2px 18px;border-radius:17px;background:#fff;border:1px solid #e5eee8;box-shadow:0 6px 20px rgba(16,61,45,.05)}
+.clock-top .brand .logo{border-radius:13px;background:#07583f;color:#fff}
+.clock-face{font-size:clamp(56px,15vw,76px)!important;color:#07583f;letter-spacing:-2px}.clock-date{margin:3px 0 20px;font-size:14px}
+.clock-shell .who-form,.clock-shell>.group{border:1px solid #e5eee8!important;border-radius:20px!important;background:#fff!important;box-shadow:0 8px 24px rgba(16,61,45,.065)!important}
+.clock-shell .today-card{padding:20px!important;margin:12px 0 16px!important;background:linear-gradient(135deg,#07583f,#08734f)!important;color:#fff!important;border:0!important;border-radius:22px!important;box-shadow:0 14px 30px rgba(7,88,63,.2)!important}
+.clock-shell .today-card .k,.clock-shell .today-card .muted{color:#cce5d7!important}.clock-shell .today-card .shift{font-size:30px!important;margin:8px 0!important}.clock-shell .today-card p{line-height:1.55}
+.clock-shell .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px;padding:6px;border-radius:17px;background:#eaf2ec;border:1px solid #e1ebe4}
+.clock-shell .tabs a{border-radius:12px;padding:10px 8px;font-size:13px}.clock-shell .tabs a[aria-current="page"]{background:#07583f;color:#fff;box-shadow:0 5px 12px rgba(7,88,63,.18)}
+.clock-shell .stats{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.clock-shell .stats>div{padding:15px!important;border-radius:17px!important}.clock-shell .stats b{color:#07583f;font-size:23px}
+.clock-shell .keypad{gap:12px}.clock-shell .keypad button{border-radius:17px;min-height:66px;background:#fff;box-shadow:0 4px 12px rgba(16,61,45,.05)}
+.clock-shell .btn{min-height:44px}.clock-shell .btn.primary{background:#07583f!important;border-color:#07583f!important}.clock-shell .btn.big{min-height:58px;border-radius:16px;font-size:18px}
+@media(max-width:520px){.clock-shell{padding:12px 13px calc(28px + env(safe-area-inset-bottom))!important}.clock-top{margin-bottom:14px}.clock-shell .today-card{padding:17px!important}.clock-shell .today-card .shift{font-size:27px!important}.clock-shell .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.clock-shell .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.clock-shell .group.pad{padding:15px}.clock-shell .actions .btn.big{width:100%}}
