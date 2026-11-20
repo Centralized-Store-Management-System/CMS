@@ -8,7 +8,7 @@
   'use strict';
   var THEMES = {
     classic: [],
-    prototype: ['css/prototype-theme.css?v=1.7.2', 'css/module-headers.css?v=1.0.4'],
+    prototype: ['css/prototype-theme.css?v=1.7.2', 'css/module-headers.css?v=1.0.4', 'css/prototype-fix.css?v=1.0.0'],
     owner: ['css/owner-theme.css?v=1.0.0']
   };
   var DEFAULTS = { owner: 'owner', backoffice: 'prototype', backoffice_owner: 'prototype', staff: 'classic' };

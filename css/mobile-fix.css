@@ -1,0 +1,9 @@
+/* แก้การจัดวางบนมือถือ (ทุก Theme ของหลังร้าน) — ไม่เปลี่ยนสี/หน้าตา
+ * แถวที่มีปุ่มหลายปุ่ม (เช่น Approvals > มีกะตามตาราง แต่ไม่พบการลงเวลา): ปุ่มขึ้นบรรทัดใหม่ใต้ชื่อ ไม่ล้นจอ */
+@media (max-width:680px){
+  .row:has(>.mini>:nth-child(3)){flex-wrap:wrap;row-gap:8px}
+  .row:has(>.mini>:nth-child(3))>.main{flex:1 1 0;min-width:0}
+  .row>.mini:has(>:nth-child(3)){flex:1 1 100%;justify-content:flex-start;flex-wrap:wrap;padding-left:52px}
+  .row>.mini:has(>:nth-child(3)) .btn{flex:0 0 auto}
+}
+@media (max-width:380px){ .row>.mini:has(>:nth-child(3)){padding-left:0} }
