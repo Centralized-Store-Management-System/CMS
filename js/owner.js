@@ -153,7 +153,9 @@ function ocIt() {
   <h3 class="h3">เหตุการณ์ล่าสุด</h3>${ocEventList(s.events)}`;
 }
 function ocAiPage() {
-  return '<h1>🧠 AI Monitoring · Advanced</h1><p class="muted">วิเคราะห์สุขภาพระบบจาก 4 แหล่งข้อมูล: IT Status, Performance, Event History และ Incident Dashboard ย้อนหลัง 7 วัน · รีเฟรชอัตโนมัติทุก 5 นาทีขณะเปิดหน้านี้</p>' + (typeof ocAiPanelHtml === 'function' ? ocAiPanelHtml() : '<p class="status bad">ไม่พบ Diagnostic Engine</p>');
+  const html = '<h1>🧠 AI Monitoring · Advanced</h1><p class="muted">วิเคราะห์สุขภาพระบบจาก 4 แหล่งข้อมูล: IT Status, Performance, Event History และ Incident Dashboard ย้อนหลัง 7 วัน · รีเฟรชอัตโนมัติทุก 5 นาทีขณะเปิดหน้านี้</p>' + (typeof ocAiPanelHtml === 'function' ? ocAiPanelHtml() : '<p class="status bad">ไม่พบ Diagnostic Engine</p>') + (typeof ocOpsPanelHtml === 'function' ? ocOpsPanelHtml() : '');
+  setTimeout(() => { if (typeof ocOpsCheck === 'function' && OC.view === 'ai') ocOpsCheck(); }, 0);
+  return html;
 }
 function ocEventList(L) {
   return `<div class="group">${(L || []).map(e => `<div class="row static">${ocDot(e.kind === 'alert' ? 'bad' : e.kind === 'heal' ? 'ok' : 'warn')}<span class="main"><span class="t">${esc(e.title)}</span><span class="s">${esc(e.at)}${e.auto ? ' · อัตโนมัติ' : ''}${e.detail ? ' · ' + esc(e.detail) : ''}</span></span></div>`).join('') || empty('ยังไม่มีเหตุการณ์')}</div>`;
