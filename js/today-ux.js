@@ -72,6 +72,15 @@
     '@media(max-width:1050px){#view:has(.kpis.exec) .kpis.exec{grid-template-columns:repeat(2,minmax(0,1fr))}}',
     '@media(max-width:759px){#view:has(.kpis.exec) .hello{min-height:150px;padding:20px 18px;border-radius:20px}#view:has(.kpis.exec) .hello:before{width:62%}#view:has(.kpis.exec) .hello:after{right:5%;width:76px;height:105px;bottom:8px;border-width:4px}#view:has(.kpis.exec) .kpis.exec{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px}#view:has(.kpis.exec) .kpis.exec .exec-kpi{min-height:138px;padding:13px;border-radius:18px}#view:has(.kpis.exec) .exec-kpi-head small{font-size:11px}}',
     '@media(max-width:380px){#view:has(.kpis.exec) .hello{padding:16px;min-height:136px}#view:has(.kpis.exec) .hello:after{width:60px;height:86px;right:4%}#view:has(.kpis.exec) .kpis.exec .exec-kpi{min-height:128px;padding:11px}}'
+    /* Owner Today: real café photo header across desktop, iPad and mobile; content/sidebar/functions unchanged */,
+    '#view:has(.kpis.exec) .hello{background-color:#edf5e9;background-image:linear-gradient(90deg,rgba(246,250,244,.99) 0%,rgba(246,250,244,.96) 34%,rgba(246,250,244,.70) 56%,rgba(246,250,244,.10) 100%),url(https://images.unsplash.com/photo-1752216581594-a235ddcbfa9f?auto=format&fit=crop&w=1800&q=82);background-size:cover;background-position:center 46%;border-color:#dce9dc;min-height:184px;padding:26px 30px;box-shadow:0 12px 30px rgba(16,61,43,.08)}',
+    '#view:has(.kpis.exec) .hello:before{content:"";position:absolute;z-index:0;inset:0 auto 0 58%;width:42%;background:radial-gradient(ellipse at 90% 12%,rgba(198,226,159,.30),transparent 40%),linear-gradient(135deg,transparent 45%,rgba(255,255,255,.10));pointer-events:none}',
+    '#view:has(.kpis.exec) .hello:after{content:none;display:none}',
+    '#view:has(.kpis.exec) .hello h2,#view:has(.kpis.exec) .hello p{z-index:2;max-width:62%;text-shadow:0 1px 0 rgba(255,255,255,.35)}',
+    '#view:has(.kpis.exec) .kpis.exec .exec-kpi{transition:transform .18s ease,box-shadow .18s ease;border-radius:22px;backdrop-filter:blur(2px)}',
+    '#view:has(.kpis.exec) .kpis.exec .exec-kpi:hover{transform:translateY(-3px);box-shadow:0 14px 28px rgba(18,61,43,.11)}',
+    '@media(max-width:759px){#view:has(.kpis.exec) .hello{min-height:158px;padding:20px 18px;background-position:62% center;background-image:linear-gradient(90deg,rgba(246,250,244,.99) 0%,rgba(246,250,244,.94) 42%,rgba(246,250,244,.55) 68%,rgba(246,250,244,.10) 100%),url(https://images.unsplash.com/photo-1752216581594-a235ddcbfa9f?auto=format&fit=crop&w=1200&q=78)}#view:has(.kpis.exec) .hello h2,#view:has(.kpis.exec) .hello p{max-width:72%}}',
+    '@media(max-width:420px){#view:has(.kpis.exec) .hello{min-height:142px;padding:16px;background-position:66% center}#view:has(.kpis.exec) .hello h2{font-size:22px}#view:has(.kpis.exec) .hello p{font-size:12px;max-width:76%}}'
   ].join('');
   document.head.appendChild(st);
   const I = {
