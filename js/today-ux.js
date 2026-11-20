@@ -16,6 +16,22 @@
     '.tux-acts{display:grid;gap:10px;margin:14px 0 4px}.tux-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--line);color:var(--ink)!important;text-decoration:none;font-size:13px;font-weight:600}',
     '.tux-act span{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}.tux-act svg{width:20px;height:20px}',
     '.group.pad.my.tux{padding:0;background:transparent;border:0;box-shadow:none}.my.tux .mystats{padding:0 4px}'
+    /* Compact Today layout: equal-height attendance and visual companion cards on desktop */
+    '.tux-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch;width:100%}',
+    '.tux-hero{min-width:0;min-height:0;padding:16px;border-radius:20px;gap:10px}',
+    '.tux-top b{font-size:24px}.tux-go{height:58px;font-size:21px;border-radius:15px}',
+    '.tux-tiles{gap:8px}.tux-tile{padding:9px 11px}.tux-tile b{font-size:19px}',
+    '.tux-decor{display:none;position:relative;overflow:hidden;min-width:0;border:1px solid #e0ebe4;border-radius:20px;background:linear-gradient(145deg,#fff 0%,#f3f8f3 60%,#e6f1e9 100%);color:#174d3b;padding:20px;flex-direction:column;justify-content:space-between}',
+    '.tux-decor:before,.tux-decor:after{content:"";position:absolute;border:1px solid rgba(15,100,70,.12);border-radius:50%;pointer-events:none}',
+    '.tux-decor:before{width:210px;height:210px;right:-65px;top:-65px}.tux-decor:after{width:145px;height:145px;right:-32px;top:-32px}',
+    '.tux-decor .deco-mark{width:54px;height:54px;border-radius:17px;background:#e0f0e6;color:#08734f;display:grid;place-items:center}',
+    '.tux-decor .deco-mark svg{width:30px;height:30px}',
+    '.tux-decor strong{display:block;font:700 21px/1.2 var(--display);color:#104b38;margin:12px 0 6px}',
+    '.tux-decor p{margin:0;color:#71847a;font-size:13px;line-height:1.55;max-width:28ch}',
+    '.tux-decor .deco-foot{font-size:11px;letter-spacing:.08em;color:#87998f;text-transform:uppercase}',
+    '@media(min-width:760px){.tux-layout{grid-template-columns:minmax(0,1fr) minmax(240px,.72fr);gap:14px}.tux-hero,.tux-decor{min-height:246px}.tux-decor{display:flex}.tux-hero{justify-content:space-between}.tux-go{height:56px}.tux-note{margin-top:-2px}}',
+    '@media(min-width:1100px){.tux-layout{grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);gap:16px}.tux-hero,.tux-decor{min-height:260px}.tux-top b{font-size:25px}}',
+    '@media(max-width:759px){.tux-hero{padding:15px;border-radius:18px}.tux-go{height:56px;font-size:20px}.tux-tiles{gap:8px}}',
   ].join('');
 
     /* Owner / executive dashboard KPI cards: compact, icon-led and touch-friendly */
@@ -49,13 +65,13 @@
     const link = clockLink(p.branch || e.branch), st = a ? (a.outTime ? 'done' : 'in') : 'out';
     const late = a && num(a.lateMin) > 0;
     const pill = st === 'in' ? `<span class="tux-pill go">กำลังทำงาน</span>` : st === 'done' ? '<span class="tux-pill done">ครบแล้ววันนี้</span>' : lvT ? `<span class="tux-pill">${esc(lvT.type || 'ลา')}${lvT.status === 'รออนุมัติ' ? ' (รออนุมัติ)' : ''}</span>` : p.off ? '<span class="tux-pill">วันหยุด</span>' : '<span class="tux-pill late">ยังไม่เข้างาน</span>';
-    let h = `<div class="tux-hero"><div class="tux-top"><div><small>กะวันนี้${p.branch && p.branch !== e.branch ? ' · ไปช่วย' + esc(branchName(p.branch)) : ''}</small><b>${p.off ? 'วันหยุด' : esc(p.start) + ' – ' + esc(p.end)}</b><small>${esc(p.code || '')}</small></div>${pill}</div>
+    let h = `<div class="tux-layout"><div class="tux-hero"><div class="tux-top"><div><small>กะวันนี้${p.branch && p.branch !== e.branch ? ' · ไปช่วย' + esc(branchName(p.branch)) : ''}</small><b>${p.off ? 'วันหยุด' : esc(p.start) + ' – ' + esc(p.end)}</b><small>${esc(p.code || '')}</small></div>${pill}</div>
       <div class="tux-tiles"><div class="tux-tile${a ? ' on' : ''}"><small>${a ? '✓ เข้างานแล้ว' : 'เข้างาน'}</small><b>${a ? esc(a.inTime) : '--:--'}</b><em class="${late ? 'late' : ''}">${a ? (late ? `สาย ${a.lateMin} นาที` : 'ตรงเวลา') : 'ยังไม่เข้า'}</em></div>
       <div class="tux-tile${a && a.outTime ? ' on' : ''}"><small>${a && a.outTime ? '✓ ออกงานแล้ว' : 'ออกงาน'}</small><b>${a && a.outTime ? esc(a.outTime) : '--:--'}</b><em>${a && a.outTime ? (num(a.workMin) ? 'ทำงาน ' + hrsShort(a.workMin) : '') + (num(a.otMin) > 0 ? ` · OT ${a.otMin} น.${a.otStatus ? ' ' + esc(a.otStatus) : ''}` : '') : 'ยังไม่ออก'}</em></div></div>`;
     if (st === 'done') h += '<div class="tux-done">ลงเวลาครบแล้ววันนี้ ✓</div>';
     else if (st === 'in') h += `<a class="tux-go out" href="${esc(withQ(link, 'auto', 'out'))}">${I.out}ออกงาน</a><p class="tux-note">แตะครั้งเดียว ระบบตรวจ GPS แล้วลงเวลาให้</p>`;
     else if (!lvT || lvT.status !== 'อนุมัติ') h += `<a class="tux-go in" href="${esc(withQ(link, 'auto', 'in'))}">${I.in}เข้างาน</a><p class="tux-note">${p.off ? 'วันนี้วันหยุด ถ้ามาทำงาน ระบบส่งให้ผู้อนุมัติ' : 'แตะครั้งเดียว ระบบตรวจ GPS แล้วลงเวลาให้'}</p>`;
-    h += '</div>';
+    h += '</div><aside class="tux-decor" aria-label="Café Amazon daily inspiration"><div><span class="deco-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 10h2a2.5 2.5 0 0 1 0 5h-2M8 3c-1 1 1 1.5 0 3M12 3c-1 1 1 1.5 0 3"/></svg></span><strong>Café Amazon</strong><p>ใส่ใจทุกช่วงเวลา พร้อมส่งมอบประสบการณ์ที่ดีให้ลูกค้าในทุกวัน</p></div><span class="deco-foot">Everyday · Every moment</span></aside></div>';
     const list = [['leave', 'ขอลา', '#E6F1EA', '#17694A'], ['ot', 'ขอ OT', '#F6EEDC', '#8A6516'], ['fix', 'แก้เวลา', '#E8EEF6', '#2F5C8F'], ['swap', 'แลกกะ', '#F1E8F2', '#7A3E7F']];
     h += `<nav class="tux-acts" aria-label="ทำรายการ" style="grid-template-columns:repeat(4,minmax(0,1fr))">${list.map(([k, l, bg, fg]) => `<a class="tux-act" href="${esc(withQ(link, 'tab', k))}"><span style="background:${bg};color:${fg}">${I[k]}</span>${l}</a>`).join('')}</nav>`;
     return h;
