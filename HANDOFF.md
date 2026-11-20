@@ -221,3 +221,5 @@
 - Phase 2.1 is a controlled dry-run only. No production-changing action executor is enabled. Next gate: test an actual Owner-approved dry-run from mobile/desktop Owner UI, then design a separately reviewed remediation adapter with tested rollback before enabling any automatic repair.
 
 - Phase 2.1 follow-up verification fix: `it_monitor_runs.findings` and `metrics` are returned by the Postgres driver as JSON strings in this project. Orchestrator v4 now safely parses JSONB strings before triage/dry-run; without this fix, Monitor findings would have been incorrectly treated as empty. Next scheduled 5-minute cycle should now create the OUTBOX_ERRORS incident and Owner approval proposal from the live finding.
+
+- Post-v4 deployment snapshot: Monitor run 303 contains `OUTBOX_ERRORS` + `MAIL_NOT_CONFIGURED`; the most recent orchestrator request visible in `net._http_response` was still the pre-v4 cycle (run 302), so the new JSONB parser has not yet been observed processing run 303. At snapshot time, incidents=0, pending approvals=0, dry-run records=0. Verify after the next scheduled orchestrator tick before considering Phase 2.1 end-to-end tested.
