@@ -219,3 +219,5 @@
 - Current observed Outbox state: 1 mail error in last 24 hours. Current Monitor run had findings `OUTBOX_ERRORS` and `MAIL_NOT_CONFIGURED`. This should be investigated; no retry was performed.
 - Supabase security advisors still report pre-existing broader project notices (RLS-enabled/no-policy tables, pg_net in public schema, one SECURITY DEFINER RPC, and leaked-password protection disabled). No unrelated security settings were changed in this phase.
 - Phase 2.1 is a controlled dry-run only. No production-changing action executor is enabled. Next gate: test an actual Owner-approved dry-run from mobile/desktop Owner UI, then design a separately reviewed remediation adapter with tested rollback before enabling any automatic repair.
+
+- Phase 2.1 follow-up verification fix: `it_monitor_runs.findings` and `metrics` are returned by the Postgres driver as JSON strings in this project. Orchestrator v4 now safely parses JSONB strings before triage/dry-run; without this fix, Monitor findings would have been incorrectly treated as empty. Next scheduled 5-minute cycle should now create the OUTBOX_ERRORS incident and Owner approval proposal from the live finding.
