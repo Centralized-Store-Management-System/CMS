@@ -3,6 +3,7 @@
  */
 'use strict';
 const IT_OPS_URL = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/it-ai-ops';
+const IT_OPS_QUEUE_URL = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/it-ops-orchestrator';
 let IT_OPS_STATE = { checked: false, configured: false, busy: false };
 function ocOpsContext() {
   const s = OC.status || {}, bg = OC.aiData && OC.aiData.background || {}, m = bg.metrics || {};
@@ -47,6 +48,7 @@ function ocOpsPanelHtml() {
       <div class="oc-ops-submit"><small>ส่งเฉพาะตัวเลขสถานะและข้อมูลวินิจฉัยที่ผ่านการคัดกรอง ไม่ส่งชื่อพนักงาน ลูกค้า หรือข้อความ LINE</small><button class="btn primary" id="oc-ops-send" type="submit" ${IT_OPS_STATE.busy || !IT_OPS_STATE.configured ? 'disabled' : ''}>วิเคราะห์ด้วย AI</button></div>
     </form>
     <div id="oc-ops-answer" class="oc-ops-answer" aria-live="polite"><span class="muted">AI จะช่วยวิเคราะห์เมื่อเชื่อมต่อ API Key แล้ว · ระบบ Monitor ปัจจุบันยังตรวจอัตโนมัติทุก 5 นาทีตามเดิม</span></div>
+    <div class="oc-ops-queue" id="oc-ops-queue"><div class="oc-ops-queue-head"><h3>Incident & Approval Center</h3><button type="button" id="oc-ops-refresh">รีเฟรชสถานะ</button></div><p class="muted">กำลังโหลดเหตุการณ์จากรอบตรวจล่าสุด…</p></div>
     <div class="oc-ops-guard"><b>Safety Guard</b><span>โหมดเริ่มต้นเป็น Read-only: AI วิเคราะห์และเสนอแผนเท่านั้น ไม่สั่งแก้ฐานข้อมูล ไม่เปลี่ยนสิทธิ์ ไม่ Deploy และไม่สั่งซ่อม Production เอง</span></div>
   </section>`;
 }
@@ -60,6 +62,7 @@ async function ocOpsCheck() {
     const send = document.getElementById('oc-ops-send');
     if (send) send.disabled = !IT_OPS_STATE.configured || IT_OPS_STATE.busy;
     const answer = document.getElementById('oc-ops-answer');
+    ocOpsLoadQueue();
     if (answer && !IT_OPS_STATE.configured) answer.innerHTML = '<span class="muted">ยังไม่ได้ตั้งค่า OPENAI_API_KEY ใน Supabase Secrets · ส่วน AI Advisor จะเปิดใช้งานหลังตั้งค่าคีย์ โดยไม่กระทบระบบ Monitor เดิม</span>';
   } catch (_) {
     IT_OPS_STATE.checked = true;
@@ -95,4 +98,62 @@ document.addEventListener('submit', e => {
     e.preventDefault(); const input = document.getElementById('oc-ops-question');
     const q = input && input.value.trim(); if (q) ocOpsAsk(q);
   }
+});
+
+
+async function ocOpsLoadQueue() {
+  const box = document.getElementById('oc-ops-queue');
+  if (!box) return;
+  box.innerHTML = '<div class="oc-ops-queue-head"><h3>Incident & Approval Center</h3><span class="muted">กำลังโหลด…</span></div>';
+  try {
+    const r = await fetch(IT_OPS_QUEUE_URL, { headers: { 'x-cms-session': S.token || '' }, cache: 'no-store' });
+    const p = await r.json();
+    if (!r.ok || !p.ok) throw new Error(p.error || 'โหลด Incident ไม่สำเร็จ');
+    const head = document.createElement('div'); head.className = 'oc-ops-queue-head';
+    const title = document.createElement('h3'); title.textContent = 'Incident & Approval Center'; head.appendChild(title);
+    const refresh = document.createElement('button'); refresh.type = 'button'; refresh.id = 'oc-ops-refresh'; refresh.textContent = 'รีเฟรช'; head.appendChild(refresh);
+    box.replaceChildren(head);
+    const summary = document.createElement('p'); summary.className = 'oc-ops-queue-summary';
+    const open = (p.incidents || []).filter(x => ['open','acknowledged'].includes(x.status));
+    const pending = (p.queue || []).filter(x => x.status === 'pending_approval');
+    summary.textContent = 'เหตุการณ์เปิด ' + open.length + ' · รออนุมัติ ' + pending.length + ' · โหมด Observe-only';
+    box.appendChild(summary);
+    const qTitle = document.createElement('h4'); qTitle.textContent = 'รายการรออนุมัติ'; box.appendChild(qTitle);
+    if (!pending.length) { const empty = document.createElement('p'); empty.className = 'muted'; empty.textContent = 'ไม่มีรายการรออนุมัติ'; box.appendChild(empty); }
+    pending.forEach(item => {
+      const card = document.createElement('article'); card.className = 'oc-ops-queue-card';
+      const h = document.createElement('b'); h.textContent = item.title; card.appendChild(h);
+      const d = document.createElement('p'); d.textContent = (item.incident_code || '') + ' · ' + item.rationale + ' · ความเสี่ยง ' + item.risk_level; card.appendChild(d);
+      const note = document.createElement('small'); note.textContent = 'การอนุมัติเป็นการรับรองแผนเท่านั้น ยังไม่มีการรันคำสั่งอัตโนมัติ'; card.appendChild(note);
+      const actions = document.createElement('div'); actions.className = 'oc-ops-queue-actions';
+      [['approve','อนุมัติแผน'],['reject','ปฏิเสธ']].forEach(([decision,label]) => {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = label; btn.dataset.opsDecision = decision; btn.dataset.opsId = item.id;
+        if (decision === 'approve') btn.className = 'btn primary'; actions.appendChild(btn);
+      });
+      card.appendChild(actions); box.appendChild(card);
+    });
+    const iTitle = document.createElement('h4'); iTitle.textContent = 'เหตุการณ์ล่าสุด'; box.appendChild(iTitle);
+    (p.incidents || []).slice(0,8).forEach(item => {
+      const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
+      const label = document.createElement('b'); label.textContent = '[' + String(item.severity).toUpperCase() + '] ' + item.title; row.appendChild(label);
+      const detail = document.createElement('small'); detail.textContent = item.detail + ' · พบ ' + item.occurrence_count + ' ครั้ง'; row.appendChild(detail);
+      box.appendChild(row);
+    });
+  } catch (e) {
+    box.textContent = 'ไม่สามารถโหลด Incident Center: ' + (e.message || 'connection error');
+  }
+}
+async function ocOpsDecision(id, decision) {
+  if (!confirm(decision === 'approve' ? 'ยืนยันอนุมัติแผนสำหรับผู้ดูแล? ระบบจะยังไม่รันคำสั่งใด ๆ' : 'ยืนยันปฏิเสธรายการนี้?')) return;
+  try {
+    const r = await fetch(IT_OPS_QUEUE_URL, { method: 'POST', headers: { 'content-type': 'application/json', 'x-cms-session': S.token || '' }, body: JSON.stringify({ id: Number(id), decision }), cache: 'no-store' });
+    const p = await r.json(); if (!r.ok || !p.ok) throw new Error(p.error || 'บันทึกไม่สำเร็จ');
+    ocOpsLoadQueue();
+  } catch (e) { alert(e.message || 'บันทึกไม่สำเร็จ'); }
+}
+document.addEventListener('click', e => {
+  const refresh = e.target.closest('#oc-ops-refresh');
+  if (refresh) ocOpsLoadQueue();
+  const decision = e.target.closest('[data-ops-decision]');
+  if (decision) ocOpsDecision(decision.dataset.opsId, decision.dataset.opsDecision);
 });
