@@ -161,3 +161,18 @@
 - ยังไม่เปลี่ยน Theme ภายในหน้าที่ Staff เปิดผ่าน Back Office (`index.html`); การแก้ครั้งนี้จำกัดเฉพาะ Staff Time Clock/PWA เพื่อไม่กระทบ Back Office ทั้งระบบ
 - Commit: `d39c8d739390a10c7517ee5a60eacdc31f45c348`
 - หลัง deploy ให้ทดสอบ PC, iPhone/Android PWA และ iPad; บนเครื่องที่ติดตั้งแอปอาจต้องปิด/เปิดแอปใหม่ขณะออนไลน์เพื่อดึง HTML เวอร์ชันล่าสุด
+
+
+## IT Control Center — ใช้งานจริง: Theme แยกตาม Scope (20 พ.ย. 2569 · Claude)
+- **ปัญหาเดิม:** ตาราง `it_control_settings` เป็นแค่บันทึก ไม่มีหน้าไหนอ่าน · Theme ยังเขียนตายตัวใน html (`prototype-theme.css` + `module-headers.css` ใน index.html ใช้กับทุกคนที่เปิดหลังร้าน) → แก้ของ Owner ทีไรกระทบทุกระบบ
+- **ตอนนี้:** `js/app-scope.js` (โหลดใน `<head>` ของ owner/index/clock แทน `<link>` Theme เดิม) หา Scope ของเครื่อง = ระบบ × ช่องทาง (web / installed_app / line_liff) × อุปกรณ์ (pc / mobile / ipad) แล้วโหลด CSS ตามที่ตั้งใน IT Control Center
+  - Theme เป็น "ชุด" (`theme_package`): `classic` (ไม่มี) · `prototype` (prototype-theme + module-headers) · `owner` (owner-theme) — รายการไฟล์อยู่ที่ `THEMES` ใน `js/app-scope.js` ที่เดียว (**ห้ามใส่ `<link>` Theme ตรงใน html อีก** · bump `?v=` ของ CSS Theme ที่ไฟล์นี้)
+  - จำค่าไว้ใน localStorage `amz.itcc.pub.v1` (ไม่กระพริบ) · ไม่มีเน็ต/ครั้งแรก ใช้ค่าตั้งต้น = หน้าตาเดิม · โหลดค่าใหม่หลังหน้าเสร็จ + ทุกครั้งที่กลับเข้าแอป
+  - Scope ใหม่ `backoffice_owner_web` / `backoffice_owner_app` = หน้าจัดการร้านที่เปิดจากแอป Owner (`from=owner`) → ตั้ง Theme ให้ Owner ได้โดยไม่กระทบพนักงาน
+- DB: migration `it_control_theme_package_and_owner_handoff` (คอลัมน์ `theme_package` + 2 scope ใหม่ · ค่าเริ่มต้นตรงกับหน้าตาปัจจุบัน: Owner=owner, หลังร้าน=prototype, Staff/LINE/ลงทะเบียน=classic)
+- Edge Function `it-control-center` **v2** (ต้นฉบับ `supabase/functions/it-control-center/index.ts`): `GET ?public=1` ไม่ต้องเข้าระบบ คืนเฉพาะค่า Theme · POST รับ `theme_package` · Scope ที่ล็อกเปลี่ยน Theme ไม่ได้ (409) · Owner เท่านั้นที่แก้ได้ + Audit Log
+- หน้า Owner > ระบบ IT > IT Control Center: ทุกแถวมี เลือก Theme / เปิด-ปิด / ล็อก-ปลดล็อก แยกกัน · แสดงว่า "เครื่องนี้" อยู่ Scope ไหน
+- ทดสอบ (Chromium จำลอง PC / iPhone / แอปที่ติดตั้ง): 18 ข้อผ่าน — ค่าตั้งต้นและลำดับ CSS เหมือนเดิมทุกหน้า, เปลี่ยน Scope หนึ่งไม่กระทบ Scope อื่น · Owner lock ชุดเดิม 27+4 ข้อผ่าน — **ยังไม่ได้ทดสอบบนเครื่องจริง**
+- สถานะ Phase: A เสร็จ · B (แยก Scope + ตั้งค่า) ใช้งานได้จริงแล้ว · C (เก็บค่า/Audit บนเซิร์ฟเวอร์) ใช้งานจริง · D (Authentication Policy) ยังเป็น Draft ไม่บังคับใช้ — ตั้งใจไม่ผูก Login กับค่าที่แก้ผ่านเว็บจนกว่าจะอนุมัติ
+- ยังไม่ครอบคลุม: `line.html` (LINE) ไม่โหลดตัวเลือก (ต้องเบา) · ฟีเจอร์/JS เฉพาะระบบ (ยังแยกด้วยโค้ด เช่น owner-pwa-lock ตรวจ owner context)
+- Commits: `64dfdd8` (ตัวเลือก Theme + หน้าตั้งค่า + function source) และ commit นี้ (HANDOFF)
