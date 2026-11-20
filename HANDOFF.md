@@ -135,3 +135,11 @@
 - Commits: monitor CORS `2b7cd1b`; AI thresholds `515799f`; HR row actions `d66030a`; cache bust `c04ebbb` + `e481111`
 
 - ปรับ KPI counts ให้สรุปจำนวน Finding ระดับ critical/warning ตามรายการวิเคราะห์จริง รวม performance warnings ด้วย; commit `288fc37`, Owner cache bust `it-ai.js?v=1.0.3`.
+
+
+## IT Control Center — Phase A isolation (20 Nov 2026)
+- Added `css/owner-theme.css` as a dedicated Owner visual stylesheet, copied from the current prototype theme to preserve the existing Owner appearance at the point of separation.
+- `owner.html` now loads `css/owner-theme.css?v=1.0.0` and declares `data-app="owner"`.
+- `index.html`, `clock.html`, and `line.html` now declare `data-app="backoffice"`, `staff`, and `line` respectively.
+- Back Office and Staff continue to load `css/prototype-theme.css`; Owner no longer loads that shared stylesheet. Future Owner Theme changes must be made only in `css/owner-theme.css`.
+- This is asset isolation only. No authentication, permissions, business logic, feature flags, or production lock controls were changed. Device-specific PC/Mobile/iPad previews and secure server-side IT Control Center controls remain pending.
