@@ -269,3 +269,18 @@ input,select,textarea{background:#fff;color:#17211e;border-color:#dfe9e2}
  :where(.bottom a svg){width:23px;height:23px}
  :where(.tile .mi){width:44px;height:44px}
 }
+
+
+/* Staff / Manager embedded Time Clock navigation icons */
+.clock-tabs{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:8px!important;padding:8px!important;background:#edf4ef!important;border:1px solid #e0ebe3!important;border-radius:18px!important}
+.clock-tabs a{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-height:88px!important;padding:10px 6px!important;background:#fff!important;border:1px solid #e1ebe4!important;border-radius:15px!important;color:#53665c!important;white-space:normal!important;line-height:1.25!important;font-size:13px!important;font-weight:600!important;box-shadow:0 3px 10px rgba(16,61,45,.04)}
+.clock-tabs a .tab-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#e6f2e9;color:#08734f}
+.clock-tabs a .tab-ic svg{width:21px;height:21px;display:block}
+.clock-tabs a .tab-month{background:#e8eef7;color:#3e6899}
+.clock-tabs a .tab-ot{background:#f7efdd;color:#9b711c}
+.clock-tabs a .tab-leave{background:#e6f2e9;color:#08734f}
+.clock-tabs a .tab-fix{background:#e9eef7;color:#426c9e}
+.clock-tabs a .tab-swap{background:#f2eaf4;color:#81518a}
+.clock-tabs a[aria-current="page"]{background:#07583f!important;border-color:#07583f!important;color:#fff!important;box-shadow:0 5px 14px rgba(7,88,63,.16)!important}
+.clock-tabs a[aria-current="page"] .tab-ic{background:#ffffff20!important;color:#fff!important}
+@media(max-width:520px){.clock-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}.clock-tabs a{min-height:82px!important;font-size:12px!important}.clock-tabs a .tab-ic{width:35px;height:35px}}
