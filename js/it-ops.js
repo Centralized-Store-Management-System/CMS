@@ -33,8 +33,8 @@ function ocOpsContext() {
 function ocOpsPanelHtml() {
   const ready = IT_OPS_STATE.checked ? (IT_OPS_STATE.configured ? 'AI เชื่อมต่อพร้อมใช้งาน' : 'รอตั้งค่า API Key') : 'กำลังตรวจสอบการเชื่อมต่อ AI';
   const cls = IT_OPS_STATE.configured ? 'ok' : 'warn';
-  return \`<section class="oc-ops-panel" id="oc-ops-panel">
-    <div class="oc-ops-head"><div><span class="oc-ops-kicker">AI OPERATIONS COPILOT</span><h2>ผู้ช่วยวิเคราะห์และดูแลระบบ</h2><p>ถามปัญหาจากข้อมูลสุขภาพระบบล่าสุด พร้อมแนวทางตรวจสอบและแผนแก้ไขที่มีหลักฐาน</p></div><span class="chip \${cls}" id="oc-ops-status">\${ready}</span></div>
+  return `<section class="oc-ops-panel" id="oc-ops-panel">
+    <div class="oc-ops-head"><div><span class="oc-ops-kicker">AI OPERATIONS COPILOT</span><h2>ผู้ช่วยวิเคราะห์และดูแลระบบ</h2><p>ถามปัญหาจากข้อมูลสุขภาพระบบล่าสุด พร้อมแนวทางตรวจสอบและแผนแก้ไขที่มีหลักฐาน</p></div><span class="chip ${cls}" id="oc-ops-status">${ready}</span></div>
     <div class="oc-ops-prompts">
       <button type="button" data-ops-prompt="ตรวจสอบสุขภาพระบบทั้งหมด และสรุปความเสี่ยงที่สำคัญที่สุด">ตรวจสุขภาพระบบ</button>
       <button type="button" data-ops-prompt="วิเคราะห์ปัญหาที่ควรแก้ก่อน พร้อมจัดลำดับความเร่งด่วน">จัดลำดับปัญหา</button>
@@ -44,11 +44,11 @@ function ocOpsPanelHtml() {
     <form class="oc-ops-form" id="oc-ops-form">
       <label class="sr-only" for="oc-ops-question">คำถามถึง AI IT Assistant</label>
       <textarea id="oc-ops-question" maxlength="1500" rows="3" placeholder="เช่น ทำไมระบบออเดอร์ค้าง และควรตรวจอะไรเป็นลำดับแรก?" required></textarea>
-      <div class="oc-ops-submit"><small>ส่งเฉพาะตัวเลขสถานะและข้อมูลวินิจฉัยที่ผ่านการคัดกรอง ไม่ส่งชื่อพนักงาน ลูกค้า หรือข้อความ LINE</small><button class="btn primary" id="oc-ops-send" type="submit" \${IT_OPS_STATE.busy || !IT_OPS_STATE.configured ? 'disabled' : ''}>วิเคราะห์ด้วย AI</button></div>
+      <div class="oc-ops-submit"><small>ส่งเฉพาะตัวเลขสถานะและข้อมูลวินิจฉัยที่ผ่านการคัดกรอง ไม่ส่งชื่อพนักงาน ลูกค้า หรือข้อความ LINE</small><button class="btn primary" id="oc-ops-send" type="submit" ${IT_OPS_STATE.busy || !IT_OPS_STATE.configured ? 'disabled' : ''}>วิเคราะห์ด้วย AI</button></div>
     </form>
     <div id="oc-ops-answer" class="oc-ops-answer" aria-live="polite"><span class="muted">AI จะช่วยวิเคราะห์เมื่อเชื่อมต่อ API Key แล้ว · ระบบ Monitor ปัจจุบันยังตรวจอัตโนมัติทุก 5 นาทีตามเดิม</span></div>
     <div class="oc-ops-guard"><b>Safety Guard</b><span>โหมดเริ่มต้นเป็น Read-only: AI วิเคราะห์และเสนอแผนเท่านั้น ไม่สั่งแก้ฐานข้อมูล ไม่เปลี่ยนสิทธิ์ ไม่ Deploy และไม่สั่งซ่อม Production เอง</span></div>
-  </section>\`;
+  </section>`;
 }
 async function ocOpsCheck() {
   const badge = document.getElementById('oc-ops-status');
