@@ -131,3 +131,18 @@
   .oc .oc-side>a[aria-current="page"]:before{display:none!important}
   .oc .oc-main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}
 }
+
+
+/* Owner Console: correct stretched grid rows only in the installed mobile app.
+ * Regular mobile web, desktop, Back Office and Staff layouts remain unchanged. */
+@media (max-width:860px){
+  html[data-app-surface="installed_app"][data-device="mobile"] body[data-app="owner"] .oc{
+    align-content:start;
+    grid-auto-rows:max-content;
+  }
+  html[data-app-surface="installed_app"][data-device="mobile"] body[data-app="owner"] .oc-top{
+    align-self:start;
+    min-height:0;
+    height:auto;
+  }
+}
