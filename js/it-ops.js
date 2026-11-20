@@ -132,6 +132,28 @@ async function ocOpsLoadQueue() {
       });
       card.appendChild(actions); box.appendChild(card);
     });
+    const approved = (p.queue || []).filter(x => x.status === 'approved');
+    const dryAllow = new Set(['inspect_outbox_errors','inspect_cron_disabled','inspect_cron_stale','inspect_cron_last_failed','inspect_cron_failures','inspect_supa_heartbeat','inspect_order_heartbeat','inspect_order_sync_errors','inspect_order_sso_failures']);
+    const aTitle = document.createElement('h4'); aTitle.textContent = 'รายการอนุมัติ · ทดสอบจำลองเท่านั้น'; box.appendChild(aTitle);
+    if (!approved.length) { const emptyA = document.createElement('p'); emptyA.className = 'muted'; emptyA.textContent = 'ยังไม่มีแผนที่อนุมัติ'; box.appendChild(emptyA); }
+    approved.forEach(item => {
+      const card = document.createElement('article'); card.className = 'oc-ops-queue-card';
+      const h = document.createElement('b'); h.textContent = item.title; card.appendChild(h);
+      const d = document.createElement('p'); d.textContent = (item.incident_code || '') + ' · ' + item.action_code + ' · อนุมัติโดย Owner'; card.appendChild(d);
+      if (dryAllow.has(item.action_code)) {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn primary'; btn.textContent = 'ทดสอบ Dry-run'; btn.dataset.opsDryrun = item.id; card.appendChild(btn);
+      } else {
+        const note = document.createElement('small'); note.textContent = 'Action นี้ยังไม่อยู่ใน Allowlist สำหรับ Dry-run'; card.appendChild(note);
+      }
+      box.appendChild(card);
+    });
+    const runsTitle = document.createElement('h4'); runsTitle.textContent = 'ประวัติการจำลองล่าสุด'; box.appendChild(runsTitle);
+    (p.actionRuns || []).slice(0,5).forEach(run => {
+      const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
+      const label = document.createElement('b'); label.textContent = '[DRY-RUN] ' + run.action_code + ' · ' + run.status; row.appendChild(label);
+      const detail = document.createElement('small'); detail.textContent = 'ผู้ดำเนินการ: ' + run.executed_by + ' · ' + new Date(run.created_at).toLocaleString('th-TH'); row.appendChild(detail);
+      box.appendChild(row);
+    });
     const iTitle = document.createElement('h4'); iTitle.textContent = 'เหตุการณ์ล่าสุด'; box.appendChild(iTitle);
     (p.incidents || []).slice(0,8).forEach(item => {
       const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
