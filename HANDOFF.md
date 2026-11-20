@@ -182,3 +182,14 @@
 - แก้ (ไม่แตะ CSS ที่ใช้ร่วม): `css/prototype-fix.css` (ใหม่ · อยู่ในชุด Theme `prototype` ใน `js/app-scope.js`) — มือถือ <960px ใช้แถบหัวอย่างเดียวตามแบบเดิมของระบบ, รูปประกอบแสดงเฉพาะหัวที่ด้านขวาว่าง, ไอคอนขาวชัด, ปฏิทินเป็นเม็ดยาไม่ล้น, `.sumbox` มีระยะขอบ · จอ PC ไม่เปลี่ยน
 - `css/mobile-fix.css` (ใหม่ · ลิงก์ใน index.html เป็นการจัดวาง ไม่ใช่ Theme): แถวที่มีปุ่ม ≥3 ปุ่ม บนจอ ≤680px ปุ่มขึ้นบรรทัดใต้ชื่อและตัดบรรทัดได้
 - ตรวจด้วย Chromium จำลอง iPhone 13 / iPhone SE / PC ครบ 16 เมนู: ไม่มีส่วนหัวทับกัน ไม่มีหน้าล้นแนวนอน · PC ยังแสดงการ์ดหัวใหญ่เหมือนเดิม — ยังไม่ได้ดูบน iPhone จริง
+
+
+### Super Advance IT — AI Operations Copilot Phase 1 (20 พ.ย. 2569)
+- ตรวจระบบจริงก่อนต่อยอด: Supabase project ytxbnqosenolojifeikf ACTIVE_HEALTHY; it-monitor ACTIVE v2; it-monitor-every-5-minutes ทำงานทุก 5 นาทีอยู่แล้ว; Diagnostic Engine ปัจจุบันเป็น rule-based ไม่ใช่ LLM
+- เพิ่ม AI Operations Copilot ในหน้า AI Monitoring: คำถามภาษาไทย + prompt shortcuts + คำตอบจาก OpenAI Responses API โดยใช้เฉพาะ health metrics / findings ที่ผ่าน whitelist; ไม่ส่งชื่อพนักงาน ลูกค้า หรือข้อความ LINE
+- เพิ่ม Edge Function it-ai-ops: ตรวจ CMS Owner session ผ่าน Back Office bootstrap, CORS allowlist แบบ exact origins, จำกัดคำถาม 1,500 ตัวอักษร, context whitelist, timeout 30 วินาที, store=false, ไม่เปิด tool calling และไม่ execute คำสั่ง/แก้ production
+- โหมดเริ่มต้น Read-only เท่านั้น; ระบบ monitor เดิมยังคงตรวจทุก 5 นาทีโดยไม่เปลี่ยน Cron หรือ Edge Function เดิม
+- ต้องตั้ง Supabase Edge Function Secret OPENAI_API_KEY ก่อน AI Chat ใช้งานได้; ตั้ง OPENAI_MODEL ได้ (default gpt-6.2-astra). API usage/billing แยกจาก ChatGPT subscription
+- ยังไม่ตั้ง secret และยังไม่ทดสอบ AI response จริง; หลังตั้ง secret ต้องทดสอบด้วยบัญชี Owner และตรวจ provider quota/model access ก่อนเปิดใช้
+- Files: js/it-ops.js (ใหม่), supabase/functions/it-ai-ops/index.ts (ใหม่), js/owner.js, owner.html, css/owner.css
+- Safety backlog: เพิ่ม durable audit/approval queue, action allowlist และ rollback verification ก่อนเปิด automatic remediation; ห้ามให้ AI execute SQL, change RLS/Auth, delete data หรือ deploy production เอง
