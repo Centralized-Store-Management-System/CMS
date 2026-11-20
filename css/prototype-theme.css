@@ -172,3 +172,57 @@ input,select,textarea{background:#fff;color:#17211e;border-color:#dfe9e2}
   :where(.actions .btn,.toolbar .btn){min-height:44px}
   :where(.form){gap:10px}
 }
+
+
+/* ===== Navigation + information hierarchy usability pass ===== */
+:where(.nav,.oc-side){scrollbar-width:thin}
+@media(min-width:960px){
+  .side,.oc-side{position:sticky;top:0;height:100dvh;overflow-y:auto;overscroll-behavior:contain}
+  .side .nav a,.oc-side a{min-height:46px;display:flex;align-items:center;gap:11px;margin:2px 0}
+  .side .nav a .ic,.oc-side a .ic{width:34px;height:34px;display:grid;place-items:center;flex:none}
+  .side .nav h4,.oc-side h4{margin:18px 8px 7px;padding:0 10px}
+  .userbox{border-radius:16px;padding:12px;margin-top:16px}
+  .topbar{min-height:62px;padding-inline:24px}
+}
+@media(max-width:959px){
+  .bottom{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:space-around;gap:3px;padding:7px 6px calc(7px + env(safe-area-inset-bottom))}
+  .bottom a{flex:1;min-width:0;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:14px;padding:5px 2px;font-size:11px;line-height:1.15}
+  .bottom a svg{width:22px;height:22px}
+  .oc-side{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}
+  .oc-side a{min-width:0;min-height:56px}
+  .oc-side a .sh{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+}
+:where(.mhead,.oc-main>header){display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+:where(.toolbar,.actions,.savebar){gap:9px}
+:where(.toolbar){display:flex;align-items:center;flex-wrap:wrap}
+:where(.toolbar select){min-width:130px;max-width:100%}
+:where(.group){margin-block:0 16px}
+:where(.group>.row:first-child,.group>.empty:first-child){border-top:0}
+:where(.group.pad){padding:clamp(14px,2vw,22px)!important}
+:where(.kpis,.stats,.oc-cards){gap:12px!important}
+:where(.kpi){min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:7px}
+:where(.kpi span){line-height:1.35}
+:where(.tile){min-width:0;display:flex;flex-direction:row;align-items:center}
+:where(.tile b,.tile span,.oc-card b,.oc-card span){overflow-wrap:anywhere}
+:where(.row){gap:10px;align-items:center}
+:where(.row .main,.rowmain){min-width:0}
+:where(.btn,button,a){-webkit-tap-highlight-color:transparent}
+:where(button,.btn,a,input,select,textarea){scroll-margin-top:90px}
+:where(:focus-visible){outline:3px solid rgba(22,134,94,.35)!important;outline-offset:2px}
+@media(max-width:600px){
+  :where(.kpis){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  :where(.oc-cards){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  :where(.tile){padding:13px!important;min-height:84px}
+  :where(.tile .mi){width:42px;height:42px}
+  :where(.mhead){margin:4px 0 14px}
+  :where(.mhead h1){font-size:22px}
+  :where(.toolbar>*){flex:1 1 auto;min-width:0}
+  :where(.toolbar select){width:100%}
+  :where(.actions .btn){flex:1 1 auto}
+}
+@media(max-width:380px){
+  :where(.kpis,.oc-cards){grid-template-columns:1fr 1fr!important;gap:8px!important}
+  :where(.kpi){padding:13px!important}
+  :where(.bottom a){font-size:10px}
+}
