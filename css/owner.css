@@ -236,3 +236,5 @@
 .oc-ops-incident-row:last-child{border-bottom:0}
 .oc-ops-incident-row small{color:#78877f;margin-top:3px}
 @media(max-width:600px){.oc-ops-queue{padding:12px}.oc-ops-queue-head h3{font-size:14px}.oc-ops-queue-actions button{flex:1}}
+
+.oc-ops-queue-card button[data-ops-dryrun]{margin-top:9px;border:0;border-radius:9px;padding:8px 13px;background:#0b6848;color:#fff;font:inherit;font-size:12px}
