@@ -1,6 +1,6 @@
 # IT Control Center — System Scope & Deployment Blueprint
 
-Status: DESIGN BASELINE — no runtime switches or authentication behavior changed by this document.
+Status: PHASE A COMPLETE / PHASE B ISOLATION BASELINE — Owner Theme now has a dedicated stylesheet entry point; no runtime switches or authentication behavior changed.
 Date: 20 Nov 2026
 
 ## 1. Purpose
@@ -146,5 +146,12 @@ Phase E — other systems
 - Existing production login, permissions, schedules, time clock, order and LINE flows remain unchanged unless specifically approved.
 - Real-device tests are required for iPhone, Android, iPadOS and desktop browsers before marking a scope ACTIVE.
 
-## 10. Current implementation boundary
+## 10. Phase A implementation record (20 Nov 2026)
+- Added `css/owner-theme.css` as an Owner-only copy of the existing visual layer.
+- `owner.html` now loads the isolated stylesheet and declares `data-app="owner"`.
+- `index.html`, `clock.html`, and `line.html` declare explicit app identities (`backoffice`, `staff`, `line`).
+- Back Office and Staff continue loading the original `css/prototype-theme.css`; only Owner loads `css/owner-theme.css`. This prevents future Owner Theme edits from propagating through the shared stylesheet URL.
+- Existing authentication, permissions, routes, API calls, and business rules were not changed. Owner Theme remains a visual baseline, not yet an independently switchable server-side deployment.
+
+## 11. Current implementation boundary
 This document establishes the approved design baseline only. No runtime feature flags, authentication policies, shared assets, database records, Edge Functions, or production behavior are changed by this commit. Those require implementation against verified server-side authorization and storage contracts.
