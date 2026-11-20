@@ -438,7 +438,3 @@ body{color:var(--amz-ink)}
   #view .tiles>.tile>span:last-child{flex:1}
 }
 
-
-/* Revert unwanted photo treatment on the Today greeting header only */
-.hello,.hello::before,.hello::after{background-image:none!important;background-color:transparent!important;box-shadow:none!important;}
-.hello{border:0!important;border-radius:0!important;min-height:0!important;padding:0!important;}
