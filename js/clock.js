@@ -74,8 +74,16 @@ function viewMe() {
     h += `<p class="status" id="ck-msg">${p.off && type === 'in' ? 'วันนี้เป็นวันหยุดตามตาราง ถ้ามาทำงาน ระบบจะส่งให้ผู้มีสิทธิ์อนุมัติ' : `กดเมื่ออยู่ในร้าน ระบบตรวจ GPS ว่าอยู่ในรัศมี ${tb.radius || 80} เมตร${multi() ? ' ของสาขาใดสาขาหนึ่ง' : ''}`}</p>
       <button class="btn big primary" data-a="clock:${type}">${type === 'in' ? 'เข้างาน' : 'ออกงาน'}</button>`;
   }
+  const tabIcons = {
+    days: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M8 17h6"/></svg>',
+    month: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M7 2v4M17 2v4M3 9h18M8 13h2M14 13h2M8 17h2"/></svg>',
+    ot: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 3 2 6M22 6l-3-3"/></svg>',
+    leave: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M7 2v4M17 2v4M3 9h18M9 14l2 2 4-4"/></svg>',
+    fix: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    swap: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"/></svg>'
+  };
   const tabs = [['days', 'ตารางของฉัน'], ['month', 'เดือนนี้'], ['ot', 'ขอ OT'], ['leave', 'ขอลา'], ['fix', 'แจ้งแก้เวลา']].concat(typeof tabSwap === 'function' ? [['swap', 'แลกกะ']] : []);   // แลกกะ (clock-swap.js)
-  h += `<nav class="tabs" style="margin-top:22px" aria-label="ข้อมูลของฉัน">${tabs.map(([k, l]) => `<a href="#" data-a="tab:${k}"${C.tab === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`;
+  h += `<nav class="tabs clock-tabs" style="margin-top:22px" aria-label="ข้อมูลของฉัน">${tabs.map(([k, l]) => `<a href="#" data-a="tab:${k}"${C.tab === k ? ' aria-current="page"' : ''}><span class="tab-ic tab-${k}">${tabIcons[k]}</span><span class="tab-label">${l}</span></a>`).join('')}</nav>`;
   h += ({ days: tabDays, month: tabMonth, ot: tabOT, leave: tabLeave, fix: tabFix, swap: typeof tabSwap === 'function' ? tabSwap : tabDays }[C.tab] || tabDays)();
   return h + '</div>';
 }
