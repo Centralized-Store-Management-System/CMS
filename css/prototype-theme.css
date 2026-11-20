@@ -100,3 +100,75 @@ table tbody tr:hover{background:#f8fbf8}
 .clock-shell .keypad{gap:12px}.clock-shell .keypad button{border-radius:17px;min-height:66px;background:#fff;box-shadow:0 4px 12px rgba(16,61,45,.05)}
 .clock-shell .btn{min-height:44px}.clock-shell .btn.primary{background:#07583f!important;border-color:#07583f!important}.clock-shell .btn.big{min-height:58px;border-radius:16px;font-size:18px}
 @media(max-width:520px){.clock-shell{padding:12px 13px calc(28px + env(safe-area-inset-bottom))!important}.clock-top{margin-bottom:14px}.clock-shell .today-card{padding:17px!important}.clock-shell .today-card .shift{font-size:27px!important}.clock-shell .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.clock-shell .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.clock-shell .group.pad{padding:15px}.clock-shell .actions .btn.big{width:100%}}
+
+
+/* ===== Unified Café Amazon UI — ALL Staff / Manager screens =====
+   Shared by Back Office Web, Staff Web/App and Manager Web/App.
+   Visual layer only; preserve module actions, forms, permissions and workflows. */
+:root{
+  color-scheme:light!important;
+  --bg:#f3f7f4!important;--surface:#fff!important;--sunk:#eaf2ec!important;
+  --ink:#17211e!important;--muted:#718079!important;--line:#e7eee9!important;
+  --brand:#07583f!important;--on-brand:#fff!important;--focus:#16865e!important;
+  --ok:#16824f!important;--warn:#ad6b12!important;--bad:#d65e50!important;
+  --mc:#07583f!important;
+}
+html,body{background-color:#f3f7f4!important;color:#17211e!important}
+body{background-image:radial-gradient(ellipse at 95% 0%,rgba(255,128,110,.12),transparent 28%),radial-gradient(ellipse at 0% 100%,rgba(36,153,105,.07),transparent 32%)!important}
+input,select,textarea{background:#fff;color:#17211e;border-color:#dfe9e2}
+:where(.group,.tile,.card,.panel,.kpi,.sumbox,.today-card,.stats>div,.tilebtn,.sheet,.modal,.login-card,.prev-card,.oc-card,.oc-main .box,.oc-main .group,.people,.daylist,.shiftlist,.userbtn,.issue,.logwrap,.preview,.chart,.roster-wrap){
+  border-color:#e3ece6!important;border-radius:20px!important;
+  box-shadow:0 8px 24px rgba(16,61,45,.065)!important;
+}
+:where(.group,.card,.panel,.kpi,.sumbox,.sheet,.modal,.login-card,.prev-card,.oc-card,.people,.daylist,.shiftlist,.issue,.preview){background:rgba(255,255,255,.97)!important}
+:where(.btn,.btn.primary,.btn.big,.btn.block,.savebar .btn,.actions .btn){border-radius:13px!important}
+:where(.btn.primary,.btn.block,.btn.big.primary){background:#07583f!important;border-color:#07583f!important;color:#fff!important}
+:where(.btn:not(.primary):not(.danger)){border-color:#dfe9e2}
+:where(.field input,.field select,.field textarea,.toolbar select,.month,.count input,.cellpick select,.login-card input,.modal input,.modal select,.modal textarea){
+ border:1px solid #dfe9e2!important;border-radius:12px!important;min-height:44px;background:#fff!important;color:#17211e!important
+}
+:where(.tabs,.seg){background:#eaf2ec!important;border:1px solid #e2ebe5!important;border-radius:16px!important;padding:5px}
+:where(.tabs a,.seg button){border-radius:12px!important}
+:where(.tabs a[aria-current="page"],.seg button[aria-pressed="true"]){background:#07583f!important;color:#fff!important;box-shadow:0 4px 12px rgba(7,88,63,.14)!important}
+:where(.h2,.h3,.mhead h1,.oc-main h1){color:#173d30}
+:where(.chip,.status,.tchip){border-radius:999px}
+:where(.tile,.tilebtn,.userbtn,.row,.daylist .row,.shiftlist button,.people button){transition:background .16s ease,border-color .16s ease,box-shadow .16s ease}
+:where(.tile:hover,.tilebtn:hover,.userbtn:hover,.row:hover,.shiftlist button:hover){background:#f5faf6!important}
+:where(.avatar,.tile .mi,.topbar .mi,.mhead .mi){border-radius:14px!important}
+:where(.tile .mi,.tilebtn .big,.kpi .mi){background:#e5f3ea!important;color:#07583f!important}
+:where(.kpi b,.kpis.exec .kpi b,.stats b,.mystats b,.sumbox .big){color:#07583f}
+:where(.bar span,.bar .rev-mark){background:#16865e}
+:where(.roster,.perm,.logtbl,.stmt,.preview table){border-color:#e5eee8}
+:where(.roster th,.perm th,.logtbl th,.stmt tr:first-child td,.preview th){background:#f3f8f4!important;color:#52635a}
+:where(.roster td,.perm td,.logtbl td,.stmt td,.preview td){border-color:#e8efea}
+:where(.roster tbody tr:hover,.logtbl tr:hover){background:#f7faf8}
+:where(.week .wd,.days label,.preset,.brush){border-radius:14px}
+:where(.week .wd.today,.days label:has(input:checked),.preset[aria-pressed="true"]){border-color:#07583f!important;background:#eaf4ed!important}
+:where(.bottom,.mobile-bottom){background:rgba(255,255,255,.97)!important;border-top:1px solid #e5eee8!important;backdrop-filter:blur(16px);box-shadow:0 -8px 26px rgba(14,55,37,.07)}
+:where(.bottom a[aria-current="page"],.mobile-bottom button.active){background:#e8f4ec!important;color:#07583f!important;border-radius:14px}
+:where(.login,.login-card){border-radius:24px!important}
+:where(.scrim){backdrop-filter:blur(3px)}
+:where(.sheet){border-radius:24px 24px 0 0!important}
+:where(.savebar){background:rgba(255,255,255,.97)!important;border-top:1px solid #e5eee8!important;backdrop-filter:blur(14px)}
+:where(.topbar,.oc-top){background:rgba(255,255,255,.94)!important;backdrop-filter:blur(14px);border-color:#e5eee8!important}
+:where(.side,.oc-side){background:linear-gradient(180deg,#064b37,#073d30)!important;color:#d7e8df!important}
+:where(.side .nav a,.oc-side a){color:#d7e8df}
+:where(.side .nav a[aria-current="page"],.oc-side a[aria-current="page"]){background:#ffffff20!important;color:#fff!important;box-shadow:inset 3px 0 #ff806e}
+:where(.side .nav a .ic,.oc-side a .ic){background:#ffffff16;color:#b9d8c9}
+:where(.side .nav a[aria-current="page"] .ic){background:#ff806e;color:#fff}
+:where(.clock-shell,.cux){max-width:720px}
+@media(min-width:960px){
+  main{max-width:1500px!important;padding-left:clamp(22px,2.4vw,38px)!important;padding-right:clamp(22px,2.4vw,38px)!important}
+  .oc-main{max-width:1500px!important}
+  :where(.group,.card,.panel,.kpi,.tile,.oc-card){border-radius:20px!important}
+}
+@media(max-width:959px){
+  :where(.group,.card,.panel,.kpi,.tile,.oc-card){border-radius:18px!important}
+  :where(.btn,.btn.big){min-height:46px}
+}
+@media(max-width:520px){
+  :where(.group.pad,.card,.kpi,.oc-card){padding:16px!important}
+  :where(.actions){gap:9px}
+  :where(.actions .btn,.toolbar .btn){min-height:44px}
+  :where(.form){gap:10px}
+}
