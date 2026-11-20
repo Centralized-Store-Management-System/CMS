@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   if (req.method === "OPTIONS") {
     if (origin && !ALLOWED_ORIGINS.has(origin)) return reply({ ok: false, error: "Origin ไม่ได้รับอนุญาต" }, 403);
-    return reply({ ok: true }, 204, origin);
+    return reply({ ok: true }, 200, origin);
   }
   if (origin && !ALLOWED_ORIGINS.has(origin)) return reply({ ok: false, error: "Origin ไม่ได้รับอนุญาต" }, 403);
   try {
