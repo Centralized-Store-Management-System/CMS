@@ -143,3 +143,11 @@
 - `index.html`, `clock.html`, and `line.html` now declare `data-app="backoffice"`, `staff`, and `line` respectively.
 - Back Office and Staff continue to load `css/prototype-theme.css`; Owner no longer loads that shared stylesheet. Future Owner Theme changes must be made only in `css/owner-theme.css`.
 - This is asset isolation only. No authentication, permissions, business logic, feature flags, or production lock controls were changed. Device-specific PC/Mobile/iPad previews and secure server-side IT Control Center controls remain pending.
+
+
+## IT Control Center Phase B/C/D (20 Nov 2026)
+- Phase B: Owner Theme rollout scopes separated for PC/Mobile/iPad web and installed Mobile/iPad app; Owner theme enabled in 5 scopes. Added device preview selector (responsive-size mock, not physical-device capture).
+- Phase C: Added `public.it_control_settings` and `public.it_control_audit` with RLS enabled and anon/authenticated direct privileges revoked. Added `it-control-center` Edge Function v1 (ACTIVE); requires valid CMS Owner session via Back Office bootstrap for reads/writes. 16 scopes seeded across Owner, Back Office, Staff, LINE and Registration.
+- Phase D: Authentication policy draft stored independently per scope. `auth_enforcement_enabled=false` for all scopes; no existing login, Authenticator, Owner PIN, Staff App Lock, or LINE login behavior changed.
+- Verification query: 16 scopes total; 5 Owner Theme scopes ON; 11 non-Owner scopes rollout-locked; 0 auth enforcement enabled.
+- Pending QA: live authenticated Owner GET/POST, audit log end-to-end, physical device visual review, browser regression. Do not enable auth enforcement or unlock non-Owner rollout until QA and explicit approval.
