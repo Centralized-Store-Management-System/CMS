@@ -154,6 +154,37 @@ async function ocOpsLoadQueue() {
       const detail = document.createElement('small'); detail.textContent = 'ผู้ดำเนินการ: ' + run.executed_by + ' · ' + new Date(run.created_at).toLocaleString('th-TH'); row.appendChild(detail);
       box.appendChild(row);
     });
+    const diagTitle = document.createElement('h4'); diagTitle.textContent = 'AI Root Cause & Predictive Signals'; box.appendChild(diagTitle);
+    const latestDiag = (p.diagnostics || [])[0];
+    if (latestDiag) {
+      const causes = Array.isArray(latestDiag.root_causes) ? latestDiag.root_causes : [];
+      if (!causes.length) { const none = document.createElement('p'); none.className = 'muted'; none.textContent = 'ยังไม่มี Root Cause ที่ยืนยันได้จาก Finding รอบล่าสุด'; box.appendChild(none); }
+      causes.forEach(cause => {
+        const card = document.createElement('article'); card.className = 'oc-ops-queue-card';
+        const h = document.createElement('b'); h.textContent = cause.title + ' · ความเชื่อมั่น ' + cause.confidence; card.appendChild(h);
+        const d = document.createElement('p'); d.textContent = (cause.evidence || []).join(' · '); card.appendChild(d);
+        const next = document.createElement('small'); next.textContent = 'ขั้นตอนตรวจสอบ: ' + cause.next; card.appendChild(next);
+        box.appendChild(card);
+      });
+      const trends = Array.isArray(latestDiag.trends) ? latestDiag.trends : [];
+      const trendTitle = document.createElement('h4'); trendTitle.textContent = 'Metric Trends · รอบตรวจล่าสุด'; box.appendChild(trendTitle);
+      trends.forEach(t => {
+        const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
+        const label = document.createElement('b'); label.textContent = t.metric + ': ' + (t.current == null ? 'N/A' : t.current) + ' · ' + t.trend; row.appendChild(label);
+        const detail = document.createElement('small'); detail.textContent = 'เปลี่ยนจากรอบก่อน: ' + (t.change == null ? 'ยังไม่มี baseline' : t.change); row.appendChild(detail);
+        box.appendChild(row);
+      });
+      const forecasts = Array.isArray(latestDiag.forecast) ? latestDiag.forecast : [];
+      forecasts.forEach(fc => {
+        const note = document.createElement('small'); note.className = 'oc-ops-forecast-note';
+        note.textContent = 'แนวโน้ม ' + fc.metric + ': ' + fc.warning; box.appendChild(note);
+      });
+      const confidence = document.createElement('small'); confidence.className = 'oc-ops-forecast-note';
+      confidence.textContent = 'ระดับความเชื่อมั่นโดยรวม: ' + latestDiag.confidence + ' · วิเคราะห์จากกฎและข้อมูลย้อนหลัง ไม่ใช่การยืนยันสาเหตุจาก AI ภายนอก';
+      box.appendChild(confidence);
+    } else {
+      const waiting = document.createElement('p'); waiting.className = 'muted'; waiting.textContent = 'รอผล Orchestrator รอบถัดไปเพื่อสร้าง Root Cause และ Trend'; box.appendChild(waiting);
+    }
     const iTitle = document.createElement('h4'); iTitle.textContent = 'เหตุการณ์ล่าสุด'; box.appendChild(iTitle);
     (p.incidents || []).slice(0,8).forEach(item => {
       const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
