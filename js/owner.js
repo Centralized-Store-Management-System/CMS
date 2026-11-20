@@ -129,15 +129,28 @@ function ocHome() {
 function ocIt() {
   if (!OC.status || !OC.status.checks) return '<p class="loading">กำลังตรวจ…</p>';
   const s = OC.status, bad = s.checks.filter(c => c.status === 'bad').length, warn = s.checks.filter(c => c.status === 'warn').length;
-  const areas = [...new Set(s.checks.map(c => c.area))];
+  const ok = s.checks.length - bad - warn, areas = [...new Set(s.checks.map(c => c.area))];
   const col = s.score >= 85 ? '#1D7A4E' : s.score >= 60 ? '#C29A3E' : '#A23B2A';
-  return `<h1>Super Advance IT</h1><p class="muted">ตรวจทุกระบบอัตโนมัติทุก 5 นาที แก้เองเมื่อแก้ได้ และแจ้ง LINE เมื่อแก้เองไม่ได้ · ตรวจล่าสุด ${esc(s.at)} (${s.ms} ms)</p>
-  <div class="oc-score"><div class="oc-ring" style="--v:${s.score};--c:${col}"><b>${s.score}</b></div>
-    <div><b style="font:600 18px var(--display)">${bad ? `ผิดปกติ ${bad} · ` : ''}${warn ? `ควรดู ${warn} · ` : ''}ปกติ ${s.checks.length - bad - warn} รายการ</b><div class="actions" style="margin:10px 0 0">
-    <button class="btn primary" data-heal="__all">ซ่อมทั้งหมดอัตโนมัติ</button><button class="btn" data-oc="it">ตรวจใหม่</button><button class="btn" data-heal="warm">เร่งความเร็ว (อุ่นแคช)</button><button class="btn" data-heal="cacheReset">ล้างแคชทั้งหมด</button></div></div></div>
+  return `<section class="oc-it-hero">
+    <div class="oc-it-hero-copy"><span class="oc-it-eyebrow">OWNER CONSOLE · IT OPERATIONS</span>
+      <h1>Super Advance IT</h1>
+      <p>ศูนย์ควบคุมและดูแลระบบหลังร้าน ตรวจสอบสุขภาพระบบ ซ่อมแซมอัตโนมัติ และติดตามประสิทธิภาพจากทุกอุปกรณ์</p>
+      <div class="oc-it-meta"><span>อัปเดตล่าสุด ${esc(s.at)}</span><span>เวลาตรวจ ${s.ms} ms</span><span>ตรวจซ้ำอัตโนมัติทุก 5 นาที</span></div>
+    </div>
+    <div class="oc-it-orbit"><span class="oc-it-orbit-label">SYSTEM HEALTH</span><strong>${s.score}</strong><small>/ 100</small><span class="oc-it-health">${s.score >= 85 ? 'ระบบทำงานปกติ' : s.score >= 60 ? 'ควรตรวจสอบบางรายการ' : 'พบรายการผิดปกติ'}</span></div>
+  </section>
+  <section class="oc-it-summary" aria-label="สรุปสถานะระบบ">
+    <article class="oc-it-stat"><span class="oc-it-stat-icon good">✓</span><div><strong>${ok}</strong><span>รายการปกติ</span></div></article>
+    <article class="oc-it-stat"><span class="oc-it-stat-icon warn">!</span><div><strong>${warn}</strong><span>ควรตรวจสอบ</span></div></article>
+    <article class="oc-it-stat"><span class="oc-it-stat-icon bad">×</span><div><strong>${bad}</strong><span>ผิดปกติ</span></div></article>
+    <article class="oc-it-stat"><span class="oc-it-stat-icon total">⌁</span><div><strong>${s.checks.length}</strong><span>รายการตรวจทั้งหมด</span></div></article>
+  </section>
+  <section class="oc-it-actions"><div><b>เครื่องมือดูแลระบบ</b><span>สั่งตรวจ ซ่อม และเพิ่มความเร็วได้จากหน้านี้</span></div>
+    <div class="actions"><button class="btn primary" data-heal="__all">ซ่อมทั้งหมดอัตโนมัติ</button><button class="btn" data-oc="it">ตรวจใหม่</button><button class="btn" data-heal="warm">เร่งความเร็วระบบ</button><button class="btn" data-heal="cacheReset">ล้างแคชทั้งหมด</button></div>
+  </section>
+  <div class="oc-it-section-head"><div><span>LIVE DIAGNOSTICS</span><h2>ผลการตรวจสอบระบบ</h2><p>แสดงรายละเอียดแยกตามหมวดงาน พร้อมสถานะและคำแนะนำการแก้ไข</p></div><span class="oc-it-live"><i></i> AUTO MONITORING</span></div>
   ${areas.map(a => `<h3 class="h3">${esc(a)}</h3><div class="group">${s.checks.filter(c => c.area === a).map(c => `<div class="row static">${ocDot(c.status)}<span class="main"><span class="t">${esc(c.name)}</span><span class="s">${esc(c.detail)}</span></span>${ocChip(c.status)}${c.fix && c.status !== 'ok' ? `<button class="btn sm" data-heal="${esc(c.fix.code)}"${c.fix.arg ? ` data-arg='${esc(JSON.stringify(c.fix.arg))}'` : ''}>${esc(c.fix.label)}</button>` : ''}</div>`).join('')}</div>`).join('')}
-  <h3 class="h3">เหตุการณ์ล่าสุด</h3>${ocEventList(s.events)}
-  `;
+  <h3 class="h3">เหตุการณ์ล่าสุด</h3>${ocEventList(s.events)}`;
 }
 function ocAiPage() {
   return '<h1>🧠 AI Monitoring · Advanced</h1><p class="muted">วิเคราะห์สุขภาพระบบจาก 4 แหล่งข้อมูล: IT Status, Performance, Event History และ Incident Dashboard ย้อนหลัง 7 วัน · รีเฟรชอัตโนมัติทุก 5 นาทีขณะเปิดหน้านี้</p>' + (typeof ocAiPanelHtml === 'function' ? ocAiPanelHtml() : '<p class="status bad">ไม่พบ Diagnostic Engine</p>');
