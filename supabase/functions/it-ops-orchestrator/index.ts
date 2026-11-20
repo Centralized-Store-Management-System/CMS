@@ -6,6 +6,7 @@ const BACKOFFICE_URL=SUPABASE_URL+"/functions/v1/backoffice";
 const ALLOWED_ORIGINS=new Set(["https://centralized-store-management.github.io","https://centralized-store-management-system.github.io"]);
 class HttpError extends Error { status:number; constructor(status:number,message:string){super(message);this.status=status;} }
 function out(body:unknown,status=200,origin=""){return new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store, private","vary":"Origin",...(origin?{"access-control-allow-origin":origin,"access-control-allow-headers":"content-type, x-cms-session","access-control-allow-methods":"GET, POST, OPTIONS","access-control-max-age":"600"}:{})}});}
+function asJson(value:unknown,fallback:any){if(typeof value==="string"){try{return JSON.parse(value)}catch(_){return fallback}}return value??fallback;}
 function parseJsonp(t:string){try{return JSON.parse(t)}catch(_){} const a=t.indexOf("("),b=t.lastIndexOf(")");if(a<0||b<=a)throw new HttpError(401,"Owner session ไม่ถูกต้อง");try{return JSON.parse(t.slice(a+1,b))}catch(_){throw new HttpError(401,"Owner session ไม่ถูกต้อง")}}
 async function owner(token:string){if(!token||token.length>4096)throw new HttpError(401,"กรุณาเข้าสู่ระบบ Owner ใหม่");const u=new URL(BACKOFFICE_URL);u.searchParams.set("action","bootstrap");u.searchParams.set("t",token);u.searchParams.set("callback","_it_ops_orchestrator_auth");u.searchParams.set("_",String(Date.now()));const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw new HttpError(401,"Session หมดอายุ");const p=parseJsonp(await r.text()),b=p.data||p;if(!b.me||b.me.role!=="owner")throw new HttpError(403,"เฉพาะ Owner เท่านั้น");return String(b.me.email||b.me.username||"owner");}
 const SAFE_ACTIONS:Record<string,{title:string,risk:"low"|"medium",why:string}>={
@@ -48,7 +49,7 @@ async function simulateApprovedAction(id:number,actor:string){
   simulation={description:"ตรวจสถานะ Cron และประวัติการรันแบบอ่านอย่างเดียว",jobs,failures,lastRuns:last};
  } else {
   const [latest]=await sql`select id,checked_at,status,risk_score,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
-  const metrics=latest?.metrics||{};
+  const metrics=asJson(latest?.metrics,{});
   const map:Record<string,string>={inspect_supa_heartbeat:"supaHeartbeatAgeMinutes",inspect_order_heartbeat:"orderHeartbeatAgeMinutes",inspect_order_sync_errors:"orderSyncErrors",inspect_order_sso_failures:"orderSsoFailures24h"};
   simulation={description:"ใช้เฉพาะตัวชี้วัดสรุปจาก IT Monitor ล่าสุด ไม่อ่านข้อมูลลูกค้าหรือข้อมูลพนักงาน",monitorRunId:latest?.id??null,checkedAt:latest?.checked_at??null,monitorStatus:latest?.status??"unknown",riskScore:latest?.risk_score??null,metric:map[item.action_code]||"unknown",value:metrics[map[item.action_code]]??null};
  }
@@ -67,7 +68,7 @@ async function runCycle(){
  if(!sql)throw new HttpError(503,"Database connection ไม่พร้อม");
  const [run]=await sql`select id,checked_at,risk_score,status,findings,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
  if(!run)throw new HttpError(409,"ยังไม่มีผลตรวจจาก IT Monitor");
- const findings=Array.isArray(run.findings)?run.findings:[];
+ const parsedFindings=asJson(run.findings,[]); const findings=Array.isArray(parsedFindings)?parsedFindings:[];
  let upserts=0,proposals=0;
  for(const f of findings){
   const code=String(f.code||"UNKNOWN").slice(0,60); if(code==="ALL_CLEAR") continue; const level=["critical","warning","info"].includes(f.level)?f.level:"info";
