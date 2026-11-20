@@ -42,8 +42,7 @@ async function simulateApprovedAction(id:number,actor:string){
   const groups=await sql`select kind,count(*)::int as count from backoffice.outbox_errors where at>=now()-interval '24 hours' group by kind order by count desc`;
   simulation={description:"ตรวจเฉพาะจำนวน Outbox errors แบบ aggregate; ไม่อ่านผู้รับหรือเนื้อหาข้อความ",counts,groups};
  } else if(["inspect_cron_disabled","inspect_cron_stale","inspect_cron_last_failed","inspect_cron_failures"].includes(item.action_code)){
-  const jobs=await sql`select jobname,active,schedule from cron.job where jobname in ('backoffice-tick','it-monitor-every-5-minutes','it-o
-ps-orchestrator-every-5-minutes') order by jobname`;
+  const jobs=await sql`select jobname,active,schedule from cron.job where jobname in ('backoffice-tick','it-monitor-every-5-minutes','it-ops-orchestrator-every-5-minutes') order by jobname`;
   const failures=await sql`select jobid,count(*)::int as failures,max(start_time) as latest_failure from cron.job_run_details where start_time>=now()-interval '24 hours' and status<>'succeeded' group by jobid order by failures desc`;
   const last=await sql`select jobid,status,start_time,return_message from cron.job_run_details where start_time>=now()-interval '24 hours' order by start_time desc limit 10`;
   simulation={description:"ตรวจสถานะ Cron และประวัติการรันแบบอ่านอย่างเดียว",jobs,failures,lastRuns:last};
@@ -57,13 +56,14 @@ ps-orchestrator-every-5-minutes') order by jobname`;
  const rollback={required:false,readiness:"not_applicable",reason:"Dry-run ไม่มีการเปลี่ยนแปลง Production จึงไม่มี state ให้ rollback",futureGate:"ก่อนเปิด remediation จริงต้องมี snapshot/backup, rollback command ที่ทดสอบแล้ว และ post-check"};
  const idempotencyKey="dryrun:"+id+":"+new Date().toISOString().slice(0,16);
  const [saved]=await sql`insert into public.it_ops_action_runs(action_queue_id,incident_id,mode,action_code,status,executed_by,idempotency_key,preflight,simulation,rollback_check)
-  values(${id},${item.incident_id},'dry_run','${item.action_code}','passed',${actor},${idempotencyKey},${JSON.stringify(preflight)}::jsonb,${JSON.stringify(simulation)}::jsonb,${JSON.stringify(rollback)}::jsonb)
+  values(${id},${item.incident_id},'dry_run',${item.action_code},'passed',${actor},${idempotencyKey},${JSON.stringify(preflight)}::jsonb,${JSON.stringify(simulation)}::jsonb,${JSON.stringify(rollback)}::jsonb)
   returning id,created_at,status,action_code`;
  await sql`insert into public.it_ops_audit(actor,event_type,entity_type,entity_id,details)
   values(${actor},'dry_run_completed','action_queue',${id},${JSON.stringify({actionRunId:saved.id,actionCode:item.action_code,mode:"dry_run",productionMutation:false})}::jsonb)`;
  return {run:saved,preflight,simulation,rollback,mode:"dry_run"};
 }
-\nasync function runCycle(){
+
+async function runCycle(){
  if(!sql)throw new HttpError(503,"Database connection ไม่พร้อม");
  const [run]=await sql`select id,checked_at,risk_score,status,findings,metrics from public.it_monitor_runs order by checked_at desc limit 1`;
  if(!run)throw new HttpError(409,"ยังไม่มีผลตรวจจาก IT Monitor");
@@ -121,9 +121,10 @@ Deno.serve(async(req:Request)=>{
    const [incidents,queue,audit,actionRuns]=await Promise.all([
     sql`select id,fingerprint,severity,code,title,detail,recommendation,status,first_seen_at,last_seen_at,occurrence_count from public.it_ops_incidents order by case severity when 'critical' then 0 when 'warning' then 1 else 2 end,last_seen_at desc limit 40`,
     sql`select q.id,q.incident_id,q.action_code,q.title,q.rationale,q.risk_level,q.status,q.requires_owner_approval,q.created_at,q.expires_at,i.code as incident_code from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id order by q.created_at desc limit 40`,
-    sql`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30`
+    sql`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30`,
+    sql`select id,action_queue_id,action_code,status,executed_by,preflight,simulation,rollback_check,created_at from public.it_ops_action_runs order by created_at desc limit 20`
    ]);
-   return out({ok:true,mode:"observe_only",incidents,queue,audit},200,origin);
+   return out({ok:true,mode:"dry_run_only",incidents,queue,audit,actionRuns},200,origin);
   }
   throw new HttpError(405,"Method not allowed");
  }catch(e){const status=e instanceof HttpError?e.status:500;if(!(e instanceof HttpError))console.error("it-ops-orchestrator",String(e).slice(0,240));return out({ok:false,error:e instanceof HttpError?e.message:"IT Ops Orchestrator error"},status,origin);}
