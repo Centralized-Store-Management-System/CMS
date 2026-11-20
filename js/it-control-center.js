@@ -14,6 +14,8 @@ async function ocControlLoad(){
  try{const p=await itccRequest();ITCC.rows=p.rows||[];ITCC.audit=p.audit||[];ocMain(ocControlPage());}
  catch(e){ocMain('<div class="status bad">'+esc(e.message)+'</div>');}
 }
+const ITCC_PKG={classic:'Theme เดิม',prototype:'Prototype (หลังร้าน)',owner:'Owner Theme'};
+function itccHere(){const a=window.AMZ_SCOPE;if(!a)return'';return `<div class="note">เครื่องนี้: <b>${esc(a.scope||'-')}</b> · ${esc(a.device)} · ${a.surface==='installed_app'?'แอปที่ติดตั้ง':a.surface==='line_liff'?'LINE':'เว็บ'} · ตอนนี้ใช้ ${esc(ITCC_PKG[a.pkg]||a.pkg)} · แต่ละแถวตั้งแยกกัน ไม่กระทบแถวอื่น · ล็อกไว้ = เปลี่ยนไม่ได้จนกว่าจะปลดล็อก</div>`;}
 const itccDeviceLabel=r=>r.device_class==='pc'?'PC':r.device_class==='mobile'?'Mobile':r.device_class==='ipad'?'iPad':r.device_class.replaceAll('_',' / ').toUpperCase();
 function itccGroupLabel(r){return r.app_label+' · '+(r.user_class==='owner'?'Owner':r.user_class==='staff_manager'?'Staff / Manager':r.user_class==='owner_staff'?'Owner / Staff':'LINE User')+' · '+(r.surface==='installed_app'?'Installed App':r.surface==='line_liff'?'LINE / LIFF':'Web')+' · '+itccDeviceLabel(r);}
 function ocControlPage(){
@@ -42,7 +44,13 @@ function ocControlPage(){
   <section class="group pad">
    <div class="h2">Theme Rollout <span class="spacer"></span><select id="itcc-filter" aria-label="กรองระบบ" style="max-width:180px"><option value="all">ทุกระบบ</option><option value="owner">Owner</option><option value="backoffice">Back Office</option><option value="staff">Staff</option><option value="line">LINE</option><option value="register">Registration</option></select></div>
    <p class="muted">เลือกอุปกรณ์แยกกันได้ PC / Mobile / iPad และ Web / Installed App</p>
-   ${visible.map(x=>`<div class="itcc-row"><div><b>${esc(itccGroupLabel(x))}</b><div class="itcc-meta">Theme ${x.theme_enabled?'ON':'OFF'} · ${x.rollout_locked?'LOCKED':'UNLOCKED'} · v${esc(x.theme_version)}</div></div><div><span class="chip ${x.theme_enabled?'ok':x.rollout_locked?'warn':''}">${x.theme_enabled?'ON':x.rollout_locked?'LOCKED':'OFF'}</span></div></div>`).join('')}
+   ${itccHere()}
+   ${visible.map(x=>`<div class="itcc-row"><div><b>${esc(itccGroupLabel(x))}</b><div class="itcc-meta">${x.theme_enabled?'ใช้ '+esc(ITCC_PKG[x.theme_package]||x.theme_package):'Theme เดิม (ปิด)'} · ${x.rollout_locked?'🔒 ล็อก':'ปลดล็อก'}${window.AMZ_SCOPE&&AMZ_SCOPE.scope===x.scope_key?' · <b>เครื่องนี้</b>':''}</div></div>
+    <div class="actions" style="justify-content:flex-end;flex-wrap:wrap;gap:6px">
+     <select data-itcc-pkg="${x.scope_key}" aria-label="เลือก Theme" ${x.rollout_locked?'disabled':''} style="max-width:150px">${Object.keys(ITCC_PKG).map(k=>`<option value="${k}" ${x.theme_package===k?'selected':''}>${ITCC_PKG[k]}</option>`).join('')}</select>
+     <button class="btn sm ${x.theme_enabled?'':'primary'}" data-itcc-save="theme" data-scope="${x.scope_key}" ${x.rollout_locked?'disabled':''}>${x.theme_enabled?'ปิด':'เปิด'}</button>
+     <button class="btn sm" data-itcc-save="${x.rollout_locked?'unlock':'lock'}" data-scope="${x.scope_key}">${x.rollout_locked?'ปลดล็อก':'ล็อก'}</button>
+    </div></div>`).join('')}
    <div class="note">ระบบอื่นถูกตั้งค่า LOCKED/OFF เป็นค่าเริ่มต้นเพื่อป้องกัน Theme ของ Owner กระทบระบบอื่น</div>
   </section>
   <section class="group pad">
@@ -66,7 +74,14 @@ function ocControlPage(){
  <section class="group pad" style="margin-top:14px"><div class="h2">Audit Log <span class="spacer"></span><button class="btn sm" data-itcc-refresh>Refresh</button></div>
  ${ITCC.audit.map(a=>`<div class="itcc-audit"><b>${esc(a.scope_key)}</b> · ${esc(a.action)} · ${esc(a.actor)}<div class="itcc-meta">${esc(new Date(a.created_at).toLocaleString('th-TH'))}</div></div>`).join('')||'<p class="muted">ยังไม่มีประวัติการเปลี่ยนแปลง</p>'}</section>`;
 }
-document.addEventListener('change',e=>{if(e.target.id==='itcc-filter'){ITCC.filter=e.target.value;ocMain(ocControlPage());}});
+document.addEventListener('change',async e=>{if(e.target.id==='itcc-filter'){ITCC.filter=e.target.value;ocMain(ocControlPage());return;}
+ const sel=e.target.closest('[data-itcc-pkg]');if(!sel)return;
+ const row=ITCC.rows.find(x=>x.scope_key===sel.dataset.itccPkg);if(!row||row.theme_package===sel.value)return;
+ if(!confirm('เปลี่ยน Theme ของ '+itccGroupLabel(row)+' เป็น '+ITCC_PKG[sel.value]+' ใช่หรือไม่?\n(มีผลเฉพาะ Scope นี้)')){sel.value=row.theme_package;return;}
+ sel.disabled=true;
+ try{await itccRequest('POST',{scopeKey:row.scope_key,changes:{theme_package:sel.value,theme_enabled:true}});toast('บันทึกแล้ว เครื่องใน Scope นี้จะเปลี่ยนเมื่อเปิดหน้าใหม่');if(window.AMZ_SCOPE)AMZ_SCOPE.refresh();await ocControlLoad();}
+ catch(err){toast(err.message);sel.value=row.theme_package;sel.disabled=false;}
+});
 document.addEventListener('click',async e=>{
  const dev=e.target.closest('[data-itcc-device]');if(dev){ITCC.device=dev.dataset.itccDevice;return ocMain(ocControlPage());}
  if(e.target.closest('[data-itcc-refresh]'))return ocControlLoad();
@@ -74,9 +89,10 @@ document.addEventListener('click',async e=>{
  if(action){
   const row=ITCC.rows.find(x=>x.scope_key===action.dataset.scope);if(!row)return;
   if(action.dataset.itccSave==='unlock'&&!confirm('ปลดล็อก Theme Rollout เฉพาะ Scope นี้ใช่หรือไม่?'))return;
+  if(action.dataset.itccSave==='lock'&&!confirm('ล็อก Scope นี้ (กันการเปลี่ยน Theme) ใช่หรือไม่?'))return;
   if(action.dataset.itccSave==='theme'&&!confirm((row.theme_enabled?'ปิด':'เปิด')+' Theme เฉพาะ Scope นี้ใช่หรือไม่?'))return;
   action.disabled=true;
-  try{const changes=action.dataset.itccSave==='unlock'?{rollout_locked:false}:{theme_enabled:!row.theme_enabled};await itccRequest('POST',{scopeKey:row.scope_key,changes});toast('บันทึกการตั้งค่าและ Audit Log แล้ว');await ocControlLoad();}
+  try{const k=action.dataset.itccSave,changes=k==='unlock'?{rollout_locked:false}:k==='lock'?{rollout_locked:true}:{theme_enabled:!row.theme_enabled};await itccRequest('POST',{scopeKey:row.scope_key,changes});toast('บันทึกการตั้งค่าและ Audit Log แล้ว');if(window.AMZ_SCOPE)AMZ_SCOPE.refresh();await ocControlLoad();}
   catch(err){toast(err.message);action.disabled=false;}return;
  }
  const auth=e.target.closest('[data-itcc-auth]');
