@@ -193,3 +193,6 @@
 - ยังไม่ตั้ง secret และยังไม่ทดสอบ AI response จริง; หลังตั้ง secret ต้องทดสอบด้วยบัญชี Owner และตรวจ provider quota/model access ก่อนเปิดใช้
 - Files: js/it-ops.js (ใหม่), supabase/functions/it-ai-ops/index.ts (ใหม่), js/owner.js, owner.html, css/owner.css
 - Safety backlog: เพิ่ม durable audit/approval queue, action allowlist และ rollback verification ก่อนเปิด automatic remediation; ห้ามให้ AI execute SQL, change RLS/Auth, delete data หรือ deploy production เอง
+
+- Post-deploy verification: client JS syntax ผ่าน; Owner JS syntax ผ่าน; Edge Function it-ai-ops ACTIVE v2; monitor cron เดิมยัง Active ที่ */5 * * * *; owner.html cache-bust owner.js 4.9.6 / owner.css 4.8.4 / it-ops.js 1.0.0
+- หมายเหตุทดสอบ: ยังไม่สามารถทดสอบ AI provider response ได้จนกว่าจะตั้ง OPENAI_API_KEY; deployment สำเร็จไม่ได้แปลว่า AI chat พร้อมใช้งานทันที
