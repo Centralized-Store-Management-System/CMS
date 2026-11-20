@@ -101,6 +101,7 @@ document.addEventListener('submit', e => {
 });
 
 
+function ocOpsParseArray(value) { if (Array.isArray(value)) return value; if (typeof value === 'string') { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch (_) {} } return []; }
 async function ocOpsLoadQueue() {
   const box = document.getElementById('oc-ops-queue');
   if (!box) return;
@@ -157,7 +158,7 @@ async function ocOpsLoadQueue() {
     const diagTitle = document.createElement('h4'); diagTitle.textContent = 'AI Root Cause & Predictive Signals'; box.appendChild(diagTitle);
     const latestDiag = (p.diagnostics || [])[0];
     if (latestDiag) {
-      const causes = Array.isArray(latestDiag.root_causes) ? latestDiag.root_causes : [];
+      const causes = ocOpsParseArray(latestDiag.root_causes);
       if (!causes.length) { const none = document.createElement('p'); none.className = 'muted'; none.textContent = 'ยังไม่มี Root Cause ที่ยืนยันได้จาก Finding รอบล่าสุด'; box.appendChild(none); }
       causes.forEach(cause => {
         const card = document.createElement('article'); card.className = 'oc-ops-queue-card';
@@ -166,7 +167,7 @@ async function ocOpsLoadQueue() {
         const next = document.createElement('small'); next.textContent = 'ขั้นตอนตรวจสอบ: ' + cause.next; card.appendChild(next);
         box.appendChild(card);
       });
-      const trends = Array.isArray(latestDiag.trends) ? latestDiag.trends : [];
+      const trends = ocOpsParseArray(latestDiag.trends);
       const trendTitle = document.createElement('h4'); trendTitle.textContent = 'Metric Trends · รอบตรวจล่าสุด'; box.appendChild(trendTitle);
       trends.forEach(t => {
         const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
@@ -174,7 +175,7 @@ async function ocOpsLoadQueue() {
         const detail = document.createElement('small'); detail.textContent = 'เปลี่ยนจากรอบก่อน: ' + (t.change == null ? 'ยังไม่มี baseline' : t.change); row.appendChild(detail);
         box.appendChild(row);
       });
-      const forecasts = Array.isArray(latestDiag.forecast) ? latestDiag.forecast : [];
+      const forecasts = ocOpsParseArray(latestDiag.forecast);
       forecasts.forEach(fc => {
         const note = document.createElement('small'); note.className = 'oc-ops-forecast-note';
         note.textContent = 'แนวโน้ม ' + fc.metric + ': ' + fc.warning; box.appendChild(note);
