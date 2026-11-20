@@ -17,6 +17,24 @@
     '.tux-act span{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}.tux-act svg{width:20px;height:20px}',
     '.group.pad.my.tux{padding:0;background:transparent;border:0;box-shadow:none}.my.tux .mystats{padding:0 4px}'
   ].join('');
+
+    /* Owner / executive dashboard KPI cards: compact, icon-led and touch-friendly */
+    '.kpis.exec{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 20px}',
+    '.kpis.exec .exec-kpi{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;min-height:142px;padding:15px 15px 13px;border:1px solid #e1ebe4;border-radius:22px;background:linear-gradient(155deg,#fff 0%,#fbfdfb 100%);box-shadow:0 8px 22px rgba(18,61,43,.055);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}',
+    '.kpis.exec .exec-kpi:active{transform:scale(.985)}',
+    '.exec-kpi-head{display:flex;align-items:center;gap:9px;width:100%;min-width:0}',
+    '.exec-kpi-head small{font-size:12px;line-height:1.3;color:#65766d;font-weight:600}',
+    '.exec-kpi-icon{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none;background:#e5f2e9;color:#08734f}',
+    '.exec-kpi-icon svg{width:21px;height:21px}',
+    '.exec-kpi.labor .exec-kpi-icon{background:#f7efdd;color:#987018}',
+    '.exec-kpi.waste .exec-kpi-icon{background:#f8e9e4;color:#b45a3d}',
+    '.exec-kpi.late .exec-kpi-icon{background:#e9eef7;color:#426d9e}',
+    '.kpis.exec .exec-kpi>b{display:block;font:700 clamp(23px,5.8vw,30px)/1.15 var(--display);letter-spacing:-.4px;color:#17251e;overflow-wrap:anywhere}',
+    '.kpis.exec .exec-kpi>em{font-style:normal;font-size:11.5px;line-height:1.35;color:#16815a;font-weight:600}',
+    '.kpis.exec .exec-kpi.labor>em{color:#987018}.kpis.exec .exec-kpi.waste>em{color:#b45a3d}.kpis.exec .exec-kpi.late>em{color:#426d9e}',
+    '.kpis.exec .exec-kpi>em.exec-kpi-hint{color:#84938b;font-weight:500}',
+    '@media(min-width:760px){.kpis.exec{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.kpis.exec .exec-kpi{min-height:154px;padding:17px}}',
+    '@media(max-width:360px){.kpis.exec{gap:8px}.kpis.exec .exec-kpi{min-height:132px;padding:12px;border-radius:18px}.exec-kpi-head{gap:7px}.exec-kpi-icon{width:34px;height:34px}.kpis.exec .exec-kpi>b{font-size:22px}}',
   document.head.appendChild(st);
   const I = {
     in: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>',
