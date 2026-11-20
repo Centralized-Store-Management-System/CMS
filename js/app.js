@@ -26,12 +26,13 @@ const App = {
     const showMonth = !!((sub && sub.month) || (!sub && mod.month));
     $('#tb-ic').innerHTML = icon(mod.icon);
     $('#tb-title').textContent = mod.label;
+    $('#tb-title').closest('.topbar').dataset.header = mod.key;
     $('#tb-shop').textContent = shopLabel();
     $$('.monthpick').forEach(i => { i.hidden = !showMonth; i.value = S.month; });
     const bp = mod.noBranch || mod.key === 'menu' ? '' : branchPick();
     $('#tb-br').innerHTML = bp;
     renderNav(mod.key);
-    let h = `<div class="mhead"><span class="mi">${icon(mod.icon)}</span><h1>${esc(mod.label)}<small>${esc(mod.desc || '')}</small></h1>${bp}<input type="month" class="month monthpick" aria-label="เลือกเดือน" value="${S.month}"${showMonth ? '' : ' hidden'}></div>`;
+    let h = `<div class="mhead" data-header="${esc(mod.key)}"><span class="mi">${icon(mod.icon)}</span><h1>${esc(mod.label)}<small>${esc(mod.desc || '')}</small></h1>${bp}<input type="month" class="month monthpick" aria-label="เลือกเดือน" value="${S.month}"${showMonth ? '' : ' hidden'}></div>`;
     if (subs && subs.length > 1) h += `<nav class="tabs" aria-label="หมวดย่อย">${subs.map(s => `<a href="#${mod.key}/${s.key}"${s === sub ? ' aria-current="page"' : ''}>${esc(s.label)}</a>`).join('')}</nav>`;
     if (showMonth && typeof frozenMonth === 'function' && frozenMonth(S.month)) h += `<p class="frozen-note"><b>Freeze แล้ว</b><span>ข้อมูลเดือนนี้ปิดแล้ว ดูได้อย่างเดียว ถ้าจำเป็นต้องแก้ ให้ Owner กด Unfreeze ที่ System Admin > Freeze</span></p>`;
     try { h += mod.key === 'menu' ? viewMenu() : (sub ? sub.view() : mod.view()); }
