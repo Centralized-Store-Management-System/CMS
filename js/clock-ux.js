@@ -61,6 +61,10 @@
     '@media(min-width:960px){html.embed body{background-color:#f2f6f2;background-image:radial-gradient(ellipse at 92% 8%,rgba(255,128,110,.12),transparent 27%),radial-gradient(ellipse at 4% 92%,rgba(7,115,79,.09),transparent 30%),linear-gradient(135deg,#f4f8f4,#eef4ef)}html.embed .clock-shell.cux{max-width:1120px!important;padding:14px 22px 28px!important}html.embed .cux-hi{margin:4px 2px 12px}html.embed .cux-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.82fr);align-items:center;gap:12px 16px;padding:18px 20px!important;border-radius:22px!important;background:radial-gradient(ellipse at 100% 0%,rgba(255,255,255,.12),transparent 34%),linear-gradient(125deg,#073f30 0%,#07583f 56%,#0d684b 100%)!important;box-shadow:0 12px 26px rgba(7,88,63,.14)!important;position:relative;overflow:hidden}html.embed .cux-top,html.embed .cux-tiles,html.embed .cux-done,html.embed .cux-hero .selfie-box,html.embed .cux-hero .field.check{grid-column:1/-1}html.embed .cux-top{align-items:center;margin-bottom:0}html.embed .cux-top b{font-size:27px!important}html.embed .cux-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}html.embed .cux-tile{min-height:78px;padding:10px 14px!important;border-radius:14px!important}html.embed .cux-tile b{font-size:23px!important}html.embed .cux-gps{grid-column:1;min-height:48px;padding:10px 12px;font-size:13px}html.embed .cux-go{grid-column:2;height:58px!important;border-radius:15px!important;font-size:21px!important}html.embed .cux-go svg{width:25px;height:25px}html.embed .cux-hero #ck-msg{grid-column:1/-1;text-align:left;font-size:12px;padding-left:2px}html.embed .cux-acts{max-width:none;gap:12px;margin:14px 0!important}html.embed .cux-act{min-height:82px;padding:10px!important;border-radius:16px!important;flex-direction:row;justify-content:flex-start;gap:12px;text-align:left;font-size:14px}html.embed .cux-act span{width:42px!important;height:42px!important;border-radius:13px!important}html.embed .cux-seg{margin:12px 0 8px}html.embed .cux .group,html.embed .cux .group.pad,html.embed .cux .stats>div{border-radius:16px!important;box-shadow:0 5px 16px rgba(16,61,45,.045)!important}html.embed .cux .row{min-height:52px;padding:10px 14px}html.embed .cux .group.pad{padding:14px!important}}',
     '@media(min-width:960px) and (max-width:1200px){html.embed .clock-shell.cux{padding-left:14px!important;padding-right:14px!important}html.embed .cux-hero{grid-template-columns:minmax(0,1fr) minmax(220px,.8fr);padding:16px!important}}',
 
+    /* Desktop decorative companion card: fills freed layout space without adding fake actions */
+    '.cux-web-feature{display:block}',
+    '.cux-decor{display:none}',
+    '@media(min-width:1200px){html.embed .cux-web-feature{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,.72fr);gap:16px;align-items:stretch}html.embed .cux-web-feature>.cux-hero{height:100%;min-height:100%}html.embed .cux-decor{display:flex;position:relative;min-height:260px;overflow:hidden;flex-direction:column;justify-content:space-between;padding:22px;border:1px solid #dce9df;border-radius:22px;background:radial-gradient(circle at 85% 15%,rgba(255,255,255,.88),transparent 33%),linear-gradient(145deg,#e7f2e9 0%,#f7f3e9 58%,#f4e2d9 100%);box-shadow:0 12px 26px rgba(16,61,45,.07)}html.embed .cux-decor-art{position:absolute;inset:0 0 35px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(ellipse at 50% 55%,rgba(8,105,73,.13),transparent 56%)}html.embed .cux-decor-art svg{width:min(88%,260px);height:auto;filter:drop-shadow(0 14px 14px rgba(16,61,45,.12));z-index:1}html.embed .cux-decor-orbit{position:absolute;border:1px solid rgba(7,88,63,.13);border-radius:50%;width:220px;height:220px}html.embed .cux-decor-orbit.orbit-b{width:290px;height:290px;border-style:dashed}html.embed .cux-decor-copy{position:relative;z-index:2;margin-top:auto;display:grid;gap:8px}html.embed .cux-decor-copy span{font:700 10px var(--display);letter-spacing:1.8px;color:#658274}html.embed .cux-decor-copy strong{font:700 25px var(--display);line-height:1.25;color:#104b37}html.embed .cux-decor-copy small{font-size:11px;color:#718278}html.embed .cux-decor-mark{position:absolute;right:18px;top:14px;color:#0b6748;font-size:22px;opacity:.7}}',
     /* Contrast and visual polish: keep every label readable on every state */
     '.cux-hero .cux-top small,.cux-hero .cux-top b,.cux-hero .cux-top strong{color:#fff!important}',
     '.cux-hero .cux-top small{color:#d7eee3!important}',
@@ -132,6 +136,24 @@
     const list = [['leave', 'ขอลา', '#E6F1EA', '#17694A'], ['ot', 'ขอ OT', '#F6EEDC', '#8A6516'], ['fix', 'แก้เวลา', '#E8EEF6', '#2F5C8F']].concat(typeof tabSwap === 'function' ? [['swap', 'แลกกะ', '#F1E8F2', '#7A3E7F']] : []);
     return `<nav class="cux-acts" aria-label="ทำรายการ" style="grid-template-columns:repeat(${list.length},minmax(0,1fr))">${list.map(([k, l, bg, fg]) => `<a href="#" class="cux-act" data-a="tab:${k}"${C.tab === k ? ' aria-current="page"' : ''}><span style="background:${bg};color:${fg}">${I[k]}</span>${l}</a>`).join('')}</nav>`;
   }
+  function webDecor() {
+    return `<aside class="cux-decor" aria-label="Café Amazon decorative brand card">
+      <div class="cux-decor-art" aria-hidden="true">
+        <span class="cux-decor-orbit orbit-a"></span><span class="cux-decor-orbit orbit-b"></span>
+        <svg viewBox="0 0 240 180" role="presentation">
+          <path d="M55 65h112v54c0 25-19 43-43 43H98c-24 0-43-18-43-43Z" fill="#fff" opacity=".96"/>
+          <path d="M167 78h18c19 0 25 13 21 29-4 16-16 24-39 22" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round"/>
+          <path d="M70 62c-10-17 13-19 4-37M111 62c-10-17 13-19 4-37M148 62c-10-17 13-19 4-37" fill="none" stroke="#f3d9a2" stroke-width="6" stroke-linecap="round"/>
+          <path d="M88 91c10-13 24-13 34 0-10 13-24 13-34 0Zm28 24c10-13 24-13 34 0-10 13-24 13-34 0Z" fill="#0b6748"/>
+          <path d="M96 91h18M125 115h18" stroke="#d6a64b" stroke-width="3" stroke-linecap="round"/>
+          <path d="M47 166h150" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+        </svg>
+      </div>
+      <div class="cux-decor-copy"><span>CAFÉ AMAZON · STORE LIFE</span><strong>เติมพลัง<br>ให้ทุกวันทำงาน</strong><small>Every cup brings a little more joy.</small></div>
+      <span class="cux-decor-mark" aria-hidden="true">☕</span>
+    </aside>`;
+  }
+
   function newView() {
     const m = C.my;
     if (!tabInit) { tabInit = true; const t = Q.get('tab'); if (t === 'swap' && typeof tabSwap === 'function') C.tab = 'swap'; }
@@ -141,7 +163,7 @@
     else if (C.result && C.result.ok && /<b>link /.test(C.result.msg)) h += `<p class="status good" role="status">${C.result.msg}</p>`;   // รหัสเชื่อม LINE: ต้องอ่านนาน แสดงค้างไว้
     else if (C.result && C.result.ok && (clocking || C.result.msg === shownMsg)) { if (!clocking) C.result = null; }   // ข้อความลงเวลา: แสดงในหน้าต่างเครื่องหมายถูกแล้ว ไม่ซ้ำ
     else if (C.result && C.result.ok) { const msg = String(C.result.msg).replace(/<[^>]+>/g, ''); C.result = null; setTimeout(() => { if (typeof toast === 'function') toast(msg); }, 0); }   // ทำรายการสำเร็จ (แลกกะ ฯลฯ): แถบแจ้งผล ✓
-    h += hero() + acts();
+    h += '<div class="cux-web-feature">' + hero() + webDecor() + '</div>' + acts();
     const T = { leave: 'ขอลา', ot: 'ขอ OT', fix: 'แจ้งแก้เวลา', swap: 'แลกกะ' }[C.tab];
     if (T) h += `<h3 class="h2" style="margin:8px 0 10px">${T}<span class="spacer"></span><a href="#" class="btn sm" data-a="tab:days">ปิด</a></h3>`;
     else h += `<div class="cux-seg" role="tablist"><a href="#" data-a="tab:days"${C.tab !== 'month' ? ' aria-current="page"' : ''}>ตารางของฉัน</a><a href="#" data-a="tab:month"${C.tab === 'month' ? ' aria-current="page"' : ''}>เดือนนี้</a></div>`;
