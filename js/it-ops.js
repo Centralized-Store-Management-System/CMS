@@ -49,6 +49,7 @@ function ocOpsPanelHtml() {
     </form>
     <div id="oc-ops-answer" class="oc-ops-answer" aria-live="polite"><span class="muted">AI จะช่วยวิเคราะห์เมื่อเชื่อมต่อ API Key แล้ว · ระบบ Monitor ปัจจุบันยังตรวจอัตโนมัติทุก 5 นาทีตามเดิม</span></div>
     <div class="oc-ops-queue" id="oc-ops-queue"><div class="oc-ops-queue-head"><h3>Incident & Approval Center</h3><button type="button" id="oc-ops-refresh">รีเฟรชสถานะ</button></div><p class="muted">กำลังโหลดเหตุการณ์จากรอบตรวจล่าสุด…</p></div>
+    <div id="it-ops-control-center" class="oc-ops-queue"><div class="oc-ops-queue-head"><h3>IT Ops Control Center · Phase 2.4–2.9</h3><button type="button" id="itopscc-refresh">รีเฟรช</button></div><p class="muted">กำลังโหลด Governance / Alerts / Recovery Plans…</p></div>
     <div class="oc-ops-guard"><b>Safety Guard</b><span>โหมดเริ่มต้นเป็น Read-only: AI วิเคราะห์และเสนอแผนเท่านั้น ไม่สั่งแก้ฐานข้อมูล ไม่เปลี่ยนสิทธิ์ ไม่ Deploy และไม่สั่งซ่อม Production เอง</span></div>
   </section>`;
 }
@@ -63,6 +64,7 @@ async function ocOpsCheck() {
     if (send) send.disabled = !IT_OPS_STATE.configured || IT_OPS_STATE.busy;
     const answer = document.getElementById('oc-ops-answer');
     ocOpsLoadQueue();
+    ocOpsControlLoad();
     if (answer && !IT_OPS_STATE.configured) answer.innerHTML = '<span class="muted">ยังไม่ได้ตั้งค่า OPENAI_API_KEY ใน Supabase Secrets · ส่วน AI Advisor จะเปิดใช้งานหลังตั้งค่าคีย์ โดยไม่กระทบระบบ Monitor เดิม</span>';
   } catch (_) {
     IT_OPS_STATE.checked = true;
@@ -246,4 +248,38 @@ document.addEventListener('click', e => {
   if (decision) ocOpsDecision(decision.dataset.opsId, decision.dataset.opsDecision);
   const feedback = e.target.closest('[data-ops-feedback]');
   if (feedback) ocOpsSubmitFeedback(feedback.dataset.opsFeedback, feedback.dataset.opsAnomalyId);
+});
+
+/* Phase 2.4–2.9 Owner-governed control center. No remediation execution. */
+const IT_OPS_CONTROL_URL='https://ytxbnqosenolojifeikf.supabase.co/functions/v1/it-ops-control-center';
+async function ocOpsControlRequest(method='GET',body=null){
+ const r=await fetch(IT_OPS_CONTROL_URL,{method,headers:{'content-type':'application/json','x-cms-session':S.token||''},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+ const p=await r.json().catch(()=>({}));if(!r.ok||!p.ok)throw new Error(p.error||'Control Center request failed');return p;
+}
+async function ocOpsControlLoad(){
+ const box=document.getElementById('it-ops-control-center');if(!box)return;
+ box.innerHTML='<p class="muted">กำลังโหลด Control Center…</p>';
+ try{
+  const p=await ocOpsControlRequest();box.replaceChildren();
+  const head=document.createElement('div');head.className='oc-ops-queue-head';
+  const title=document.createElement('h3');title.textContent='IT Ops Control Center · Governance / Alerts / Recovery';head.appendChild(title);
+  const refresh=document.createElement('button');refresh.type='button';refresh.id='itopscc-refresh';refresh.textContent='รีเฟรช';head.appendChild(refresh);box.appendChild(head);
+  const note=document.createElement('p');note.className='muted';note.textContent='Owner-governed · Observe-only · ไม่มีคำสั่งแก้ไข Production อัตโนมัติ';box.appendChild(note);
+  const stats=document.createElement('p');stats.textContent='Alerts '+p.alerts.length+' · Recovery Plans '+p.plans.length+' · Anomalies '+p.anomalies.length+' · Tests '+p.tests.length;box.appendChild(stats);
+  function section(label,items){const h=document.createElement('h4');h.textContent=label;box.appendChild(h);if(!items.length){const e=document.createElement('p');e.className='muted';e.textContent='ไม่มีรายการ';box.appendChild(e);}return items;}
+  section('Governance Controls',p.governance).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.control_key+' · '+(x.enabled?'ON':'OFF');r.appendChild(b);const d=document.createElement('small');d.textContent=(x.config&&x.config.reason)||'ควบคุมโดย Owner';r.appendChild(d);box.appendChild(r);});
+  section('Alerts',p.alerts).forEach(x=>{const c=document.createElement('article');c.className='oc-ops-queue-card';const h=document.createElement('b');h.textContent=x.severity.toUpperCase()+' · '+x.title;c.appendChild(h);const d=document.createElement('p');d.textContent=x.message||'';c.appendChild(d);const st=document.createElement('small');st.textContent='สถานะ: '+x.status;c.appendChild(st);if(x.status!=='resolved'){const a=document.createElement('div');a.className='oc-ops-queue-actions';[['acknowledged','รับทราบ'],['resolved','ปิด Alert']].forEach(([v,t])=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.dataset.ccAlert=x.id;b.dataset.ccStatus=v;a.appendChild(b);});c.appendChild(a);}box.appendChild(c);});
+  section('Recovery Plans · Approval only',p.plans).forEach(x=>{const c=document.createElement('article');c.className='oc-ops-queue-card';const h=document.createElement('b');h.textContent=x.component+' · '+x.recovery_type;c.appendChild(h);const d=document.createElement('p');d.textContent='สถานะ '+x.status+' · ต้องมี Backup และ Rollback evidence ก่อนดำเนินการ';c.appendChild(d);if(x.status==='proposed'){const b=document.createElement('button');b.type='button';b.className='btn primary';b.textContent='อนุมัติแผน (ไม่ Execute)';b.dataset.ccApprove=x.id;c.appendChild(b);}box.appendChild(c);});
+  section('Anomaly Events',p.anomalies).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.metric_key+' · '+x.severity+' · '+x.status;r.appendChild(b);const d=document.createElement('small');d.textContent='Observed '+x.observed_value+' / baseline '+x.baseline_value+' · samples '+x.sample_count+' · '+x.confidence;r.appendChild(d);box.appendChild(r);});
+  section('Integration Test History',p.tests).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.suite_key+' · '+x.status;r.appendChild(b);const d=document.createElement('small');d.textContent=new Date(x.created_at).toLocaleString('th-TH')+' · '+x.executed_by;r.appendChild(d);box.appendChild(r);});
+  section('Forecast Snapshots',p.forecasts).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';r.textContent=x.metric_key+' · '+x.confidence+' · '+x.method;box.appendChild(r);});
+ }catch(e){box.textContent=e.message||'โหลด Control Center ไม่สำเร็จ';}
+}
+document.addEventListener('click',async e=>{
+ const refresh=e.target.closest('#itopscc-refresh');if(refresh){ocOpsControlLoad();return;}
+ const alert=e.target.closest('[data-cc-alert]'),approve=e.target.closest('[data-cc-approve]');
+ try{
+  if(alert){alert.disabled=true;await ocOpsControlRequest('POST',{type:'alert_status',id:Number(alert.dataset.ccAlert),status:alert.dataset.ccStatus});await ocOpsControlLoad();}
+  if(approve){approve.disabled=true;if(!confirm('ยืนยันอนุมัติแผนนี้? การอนุมัติไม่ใช่การสั่ง Execute')){approve.disabled=false;return;}await ocOpsControlRequest('POST',{type:'approve_recovery',id:Number(approve.dataset.ccApprove)});await ocOpsControlLoad();}
+ }catch(err){alertToast(err.message);}
 });
