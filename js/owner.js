@@ -50,11 +50,10 @@ function ocLogin(msg) {
   $('#oc-go').onclick = go; $('#oc-pin').onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 function ocShell(main) {
-  const nav = [['home', 'ทางเข้าระบบร้าน', 'dash', 'หน้าร้าน'], ['dash', 'แดชบอร์ดปัญหารายวัน', 'acct', 'แดชบอร์ด'], ['it', 'ตรวจ & ซ่อมอัตโนมัติ', 'admin', 'ตรวจ/ซ่อม'], ['ai', 'AI Monitoring · Advanced', 'admin', 'AI Monitor'], ['perf', 'ความเร็ว', 'time', 'ความเร็ว'], ['events', 'เหตุการณ์', 'notify', 'เหตุการณ์'], ['auth', 'วิธีเข้าระบบ', 'users', 'เข้าระบบ'], ['control', 'IT Control Center', 'admin', 'IT Control']];
+  const nav = [['dash', 'แดชบอร์ดปัญหารายวัน', 'acct', 'แดชบอร์ด'], ['it', 'ตรวจ & ซ่อมอัตโนมัติ', 'admin', 'ตรวจ/ซ่อม'], ['ai', 'AI Monitoring · Advanced', 'admin', 'AI Monitor'], ['perf', 'ความเร็ว', 'time', 'ความเร็ว'], ['events', 'เหตุการณ์', 'notify', 'เหตุการณ์'], ['auth', 'วิธีเข้าระบบ', 'users', 'เข้าระบบ'], ['control', 'IT Control Center', 'admin', 'IT Control']];
   const cur = nav.find(n => n[0] === OC.view) || nav[0];
   $('#root').innerHTML = `<div class="oc"><header class="oc-top"><span class="logo">${icon('cup')}</span><span class="t"><small>Owner Console</small><b>${esc(cur[1])}</b></span><button class="oc-top-out" id="oc-out2" aria-label="ออกจากระบบ">${icon('out')}</button></header><aside class="oc-side"><div class="brand"><span class="logo">${icon('cup')}</span><span><b>Owner Console</b><small>${esc((S.settings && S.settings.shopName) || 'Café Amazon')}</small></span></div>
-    <h4>1. ระบบเข้าร้าน</h4>${nav.slice(0, 1).map(ocNav).join('')}
-    <h4>2. Super Advance IT</h4>${nav.slice(1).map(ocNav).join('')}
+    <h4>Super Advance IT · ระบบหลังร้าน</h4>${nav.map(ocNav).join('')}
     <div class="who">${esc(OC.me.name)} · ${esc(OC.me.roleName || OC.me.role)}<br><button class="btn sm" id="oc-out" style="margin-top:8px">ออกจากระบบ</button></div></aside>
     <main class="oc-main" id="oc-main">${main}</main></div>`;
   $('#oc-out').onclick = $('#oc-out2').onclick = () => { API.call('logout', { t: S.token }).catch(() => {}); if (typeof OWNER_PWA_LOCK !== 'undefined') OWNER_PWA_LOCK.logout(); S.token = ''; OC.me = null; SS.set(OC.tok, ''); ocLanding('ออกจากระบบแล้ว'); };
