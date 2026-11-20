@@ -22,6 +22,8 @@
   var installed = false;
   try { installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) { /* */ }
   var surface = /\bLine\//i.test(ua) ? 'line_liff' : installed ? 'installed_app' : 'web';
+  document.documentElement.setAttribute('data-app-surface', surface);
+  document.documentElement.setAttribute('data-device', device);
   var app = page;
   try { if (page === 'backoffice' && (sessionStorage.getItem('amz.fromOwner') === '1' || /[?&]from=owner/.test(location.search))) app = 'backoffice_owner'; } catch (e) { /* */ }
 
