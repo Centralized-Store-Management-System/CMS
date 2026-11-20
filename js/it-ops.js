@@ -186,6 +186,33 @@ async function ocOpsLoadQueue() {
     } else {
       const waiting = document.createElement('p'); waiting.className = 'muted'; waiting.textContent = 'รอผล Orchestrator รอบถัดไปเพื่อสร้าง Root Cause และ Trend'; box.appendChild(waiting);
     }
+
+    const anomalyTitle = document.createElement('h4'); anomalyTitle.textContent = 'Anomaly Detection · ตรวจจับความผิดปกติ'; box.appendChild(anomalyTitle);
+    const anomalies = (p.anomalyEvents || []).filter(x => ['open','acknowledged'].includes(x.status));
+    if (!anomalies.length) { const empty = document.createElement('p'); empty.className = 'muted'; empty.textContent = 'ยังไม่พบ Anomaly ที่เข้าเกณฑ์ หรือข้อมูลย้อนหลังยังไม่ครบ 5 ตัวอย่าง'; box.appendChild(empty); }
+    anomalies.forEach(a => {
+      const card = document.createElement('article'); card.className = 'oc-ops-queue-card';
+      const h = document.createElement('b'); h.textContent = '[' + String(a.severity).toUpperCase() + '] ' + a.metric_key; card.appendChild(h);
+      const d = document.createElement('p'); d.textContent = 'ค่าปัจจุบัน ' + a.observed_value + ' · Baseline ' + (a.baseline_value == null ? 'fixed threshold' : a.baseline_value) + ' · Samples ' + a.sample_count + ' · Confidence ' + a.confidence; card.appendChild(d);
+      [['correct','ยืนยันว่าถูกต้อง'],['false_positive','แจ้ง False Positive']].forEach(([kind,label]) => {
+        const b = document.createElement('button'); b.type='button'; b.className='btn'; b.textContent=label; b.dataset.opsFeedback=kind; b.dataset.opsAnomalyId=a.id; card.appendChild(b);
+      });
+      box.appendChild(card);
+    });
+    const depTitle = document.createElement('h4'); depTitle.textContent = 'System Dependency Map'; box.appendChild(depTitle);
+    (p.dependencies || []).forEach(dep => {
+      const row=document.createElement('div'); row.className='oc-ops-incident-row';
+      const label=document.createElement('b'); label.textContent=dep.component+' → '+dep.depends_on+' · '+dep.criticality; row.appendChild(label);
+      const detail=document.createElement('small'); detail.textContent=dep.description+' · ตรวจสอบ: '+dep.verification_hint; row.appendChild(detail); box.appendChild(row);
+    });
+    const learnTitle=document.createElement('h4'); learnTitle.textContent='Owner Learning Feedback'; box.appendChild(learnTitle);
+    const learnNote=document.createElement('p'); learnNote.className='muted'; learnNote.textContent='Feedback จะถูกเก็บเป็นข้อมูลสำหรับประเมินคุณภาพการวิเคราะห์ ยังไม่ใช้ฝึกโมเดลหรือเปลี่ยนกฎโดยอัตโนมัติ'; box.appendChild(learnNote);
+    (p.learningFeedback || []).slice(0,5).forEach(f => {
+      const row=document.createElement('div'); row.className='oc-ops-incident-row';
+      const label=document.createElement('b'); label.textContent=f.feedback_type+' · '+f.actor; row.appendChild(label);
+      const detail=document.createElement('small'); detail.textContent=f.note || 'ไม่มีหมายเหตุ'; row.appendChild(detail); box.appendChild(row);
+    });
+
     const iTitle = document.createElement('h4'); iTitle.textContent = 'เหตุการณ์ล่าสุด'; box.appendChild(iTitle);
     (p.incidents || []).slice(0,8).forEach(item => {
       const row = document.createElement('div'); row.className = 'oc-ops-incident-row';
@@ -205,9 +232,18 @@ async function ocOpsDecision(id, decision) {
     ocOpsLoadQueue();
   } catch (e) { alert(e.message || 'บันทึกไม่สำเร็จ'); }
 }
+async function ocOpsSubmitFeedback(type, anomalyId) {
+  try {
+    const r=await fetch(IT_OPS_QUEUE_URL,{method:'POST',headers:{'content-type':'application/json','x-cms-session':S.token||''},body:JSON.stringify({type:'learning_feedback',feedbackType:type,anomalyEventId:Number(anomalyId)}),cache:'no-store'});
+    const p=await r.json(); if(!r.ok||!p.ok) throw new Error(p.error||'บันทึก Feedback ไม่สำเร็จ');
+    ocOpsLoadQueue();
+  } catch(err) { alert(err.message||'บันทึก Feedback ไม่สำเร็จ'); }
+}
 document.addEventListener('click', e => {
   const refresh = e.target.closest('#oc-ops-refresh');
   if (refresh) ocOpsLoadQueue();
   const decision = e.target.closest('[data-ops-decision]');
   if (decision) ocOpsDecision(decision.dataset.opsId, decision.dataset.opsDecision);
+  const feedback = e.target.closest('[data-ops-feedback]');
+  if (feedback) ocOpsSubmitFeedback(feedback.dataset.opsFeedback, feedback.dataset.opsAnomalyId);
 });
