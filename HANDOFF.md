@@ -196,3 +196,15 @@
 
 - Post-deploy verification: client JS syntax ผ่าน; Owner JS syntax ผ่าน; Edge Function it-ai-ops ACTIVE v2; monitor cron เดิมยัง Active ที่ */5 * * * *; owner.html cache-bust owner.js 4.9.6 / owner.css 4.8.4 / it-ops.js 1.0.0
 - หมายเหตุทดสอบ: ยังไม่สามารถทดสอบ AI provider response ได้จนกว่าจะตั้ง OPENAI_API_KEY; deployment สำเร็จไม่ได้แปลว่า AI chat พร้อมใช้งานทันที
+
+### Super Advance IT — Phase 2 Observe-only Automation (20 Nov 2026)
+- Added database tables: public.it_ops_incidents, public.it_ops_action_queue, public.it_ops_audit. RLS enabled; direct anon/authenticated table privileges revoked; service_role only. No public Data API grant.
+- Deployed Edge Function it-ops-orchestrator v2. Uses existing backoffice CRON_KEY for scheduled invocation and existing Owner bootstrap session for read/approve/reject. It consumes latest it_monitor_runs, deduplicates incidents by fingerprint and monitor run, creates safe investigation proposals, and writes audit trail.
+- Added Cron job it-ops-orchestrator-every-5-minutes (jobid 3, */5 * * * *) alongside existing it-monitor-every-5-minutes (jobid 2); existing monitor job unchanged.
+- Added Incident & Approval Center to AI Operations Copilot. Owner can view recent incidents and approve/reject investigation plans. Approval only records human approval; it does NOT execute an action.
+- Verified orchestrator v1 manually through pg_net HTTP response 200 and audit row: monitorRunId 302, findings 0, proposals 0, mode observe_only. Function subsequently updated to v2 for idempotent per-monitor-run counting and ALL_CLEAR filtering; scheduled deployment now v2.
+- No automated remediation, DB writes from AI, resend/retry, cron restarts, permission changes, RLS changes, or deployments are enabled. All production-changing operations remain manual.
+- AI model API key remains separate prerequisite for AI narrative analysis; scheduled deterministic triage does not depend on OpenAI key.
+- Frontend versions: owner.js 4.9.6; owner.css 4.8.5; it-ops.js 1.1.0.
+- Current health snapshot at test: latest monitor run had zero findings, so empty incident/approval queues are expected.
+- Next Phase 2.1: after Owner UI verification, add explicit per-action allowlist, timeouts, cooldowns, rollback checks and an isolated dry-run executor; only then consider low-risk automatic remediation. No automatic repair until these controls and owner policy are tested.
