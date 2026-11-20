@@ -33,15 +33,31 @@
    On other modules keep the artwork clear of the month selector. */
 #view:has(.kpis.exec)>.mhead[data-header="today"]{display:none!important}
 #view:has(.kpis.exec)>.hello{margin-top:4px!important}
-.mhead:has(.monthpick:not([hidden])){display:grid!important;grid-template-columns:48px minmax(0,1fr) auto;grid-template-rows:auto;column-gap:14px;row-gap:4px;align-items:center}
-.mhead:has(.monthpick:not([hidden])) h1{grid-column:2;grid-row:1;max-width:min(100%,680px);padding-right:8px}
+/* Calendar controls are placed below the title, never on top of the right-side artwork. */
+.mhead:has(.monthpick:not([hidden])){
+ display:grid!important;
+ grid-template-columns:48px minmax(0,1fr);
+ grid-template-rows:auto auto;
+ column-gap:14px;
+ row-gap:8px;
+ align-items:center;
+}
 .mhead:has(.monthpick:not([hidden])) .mi{grid-column:1;grid-row:1}
-.mhead:has(.monthpick:not([hidden])) .monthpick{grid-column:3;grid-row:1;justify-self:end;align-self:center;position:relative;z-index:3;background:#fff!important;border:1px solid #dce8df!important;border-radius:999px!important;box-shadow:0 3px 12px rgba(16,61,43,.08);padding:8px 12px;max-width:180px}
-.mhead:has(.monthpick:not([hidden])):after{width:30%!important;opacity:.72!important;mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.65) 48%,#000 100%)!important}
+.mhead:has(.monthpick:not([hidden])) h1{grid-column:2;grid-row:1;max-width:min(100%,680px);padding-right:0}
+.mhead:has(.monthpick:not([hidden])) .monthpick{
+ grid-column:2;grid-row:2;justify-self:start;align-self:center;
+ position:relative;z-index:3;background:#fff!important;border:1px solid #dce8df!important;
+ border-radius:999px!important;box-shadow:0 3px 12px rgba(16,61,43,.08);
+ padding:8px 12px;max-width:180px;margin:0!important;
+}
+.mhead:has(.monthpick:not([hidden])):after{
+ width:27%!important;opacity:.72!important;
+ mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.55) 42%,#000 100%)!important
+}
 @media(max-width:680px){
- .mhead:has(.monthpick:not([hidden])){grid-template-columns:42px minmax(0,1fr);grid-template-rows:auto auto}
+ .mhead:has(.monthpick:not([hidden])){grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;row-gap:7px}
  .mhead:has(.monthpick:not([hidden])) .mi{grid-column:1;grid-row:1}
  .mhead:has(.monthpick:not([hidden])) h1{grid-column:2;grid-row:1;padding-right:0}
- .mhead:has(.monthpick:not([hidden])) .monthpick{grid-column:2;grid-row:2;justify-self:start;margin:6px 0 0;max-width:170px}
- .mhead:has(.monthpick:not([hidden])):after{width:25%!important;opacity:.48!important}
+ .mhead:has(.monthpick:not([hidden])) .monthpick{grid-column:2;grid-row:2;justify-self:start;max-width:165px}
+ .mhead:has(.monthpick:not([hidden])):after{width:22%!important;opacity:.42!important}
 }
