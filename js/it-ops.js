@@ -281,5 +281,5 @@ document.addEventListener('click',async e=>{
  try{
   if(alert){alert.disabled=true;await ocOpsControlRequest('POST',{type:'alert_status',id:Number(alert.dataset.ccAlert),status:alert.dataset.ccStatus});await ocOpsControlLoad();}
   if(approve){approve.disabled=true;if(!confirm('ยืนยันอนุมัติแผนนี้? การอนุมัติไม่ใช่การสั่ง Execute')){approve.disabled=false;return;}await ocOpsControlRequest('POST',{type:'approve_recovery',id:Number(approve.dataset.ccApprove)});await ocOpsControlLoad();}
- }catch(err){alertToast(err.message);}
+ }catch(err){toast(err.message);}
 });
