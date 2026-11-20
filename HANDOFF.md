@@ -208,3 +208,14 @@
 - Frontend versions: owner.js 4.9.6; owner.css 4.8.5; it-ops.js 1.1.0.
 - Current health snapshot at test: latest monitor run had zero findings, so empty incident/approval queues are expected.
 - Next Phase 2.1: after Owner UI verification, add explicit per-action allowlist, timeouts, cooldowns, rollback checks and an isolated dry-run executor; only then consider low-risk automatic remediation. No automatic repair until these controls and owner policy are tested.
+
+### Super Advance IT — Phase 2.1 Controlled Dry-run (20 Nov 2026)
+- Added `public.it_ops_action_runs` to record read-only dry-run simulations. RLS enabled; anon/authenticated privileges revoked; service_role only.
+- Upgraded Edge Function `it-ops-orchestrator` to v3 (ACTIVE). Added exact action allowlist for dry-run, Owner session validation, approved-status requirement, approval expiry check, 30-minute cooldown per queue item, preflight evidence, simulation result and rollback-readiness metadata.
+- Dry-run actions only read aggregated/system-health data: Outbox error counts by kind (no recipient/body), Cron job state/history, and latest IT Monitor metrics. No mail resend, cron enable/restart, order sync/retry, status edits, permissions changes, deploys, or production remediation.
+- GET response now includes action-run history. Owner UI now shows approved items and a "ทดสอบ Dry-run" button only for allowlisted actions; pending approvals still require Owner decision.
+- Frontend `js/it-ops.js` bumped to v1.2.0; `owner.html` references CSS v4.8.6. JavaScript syntax check passed.
+- Verified `it-ops-orchestrator` deployed ACTIVE v3; Cron jobs `it-monitor-every-5-minutes` and `it-ops-orchestrator-every-5-minutes` remain active at 5-minute intervals. Database permissions check: RLS on; anon/authenticated SELECT denied; service_role SELECT allowed for all four ops tables.
+- Current observed Outbox state: 1 mail error in last 24 hours. Current Monitor run had findings `OUTBOX_ERRORS` and `MAIL_NOT_CONFIGURED`. This should be investigated; no retry was performed.
+- Supabase security advisors still report pre-existing broader project notices (RLS-enabled/no-policy tables, pg_net in public schema, one SECURITY DEFINER RPC, and leaked-password protection disabled). No unrelated security settings were changed in this phase.
+- Phase 2.1 is a controlled dry-run only. No production-changing action executor is enabled. Next gate: test an actual Owner-approved dry-run from mobile/desktop Owner UI, then design a separately reviewed remediation adapter with tested rollback before enabling any automatic repair.
