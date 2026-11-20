@@ -247,3 +247,15 @@
 - Metric history is only 3 samples as of this deployment. Count-based anomaly detection remains in warm-up until 5 prior samples are available; no statistical forecasting or autonomous recovery is enabled.
 - Production safety: no business/order/customer data was modified; no secrets, Cron schedules, authentication policies, or remediation actions changed.
 - Commits: UI `28676ad34d41c830accc0c97e7ebaf17342b6af8`; Owner asset versions `82eb5b8418d5ac3ef22f4f6f108080e88b298cff`, `8802bfa3d01a6f9d93a3f0484d237d06951f324d`; CSS `0439b95453107dbc67d75ac42ccc7453cda98a51`.
+
+
+## Phase 2.4–2.9 Production Foundation (20 พ.ย. 2569)
+- Applied additive Supabase migration `it_ops_phases_24_29_foundation` to project `ytxbnqosenolojifeikf`.
+- Added six tables: `it_ops_recovery_plans`, `it_ops_alerts`, `it_ops_notification_deliveries`, `it_ops_governance`, `it_ops_integration_test_runs`, `it_ops_forecast_snapshots`.
+- Enabled RLS on all six tables; revoked client privileges from anon/authenticated; granted service_role.
+- Added indexes for alert status, recovery plan status, notification delivery lookup, and integration test history.
+- Seeded governance controls with safe defaults: autonomous remediation OFF, email notifications OFF, LINE notifications OFF, production-write stress tests OFF.
+- Verified all six tables exist with RLS enabled.
+- Verified both existing cron jobs remain active at */5 * * * *.
+- Scope delivered: production database foundation only. Phase 2.4–2.9 application workflows, Owner UI, alert dispatch integrations, forecast engine, recovery execution, and end-to-end/stress testing are NOT complete yet. Existing orchestrator function was intentionally not replaced in this migration because current deployed implementation and repository source need reconciliation before a safe production function deployment.
+- No production business/order/customer data changed; no cron schedules or secrets changed; no autonomous remediation enabled.
