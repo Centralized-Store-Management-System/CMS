@@ -284,3 +284,117 @@ input,select,textarea{background:#fff;color:#17211e;border-color:#dfe9e2}
 .clock-tabs a[aria-current="page"]{background:#07583f!important;border-color:#07583f!important;color:#fff!important;box-shadow:0 5px 14px rgba(7,88,63,.16)!important}
 .clock-tabs a[aria-current="page"] .tab-ic{background:#ffffff20!important;color:#fff!important}
 @media(max-width:520px){.clock-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}.clock-tabs a{min-height:82px!important;font-size:12px!important}.clock-tabs a .tab-ic{width:35px;height:35px}}
+
+
+/* =========================================================
+   CAFÉ AMAZON UNIFIED EXPERIENCE — ALL MODULES / ALL ROLES
+   Visual-only layer. Keeps existing DOM, data and actions intact.
+   ========================================================= */
+:root{
+ --amz-forest:#07583f;--amz-green:#08734f;--amz-mint:#e8f3ec;
+ --amz-cream:#f5f7f3;--amz-gold:#c79a32;--amz-ink:#17251e;
+ --amz-line:#dfe9e2;--amz-shadow:0 10px 28px rgba(16,61,43,.065);
+}
+html,body{background:var(--amz-cream)}
+body{color:var(--amz-ink)}
+/* Main surfaces and content sections across every back-office module */
+:where(.group,.panel,.card,.box,.section,.oc-card,.oc-score,.login-card){
+ border-color:var(--amz-line)!important;border-radius:20px!important;
+ box-shadow:var(--amz-shadow);
+}
+:where(.group.pad,.panel.pad,.card.pad){padding:clamp(14px,2vw,22px)!important}
+:where(.h2,.h3){letter-spacing:-.15px}
+:where(.h2){color:#234b38}
+:where(.h3){color:#607168}
+:where(.mhead .mi,.topbar .mi){border-radius:15px!important;background:linear-gradient(145deg,#08734f,#064b37)!important;box-shadow:0 6px 16px rgba(7,88,63,.16)}
+:where(.topbar){background:rgba(245,247,243,.94);backdrop-filter:blur(14px);border-color:var(--amz-line)}
+:where(.tabs){background:#eaf1eb;border:1px solid #e0eae2;border-radius:16px;padding:5px}
+:where(.tabs a){border-radius:12px;transition:background .16s,color .16s,box-shadow .16s}
+:where(.tabs a[aria-current="page"]){background:#fff;color:var(--amz-forest);box-shadow:0 3px 10px rgba(16,61,43,.08),inset 0 -2px 0 var(--amz-gold)}
+/* KPI tiles, metric cards and dashboard panels */
+:where(.kpis,.stats,.oc-cards){gap:12px!important}
+:where(.kpi,.stats>div,.oc-card){
+ border:1px solid var(--amz-line)!important;border-radius:22px!important;
+ background:linear-gradient(155deg,#fff 0%,#fbfdfb 100%)!important;
+ box-shadow:var(--amz-shadow);padding:clamp(14px,2vw,20px)!important;
+}
+:where(.kpi b){font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+:where(.kpi span,.kpi small){color:#718178}
+:where(.kpi.ok){border-top:3px solid #2a9568!important}
+:where(.kpi.warn){border-top:3px solid #c79a32!important}
+:where(.kpi.bad){border-top:3px solid #d36a59!important}
+/* Interactive rows and lists */
+:where(.group>.row,.oc-main .row){min-height:62px;transition:background .15s ease}
+:where(.group>.row:not(.static):active){background:#edf5ef}
+:where(.row .ti,.row .ic,.row .mi){border-radius:14px}
+:where(.chip,.tchip){border-radius:999px;font-weight:600}
+:where(.status,.note,.frozen-note){border-radius:16px}
+/* Buttons, inputs and form usability */
+:where(.btn,button){border-radius:13px;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+:where(.btn.primary,button.primary){background:linear-gradient(145deg,#08734f,#07583f);border-color:#07583f;box-shadow:0 5px 14px rgba(7,88,63,.14)}
+:where(.btn:not(:disabled),button:not(:disabled)):active{transform:translateY(1px) scale(.99)}
+:where(input:not([type=checkbox]):not([type=radio]),select,textarea){
+ border-radius:12px!important;border-color:#d7e3da!important;background:#fff;
+}
+:where(input:not([type=checkbox]):not([type=radio]),select,textarea):focus{
+ border-color:#16865e!important;box-shadow:0 0 0 3px rgba(22,134,94,.12)!important;outline:0;
+}
+:where(.field label){font-weight:600;color:#53665c}
+:where(.actions,.toolbar,.savebar){gap:9px}
+:where(.savebar){border:1px solid var(--amz-line);border-radius:18px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}
+/* Data tables: clean header, legible rows, horizontal scroll preserved */
+:where(.group table,.oc-tbl){border-collapse:separate;border-spacing:0}
+:where(.group table th,.oc-tbl th){background:#edf4ef;color:#52665a;font-weight:600}
+:where(.group table th:first-child,.oc-tbl th:first-child){border-radius:10px 0 0 10px}
+:where(.group table th:last-child,.oc-tbl th:last-child){border-radius:0 10px 10px 0}
+:where(.group table td,.group table th,.oc-tbl td,.oc-tbl th){padding:11px 12px;border-bottom:1px solid #e7eee8}
+:where(.group table tbody tr:hover,.oc-tbl tbody tr:hover){background:#f2f7f3}
+/* Sidebar and mobile navigation */
+:where(.nav a,.oc-side a){border-radius:13px;transition:background .16s,color .16s}
+:where(.nav a[aria-current="page"]){background:#e7f2ea!important;color:#07583f!important;box-shadow:inset 3px 0 0 var(--amz-gold)}
+:where(.nav a[aria-current="page"] .ic){background:#07583f!important;color:#fff!important}
+:where(.bottom,.oc-side){background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-top:1px solid #e2ebe4;box-shadow:0 -8px 24px rgba(16,61,43,.045)}
+:where(.bottom a,.oc-side a){min-height:58px}
+:where(.bottom a[aria-current="page"]){background:#e7f3eb;color:#08734f;font-weight:700}
+:where(.bottom a[aria-current="page"]):before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--amz-gold)}
+/* Owner console surfaces */
+:where(.oc-main){background:transparent}
+:where(.oc-card){padding:18px!important}
+:where(.oc-card b){font-size:17px}
+:where(.oc-side a[aria-current="page"]){background:#1d5e48;color:#fff}
+:where(.oc-big){border:1px solid rgba(255,255,255,.2);border-radius:24px;box-shadow:0 16px 38px rgba(0,0,0,.2)}
+:where(.oc-land){background:radial-gradient(ellipse at 15% 10%,rgba(199,154,50,.22),transparent 35%),radial-gradient(ellipse at 90% 90%,rgba(58,153,111,.3),transparent 42%),linear-gradient(145deg,#073f30,#0b6045 60%,#124b39)}
+/* Staff app shared clock cards and actions */
+:where(.today-card,.clock-face,.cux-hero){border-radius:26px!important}
+:where(.cux-act,.cux-tile,.tile){border:1px solid var(--amz-line)!important;border-radius:20px!important;box-shadow:0 6px 18px rgba(16,61,43,.045)}
+:where(.cux-go){border-radius:17px!important}
+:where(.cux-seg){border-radius:16px!important;background:#eaf1eb!important}
+:where(.cux-seg [aria-current="page"]){background:#fff!important;color:#07583f!important;box-shadow:0 3px 10px rgba(16,61,43,.08)}
+/* Semantic icon containers — consistent dimensions in every feature */
+:where(.nav a .ic,.tile .mi,.mhead .mi,.topbar .mi,.oc-big .ic,.oc-side .ic,.action .ico,.quick-action .ico,.exec-kpi-icon){
+ display:inline-grid;place-items:center;flex:none
+}
+:where(.nav a .ic svg,.tile .mi svg,.mhead .mi svg,.topbar .mi svg,.oc-big .ic svg,.oc-side svg,.action .ico svg,.quick-action .ico svg){
+ width:22px;height:22px;stroke:currentColor;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round
+}
+:where(.tile .mi){width:48px;height:48px;border-radius:15px;background:#e7f3eb;color:#08734f;border:1px solid #dcebe0}
+:where(.oc-side a svg){width:22px;height:22px}
+:where(.iconbtn){border-radius:13px!important}
+:where(.avatar,.row img){object-fit:cover}
+@media(max-width:959px){
+ :where(main,.oc-main){padding-left:14px;padding-right:14px}
+ :where(.group,.panel,.card){border-radius:18px!important}
+ :where(.bottom a){min-height:62px;padding-top:7px}
+ :where(.bottom a svg){width:24px;height:24px}
+}
+@media(max-width:600px){
+ :where(.kpis,.oc-cards){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ :where(.kpi,.stats>div){min-height:124px}
+ :where(.toolbar){align-items:stretch}
+ :where(.toolbar>*){min-width:0}
+ :where(.actions .btn){min-height:42px}
+}
+@media(max-width:360px){
+ :where(.kpis,.oc-cards){gap:8px!important}
+ :where(.kpi,.stats>div){padding:12px!important;min-height:112px}
+}
