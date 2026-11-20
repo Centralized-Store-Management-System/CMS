@@ -27,11 +27,11 @@ async function runCycle(){
  const findings=Array.isArray(run.findings)?run.findings:[];
  let upserts=0,proposals=0;
  for(const f of findings){
-  const code=String(f.code||"UNKNOWN").slice(0,60),level=["critical","warning","info"].includes(f.level)?f.level:"info";
+  const code=String(f.code||"UNKNOWN").slice(0,60); if(code==="ALL_CLEAR") continue; const level=["critical","warning","info"].includes(f.level)?f.level:"info";
   const title=String(f.title||code).slice(0,160),detail=String(f.detail||"").slice(0,500),recommendation=String(f.action||"").slice(0,300),fingerprint=code.toLowerCase();
   const [incident]=await sql`insert into public.it_ops_incidents(fingerprint,severity,code,title,detail,recommendation,source_monitor_run_id,evidence)
    values(${fingerprint},${level},${code},${title},${detail},${recommendation},${run.id},${JSON.stringify({riskScore:run.risk_score,monitorStatus:run.status,checkedAt:run.checked_at})}::jsonb)
-   on conflict(fingerprint) do update set severity=excluded.severity,title=excluded.title,detail=excluded.detail,recommendation=excluded.recommendation,last_seen_at=now(),occurrence_count=public.it_ops_incidents.occurrence_count+1,source_monitor_run_id=excluded.source_monitor_run_id,evidence=excluded.evidence,updated_at=now()
+   on conflict(fingerprint) do update set severity=excluded.severity,title=excluded.title,detail=excluded.detail,recommendation=excluded.recommendation,last_seen_at=case when public.it_ops_incidents.source_monitor_run_id is distinct from excluded.source_monitor_run_id then now() else public.it_ops_incidents.last_seen_at end,occurrence_count=public.it_ops_incidents.occurrence_count+case when public.it_ops_incidents.source_monitor_run_id is distinct from excluded.source_monitor_run_id then 1 else 0 end,status=case when public.it_ops_incidents.status='muted' then 'muted' when public.it_ops_incidents.source_monitor_run_id is distinct from excluded.source_monitor_run_id then 'open' else public.it_ops_incidents.status end,source_monitor_run_id=excluded.source_monitor_run_id,evidence=excluded.evidence,updated_at=now()
    returning id,fingerprint,status`;
   upserts++;
   const safe=SAFE_ACTIONS[code];
