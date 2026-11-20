@@ -207,10 +207,10 @@
 .oc-ops-head p{margin:0;color:#708078;font-size:13px;line-height:1.7}
 .oc-ops-head .chip{flex:none}
 .oc-ops-prompts{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 12px}
-.oc-ops-prompts button{border:1px solid #d5e7db;border-radius:30px;padding:8px 12px;background:#fff;color:#176447;font:500 12px inherit;cursor:pointer}
+.oc-ops-prompts button{border:1px solid #d5e7db;border-radius:30px;padding:8px 12px;background:#fff;color:#176447;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
 .oc-ops-prompts button:hover,.oc-ops-prompts button:focus{background:#e8f4ec;color:#07583f;outline:2px solid #b7d9c4}
 .oc-ops-form{padding:13px;border:1px solid #dce9e0;border-radius:16px;background:#fff}
-.oc-ops-form textarea{display:block;width:100%;resize:vertical;min-height:72px;border:0;outline:none;color:#1d3028;font:14px/1.65 inherit;background:transparent}
+.oc-ops-form textarea{display:block;width:100%;resize:vertical;min-height:72px;border:0;outline:none;color:#1d3028;font-family:inherit;font-size:14px;line-height:1.65;background:transparent}
 .oc-ops-submit{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #edf2ee;padding-top:10px}
 .oc-ops-submit small{max-width:600px;color:#78877f;font-size:10px;line-height:1.5}
 .oc-ops-answer{margin-top:12px;padding:15px;border-radius:15px;background:#f1f6f2;border:1px solid #e0ebe3;color:#213b2e;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
