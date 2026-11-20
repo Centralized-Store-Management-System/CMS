@@ -15,7 +15,7 @@
     '.tux-note{margin:-4px 0 0;text-align:center;font-size:12px;color:#B8D2C3}.tux-done{padding:12px;border-radius:14px;background:rgba(255,255,255,.1);font-weight:600;text-align:center}',
     '.tux-acts{display:grid;gap:10px;margin:14px 0 4px}.tux-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--line);color:var(--ink)!important;text-decoration:none;font-size:13px;font-weight:600}',
     '.tux-act span{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}.tux-act svg{width:20px;height:20px}',
-    '.group.pad.my.tux{padding:0;background:transparent;border:0;box-shadow:none}.my.tux .mystats{padding:0 4px}'
+    '.group.pad.my.tux{padding:0;background:transparent;border:0;box-shadow:none}.my.tux .mystats{padding:0 4px}',
     /* Compact Today layout: equal-height attendance and visual companion cards on desktop */
     '.tux-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch;width:100%}',
     '.tux-hero{min-width:0;min-height:0;padding:16px;border-radius:20px;gap:10px}',
@@ -29,11 +29,9 @@
     '.tux-decor strong{display:block;font:700 21px/1.2 var(--display);color:#104b38;margin:12px 0 6px}',
     '.tux-decor p{margin:0;color:#71847a;font-size:13px;line-height:1.55;max-width:28ch}',
     '.tux-decor .deco-foot{font-size:11px;letter-spacing:.08em;color:#87998f;text-transform:uppercase}',
-    '@media(min-width:760px){.tux-layout{grid-template-columns:minmax(0,1fr) minmax(240px,.72fr);gap:14px}.tux-hero,.tux-decor{min-height:246px}.tux-decor{display:flex}.tux-hero{justify-content:space-between}.tux-go{height:56px}.tux-note{margin-top:-2px}}',
-    '@media(min-width:1100px){.tux-layout{grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);gap:16px}.tux-hero,.tux-decor{min-height:260px}.tux-top b{font-size:25px}}',
+    '@media(min-width:760px){.tux-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.tux-hero,.tux-decor{min-height:246px}.tux-decor{display:flex}.tux-hero{justify-content:space-between}.tux-go{height:56px}.tux-note{margin-top:-2px}}',
+    '@media(min-width:1100px){.tux-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}.tux-hero,.tux-decor{min-height:260px}.tux-top b{font-size:25px}}',
     '@media(max-width:759px){.tux-hero{padding:15px;border-radius:18px}.tux-go{height:56px;font-size:20px}.tux-tiles{gap:8px}}',
-  ].join('');
-
     /* Owner / executive dashboard KPI cards: compact, icon-led and touch-friendly */
     '.kpis.exec{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 20px}',
     '.kpis.exec .exec-kpi{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;min-height:142px;padding:15px 15px 13px;border:1px solid #e1ebe4;border-radius:22px;background:linear-gradient(155deg,#fff 0%,#fbfdfb 100%);box-shadow:0 8px 22px rgba(18,61,43,.055);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}',
@@ -50,7 +48,8 @@
     '.kpis.exec .exec-kpi.labor>em{color:#987018}.kpis.exec .exec-kpi.waste>em{color:#b45a3d}.kpis.exec .exec-kpi.late>em{color:#426d9e}',
     '.kpis.exec .exec-kpi>em.exec-kpi-hint{color:#84938b;font-weight:500}',
     '@media(min-width:760px){.kpis.exec{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.kpis.exec .exec-kpi{min-height:154px;padding:17px}}',
-    '@media(max-width:360px){.kpis.exec{gap:8px}.kpis.exec .exec-kpi{min-height:132px;padding:12px;border-radius:18px}.exec-kpi-head{gap:7px}.exec-kpi-icon{width:34px;height:34px}.kpis.exec .exec-kpi>b{font-size:22px}}',
+    '@media(max-width:360px){.kpis.exec{gap:8px}.kpis.exec .exec-kpi{min-height:132px;padding:12px;border-radius:18px}.exec-kpi-head{gap:7px}.exec-kpi-icon{width:34px;height:34px}.kpis.exec .exec-kpi>b{font-size:22px}}'
+  ].join('');
   document.head.appendChild(st);
   const I = {
     in: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>',
