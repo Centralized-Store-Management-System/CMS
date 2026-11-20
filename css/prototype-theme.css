@@ -226,3 +226,46 @@ input,select,textarea{background:#fff;color:#17211e;border-color:#dfe9e2}
   :where(.kpi){padding:13px!important}
   :where(.bottom a){font-size:10px}
 }
+
+
+/* ===== Unified semantic icon system: Staff / Manager / Admin / Owner =====
+   Uses the existing SVG icon() map so each menu keeps its correct meaning. */
+:root{
+ --ico-green:#08734f;--ico-coral:#e8755e;--ico-blue:#397db5;--ico-amber:#a87818;
+ --ico-violet:#8660a8;--ico-teal:#278b8b;--ico-slate:#65766e;
+}
+:where(.nav a .ic,.mhead .mi,.tile .mi,.oc-side a,.oc-big .ic,.btn .mi,.iconbtn,.action .ico,.quick-action .ico){
+ transition:background .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+:where(.nav a .ic,.mhead .mi,.tile .mi,.oc-side a .ic,.oc-big .ic,.action .ico,.quick-action .ico){
+ display:inline-grid;place-items:center;flex:none;
+}
+:where(.nav a .ic,.mhead .mi,.tile .mi,.oc-side a .ic,.oc-big .ic){
+ border-radius:14px!important;
+}
+:where(.nav a .ic svg,.mhead .mi svg,.tile .mi svg,.oc-side a svg,.oc-big .ic svg,.btn svg,.iconbtn svg,.bottom a svg){
+ width:21px;height:21px;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
+:where(.mhead .mi svg,.oc-big .ic svg){width:25px;height:25px}
+:where(.nav a .ic){width:38px;height:38px;background:color-mix(in srgb,var(--mc,#08734f) 12%,white)!important;color:var(--mc,#08734f)!important}
+:where(.nav a[aria-current="page"] .ic){background:var(--mc,#07583f)!important;color:#fff!important;box-shadow:0 4px 10px color-mix(in srgb,var(--mc,#07583f) 20%,transparent)}
+:where(.nav a:hover .ic){transform:translateY(-1px);background:color-mix(in srgb,var(--mc,#08734f) 18%,white)!important}
+:where(.mhead .mi){background:linear-gradient(145deg,#08734f,#07583f)!important;color:#fff!important;box-shadow:0 6px 15px rgba(7,88,63,.16)}
+:where(.tile .mi){width:48px;height:48px;background:#e5f3ea!important;color:#08734f!important;border:1px solid #d9ecdf}
+:where(.tile:hover .mi){background:#d9eee1!important;transform:translateY(-2px)}
+:where(.oc-side a svg){width:21px;height:21px}
+:where(.oc-side a[aria-current="page"] svg){color:#fff}
+:where(.oc-big .ic){width:60px;height:60px;background:#e5f3ea!important;color:#07583f!important;border:1px solid #d9ecdf}
+:where(.oc-big:hover .ic){background:#d9eee1!important;transform:translateY(-2px)}
+:where(.action .ico,.quick-action .ico){width:48px;height:48px;border-radius:15px;background:var(--sunk,#eaf2ec);display:inline-grid;place-items:center;margin:0 auto 9px;color:var(--brand,#07583f)}
+:where(.action .ico svg,.quick-action .ico svg){width:25px;height:25px;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+:where(.bottom a svg){width:23px;height:23px}
+:where(.bottom a[aria-current="page"] svg){stroke-width:2.2}
+:where(.iconbtn){width:42px;height:42px;border-radius:14px!important;background:#fff;color:#52665c;border:1px solid #e4ece6;display:grid;place-items:center}
+:where(.iconbtn:hover){background:#eaf4ed;color:#07583f;transform:translateY(-1px)}
+:where(.btn svg){vertical-align:middle;margin-right:5px}
+@media(max-width:959px){
+ :where(.bottom a){gap:4px}
+ :where(.bottom a svg){width:23px;height:23px}
+ :where(.tile .mi){width:44px;height:44px}
+}
