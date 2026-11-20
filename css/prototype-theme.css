@@ -398,3 +398,42 @@ body{color:var(--amz-ink)}
  :where(.kpis,.oc-cards){gap:8px!important}
  :where(.kpi,.stats>div){padding:12px!important;min-height:112px}
 }
+
+
+
+/* App navigation and all-menu cards: mobile PWA / Owner + Staff */
+@media(max-width:620px){
+  /* All Menus: replace oversized single-column rows with balanced icon-led cards */
+  #view .tiles{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important;margin-bottom:18px}
+  #view .tiles>.tile{min-width:0;min-height:128px!important;padding:15px 13px!important;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px!important;border:1px solid #deebe2!important;border-radius:19px!important;background:linear-gradient(155deg,#fff 0%,#fbfdfb 72%,#f0f7f1 100%)!important;box-shadow:0 7px 18px rgba(16,61,45,.055)!important;color:#17211e!important}
+  #view .tiles>.tile>.mi{width:48px!important;height:48px!important;border-radius:16px!important;display:grid;place-items:center;background:linear-gradient(145deg,#e5f3e9,#d9eee1)!important;color:#08734f!important;box-shadow:inset 0 0 0 1px #d5e9dc}
+  #view .tiles>.tile>.mi svg{width:25px!important;height:25px!important;stroke-width:1.9}
+  #view .tiles>.tile>span:last-child{display:block;width:100%;min-width:0}
+  #view .tiles>.tile b{display:block;color:#174633!important;font:700 15px/1.25 var(--display)!important;white-space:normal}
+  #view .tiles>.tile>span:last-child>span{display:block;margin-top:4px;color:#718079!important;font-size:12px!important;line-height:1.4}
+  #view .h3{display:flex;align-items:center;gap:9px;margin:23px 2px 10px;color:#597568!important;font-size:13px!important;letter-spacing:.2px}
+  #view .h3:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,#dce9df,transparent)}
+  /* My Workspace shortcut follows the same visual system */
+  #view .tiles>.tile[href^="clock.html"]{background:linear-gradient(145deg,#edf7f0,#fff)!important}
+  /* Bottom navigation: larger touch target, icon tile and clear active state */
+  .bottom{grid-auto-columns:minmax(0,1fr)!important;gap:4px!important;padding:7px 7px calc(7px + env(safe-area-inset-bottom,0px))!important;background:rgba(255,255,255,.97)!important;border-top:1px solid #e2ece5!important;box-shadow:0 -8px 24px rgba(16,61,45,.07)!important}
+  .bottom a{min-width:0;min-height:62px;padding:6px 2px 5px!important;gap:3px!important;border-radius:15px!important;color:#718079!important;font-size:11px!important;font-weight:600}
+  .bottom a svg{width:23px!important;height:23px!important;stroke-width:1.9}
+  .bottom a[aria-current="page"]{background:#e7f3eb!important;color:#07583f!important;box-shadow:inset 0 2px 0 #c69a35!important}
+  .bottom a[aria-current="page"] svg{stroke-width:2.2}
+  .bottom a .dot{top:2px;left:calc(50% + 7px)}
+  /* Owner Console app bottom navigation */
+  .oc-side{gap:4px!important;padding:7px 7px calc(7px + env(safe-area-inset-bottom))!important;background:rgba(255,255,255,.97)!important;border-top:1px solid #e2ece5!important;box-shadow:0 -8px 24px rgba(16,61,45,.07)!important}
+  .oc-side a{min-height:62px;padding:6px 2px!important;border-radius:15px!important;color:#718079!important}
+  .oc-side a svg{width:23px!important;height:23px!important;stroke-width:1.9}
+  .oc-side a[aria-current="page"]{background:#e7f3eb!important;color:#07583f!important;box-shadow:inset 0 2px 0 #c69a35!important}
+  .oc-side a[aria-current="page"]:before{display:none!important}
+  .oc-side a .sh{font-size:10px!important;font-weight:600}
+  /* App page cards: unify spacing and text contrast without changing actions */
+  .oc-main .oc-card{border-radius:18px!important;background:linear-gradient(155deg,#fff,#f8fbf8)!important;border:1px solid #deebe2!important;box-shadow:0 7px 18px rgba(16,61,45,.055)!important}
+}
+@media(max-width:380px){
+  #view .tiles{grid-template-columns:minmax(0,1fr)!important}
+  #view .tiles>.tile{min-height:94px!important;flex-direction:row;align-items:center;justify-content:flex-start}
+  #view .tiles>.tile>span:last-child{flex:1}
+}
