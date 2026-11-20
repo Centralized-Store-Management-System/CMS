@@ -233,3 +233,17 @@
 - Both Cron jobs remain active at */5 * * * *. Security verification: new diagnostic/history tables have RLS enabled; anon and authenticated SELECT denied; service_role SELECT allowed.
 - Existing issue remains: 1 Outbox error in 24h and mail provider is not configured (MAIL_NOT_CONFIGURED). No resend or secret changes performed.
 - Phase 2.2 is deployed and the first end-to-end diagnostic run succeeded. Next: collect a longer metric window (at least 24h / 288 five-minute samples) before fitting any meaningful forecast; consider AI-assisted diagnosis only after OPENAI_API_KEY and model configuration are confirmed. No autonomous remediation is enabled.
+
+
+## Super Advance IT — Phase 2.3 (2026-11-20)
+
+- Added isolated tables: `it_ops_anomaly_events`, `it_ops_dependency_map`, `it_ops_learning_feedback`. RLS enabled; anon/authenticated have no table privileges; service_role has access.
+- Seeded 7 curated dependency relationships spanning Owner Console, Backoffice, Supabase, IT Monitor, IT Orchestrator, AI context, Mail provider, and Order pipeline.
+- Deployed `it-ops-orchestrator` version 6. It now performs read-only anomaly checks for outbox errors, stale orders, order sync/SSO errors, and heartbeat age. Count-based anomaly checks require at least 5 prior samples and use a median baseline; heartbeat age has a fixed 10-minute threshold. Anomaly records are upserted and auto-resolved when readings return within thresholds. No remediation is triggered.
+- Added Owner-only learning feedback POST with validated feedback types and audit logging. Feedback is stored for evaluation only; it does not train a model or alter thresholds automatically.
+- GET response now exposes anomaly events, dependency map, and feedback history to the existing Owner UI.
+- Owner UI adds Anomaly Detection, dependency map, and feedback controls. Asset versions: `it-ops.js?v=2.3.0`, `owner.css?v=4.8.8`.
+- Verified JavaScript syntax with `new Function`. Manually invoked Cron endpoint: HTTP 200, monitor run 305, 2 findings, 2 incident upserts, 1 proposal, no anomalies detected. Existing Outbox issue and missing mail-provider configuration remain unresolved.
+- Metric history is only 3 samples as of this deployment. Count-based anomaly detection remains in warm-up until 5 prior samples are available; no statistical forecasting or autonomous recovery is enabled.
+- Production safety: no business/order/customer data was modified; no secrets, Cron schedules, authentication policies, or remediation actions changed.
+- Commits: UI `28676ad34d41c830accc0c97e7ebaf17342b6af8`; Owner asset versions `82eb5b8418d5ac3ef22f4f6f108080e88b298cff`, `8802bfa3d01a6f9d93a3f0484d237d06951f324d`; CSS `0439b95453107dbc67d75ac42ccc7453cda98a51`.
