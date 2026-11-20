@@ -153,5 +153,27 @@ Phase E — other systems
 - Back Office and Staff continue loading the original `css/prototype-theme.css`; only Owner loads `css/owner-theme.css`. This prevents future Owner Theme edits from propagating through the shared stylesheet URL.
 - Existing authentication, permissions, routes, API calls, and business rules were not changed. Owner Theme remains a visual baseline, not yet an independently switchable server-side deployment.
 
-## 11. Current implementation boundary
+## 11. Phase B/C/D implementation record (20 Nov 2026)
+
+### Phase B — Device-specific Theme rollout
+- Added Owner PC/Mobile/iPad scope records and separate installed-app scopes for mobile/iPad. Owner Theme is enabled for the five Owner scopes only.
+- Added IT Control Center preview frame selector for PC/Mobile/iPad. This is a responsive-size mock preview, not a live screenshot from physical hardware.
+- Back Office, Staff, LINE and Registration remain Theme OFF and rollout-locked.
+
+### Phase C — IT Control Center backend
+- Added `public.it_control_settings` and `public.it_control_audit`; RLS enabled and direct `anon`/`authenticated` privileges revoked.
+- Added `it-control-center` Edge Function v1. GET/POST requires a valid CMS Owner session verified through the existing Back Office bootstrap. All changes are persisted and audited.
+- Seeded 16 scopes across Owner, Back Office, Staff, LINE and Registration, including device and surface distinctions.
+
+### Phase D — Authentication policy separation
+- Added per-scope `auth_profile` draft storage, separate from Theme settings.
+- `auth_enforcement_enabled` is false for all 16 scopes. Existing Owner, Staff, Manager, Authenticator, PIN and LINE login flows are unchanged.
+- The control panel labels policies as Draft / Not enforced. This phase establishes configuration and audit, not a live authentication replacement.
+
+### Verification
+- Database query confirmed 16 scopes, 5 Owner Theme scopes ON, 11 non-Owner scopes rollout-locked, and 0 authentication enforcement scopes ON.
+- Edge Function `it-control-center` deployed ACTIVE v1.
+- Remaining QA: authenticated Owner GET/POST through the live UI, audit entry verification, visual review on real PC/Mobile/iPad, and browser-level regression checks before enabling enforcement or unlocking other systems.
+
+## 12. Current implementation boundary
 This document establishes the approved design baseline only. No runtime feature flags, authentication policies, shared assets, database records, Edge Functions, or production behavior are changed by this commit. Those require implementation against verified server-side authorization and storage contracts.
