@@ -31,11 +31,19 @@ function execKpis() {
   let labor = '';
   if (can('pnl') && typeof pnl === 'function') { const p = pnl(m); if (p.revenue > 0) labor = (p.labor / p.revenue * 100).toFixed(1) + '%'; }
   const late = S.t.attendance.filter(a => (a.date || '').startsWith(m) && attInBr(a) && num(a.lateMin) > 0).length;
+  const ico = {
+    sales: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 6-7"/></svg>',
+    labor: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2M19 5l2 2-2 2"/></svg>',
+    waste: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg>',
+    late: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+  };
+  const card = (key, href, value, label, note = '') => `<a class="kpi exec-kpi ${key}" href="${href}"><span class="exec-kpi-head"><i class="exec-kpi-icon">${ico[key]}</i><small>${label}</small></span><b>${value}</b>${note ? `<em>${note}</em>` : '<em class="exec-kpi-hint">ดูรายละเอียด <span aria-hidden="true">→</span></em>'}</a>`;
   return `<div class="kpis exec">
-    <a class="kpi" href="#acct/sales"><b>${baht(cur)}</b><span>ยอดขายเดือนนี้ถึงวันนี้</span>${prev ? `<em class="${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}% เทียบช่วงเดียวกันเดือนก่อน</em>` : ''}</a>
-    ${labor ? `<a class="kpi" href="#acct/pnl"><b>${labor}</b><span>ค่าแรงต่อยอดขาย</span><em>${num(labor) > 30 ? 'สูงกว่าเกณฑ์ 30%' : 'อยู่ในเกณฑ์'}</em></a>` : ''}
-    <a class="kpi" href="#stock/moves"><b>${baht(waste)}</b><span>ของเสียเดือนนี้</span></a>
-    <a class="kpi" href="#time/att"><b>${late}</b><span>ครั้งที่มาสายเดือนนี้</span></a></div>`;
+    ${card('sales', '#acct/sales', baht(cur), 'ยอดขายเดือนนี้ถึงวันนี้', prev ? `${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}% เทียบช่วงเดียวกันเดือนก่อน` : '')}
+    ${labor ? card('labor', '#acct/pnl', labor, 'ค่าแรงต่อยอดขาย', num(labor) > 30 ? 'สูงกว่าเกณฑ์ 30%' : 'อยู่ในเกณฑ์') : ''}
+    ${card('waste', '#stock/moves', baht(waste), 'ของเสียเดือนนี้')}
+    ${card('late', '#time/att', late, 'ครั้งที่มาสายเดือนนี้')}
+  </div>`;
 }
 function myWeek(e) {
   const T = today(), days = Array.from({ length: 7 }, (_, i) => addDays(T, i));
