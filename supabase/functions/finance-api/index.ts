@@ -9,6 +9,7 @@ import * as J from "./journals.ts";
 import * as T from "./tax.ts";
 import * as R from "./reports.ts";
 import * as A from "./admin.ts";
+import * as V from "./verification.ts";
 
 const ORIGINS = new Set([
   "https://centralized-store-management.github.io",
@@ -25,6 +26,7 @@ const READ: Record<string, Reader> = {
   approvals: A.approvalsQueue, audit: A.listAudit,
   documents: D.listDocuments, document: D.getDocument,
   payments: P.listPayments, "open-documents": P.openDocuments,
+  "verification-queue": V.verificationQueue, "payment-files": V.listPaymentFiles, "file-url": V.fileUrl,
   journals: J.listJournals, journal: J.getJournal, periods: J.listPeriods,
   "tax-report": T.taxReport, filings: T.listFilings,
   summary: R.summary, "trial-balance": R.trialBalance, "profit-loss": R.profitLoss, "balance-sheet": R.balanceSheet, ledger: R.ledger, aging: R.aging,
@@ -35,6 +37,7 @@ const WRITE: Record<string, Writer> = {
   "document.create": D.createDocument, "document.update": D.updateDocument, "document.submit": D.submitDocument, "document.return": D.returnDocument,
   "document.void": D.voidDocument, "document.approve": D.approveDocument, "document.reverse": D.reverseDocument,
   "payment.create": P.createPayment, "payment.approve": P.approvePayment, "payment.reject": P.rejectPayment, "payment.cancel": P.cancelPayment, "payment.mark-paid": P.markPaid,
+  "payment.verify-documents": V.verifyPaymentDocuments,
   "journal.create": J.createJournal, "journal.submit": J.submitJournal, "journal.post": J.postJournal, "journal.reject": J.rejectJournal, "journal.delete": J.deleteDraftJournal, "journal.reverse": J.reverseJournal,
   "period.create-year": J.createPeriods, "period.close": J.closePeriod, "period.reopen": J.reopenPeriod,
   "tax.prepare": T.prepareFiling, "tax.submit-review": T.submitFilingReview, "tax.return": T.returnFiling, "tax.approve": T.approveFiling, "tax.mark-submitted": T.markFiled, "tax.mark-paid": T.markFilingPaid,
@@ -71,6 +74,14 @@ Deno.serve(async (req: Request) => {
       const fn = READ[action];
       if (!fn) throw new HttpError(404, "ไม่พบ Finance API action");
       return json({ ok: true, data: await fn(url, user) }, 200, origin);
+    }
+    const contentType = (req.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      const uploadAction = text(form.get("action"), 40);
+      if (uploadAction !== "file.upload") throw new HttpError(404, "ไม่พบ Finance API action");
+      const data = await V.uploadPaymentFile(form, user, rid);
+      return json({ ok: true, data }, 201, origin);
     }
     const raw = await req.text();
     if (raw.length > 200_000) throw new HttpError(413, "ข้อมูลใหญ่เกินไป");
