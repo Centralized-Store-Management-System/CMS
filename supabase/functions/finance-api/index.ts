@@ -16,7 +16,7 @@ const ORIGINS = new Set([
   "https://centralized-store-management-system.github.io",
   ...String(Deno.env.get("FINANCE_TEST_ORIGINS") || "").split(",").map(s => s.trim()).filter(Boolean),
 ]);
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 
 type Reader = (url: URL, u: User) => Promise<unknown>;
 type Writer = (body: Record<string, unknown>, u: User, rid: string, idem: string) => Promise<unknown>;
