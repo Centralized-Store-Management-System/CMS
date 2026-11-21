@@ -81,7 +81,6 @@ const OWNER_PWA_LOCK = (() => {
     '@media(max-height:700px){#owner-lock{gap:8px;padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}#owner-lock .ol-pad{gap:8px 18px}#owner-lock .ol-pad button{height:clamp(52px,7vh,62px);min-height:52px}#owner-lock .ol-pad button.ol-x{height:54px;min-height:54px}}',
     '@media(min-width:700px){#owner-lock .ol-pad{width:300px;grid-template-columns:repeat(3,76px);gap:14px 22px}#owner-lock .ol-pad button{height:76px}}@media(orientation:landscape) and (max-height:520px){#owner-lock{gap:5px;padding-top:8px;padding-bottom:8px}#owner-lock .ol-mark{width:48px;height:48px}#owner-lock .ol-pad{gap:6px 18px}#owner-lock .ol-pad button{height:48px;min-height:48px}}'
   ].join('');
-  st.textContent += '@media(orientation:landscape) and (max-height:520px){#owner-lock{gap:5px;padding-top:8px;padding-bottom:8px}#owner-lock .ol-mark{width:48px;height:48px}#owner-lock .ol-pad{gap:6px 18px}#owner-lock .ol-pad button{height:48px;min-height:48px}}';
   document.head.appendChild(st);
 
   /** แสดงหน้ารหัส: onCode(code) คืน true = ปิด, ข้อความ = แสดงแล้วให้ใส่ใหม่ · alt = ปุ่มล่าง [ข้อความ, fn] */
