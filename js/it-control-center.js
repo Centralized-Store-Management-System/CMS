@@ -77,7 +77,7 @@ function ocControlPage(){
 document.addEventListener('change',async e=>{if(e.target.id==='itcc-filter'){ITCC.filter=e.target.value;ocMain(ocControlPage());return;}
  const sel=e.target.closest('[data-itcc-pkg]');if(!sel)return;
  const row=ITCC.rows.find(x=>x.scope_key===sel.dataset.itccPkg);if(!row||row.theme_package===sel.value)return;
- if(!confirm('เปลี่ยน Theme ของ '+itccGroupLabel(row)+' เป็น '+ITCC_PKG[sel.value]+' ใช่หรือไม่?\n(มีผลเฉพาะ Scope นี้)')){sel.value=row.theme_package;return;}
+ if(!await ITDialog.confirm('เปลี่ยน Theme ของ '+itccGroupLabel(row)+' เป็น '+ITCC_PKG[sel.value]+' ใช่หรือไม่?',{title:'ยืนยันการเปลี่ยน Theme',detail:'มีผลเฉพาะ Scope นี้'})){sel.value=row.theme_package;return;}
  sel.disabled=true;
  try{await itccRequest('POST',{scopeKey:row.scope_key,changes:{theme_package:sel.value,theme_enabled:true}});toast('บันทึกแล้ว เครื่องใน Scope นี้จะเปลี่ยนเมื่อเปิดหน้าใหม่');if(window.AMZ_SCOPE)AMZ_SCOPE.refresh();await ocControlLoad();}
  catch(err){toast(err.message);sel.value=row.theme_package;sel.disabled=false;}
@@ -88,9 +88,9 @@ document.addEventListener('click',async e=>{
  const action=e.target.closest('[data-itcc-save]');
  if(action){
   const row=ITCC.rows.find(x=>x.scope_key===action.dataset.scope);if(!row)return;
-  if(action.dataset.itccSave==='unlock'&&!confirm('ปลดล็อก Theme Rollout เฉพาะ Scope นี้ใช่หรือไม่?'))return;
-  if(action.dataset.itccSave==='lock'&&!confirm('ล็อก Scope นี้ (กันการเปลี่ยน Theme) ใช่หรือไม่?'))return;
-  if(action.dataset.itccSave==='theme'&&!confirm((row.theme_enabled?'ปิด':'เปิด')+' Theme เฉพาะ Scope นี้ใช่หรือไม่?'))return;
+  if(action.dataset.itccSave==='unlock'&&!await ITDialog.confirm('ปลดล็อก Theme Rollout เฉพาะ Scope นี้ใช่หรือไม่?',{title:'ปลดล็อก Rollout'}))return;
+  if(action.dataset.itccSave==='lock'&&!await ITDialog.confirm('ล็อก Scope นี้เพื่อป้องกันการเปลี่ยน Theme ใช่หรือไม่?',{title:'ล็อก Scope'}))return;
+  if(action.dataset.itccSave==='theme'&&!await ITDialog.confirm((row.theme_enabled?'ปิด':'เปิด')+' Theme เฉพาะ Scope นี้ใช่หรือไม่?',{title:'ยืนยันการตั้งค่า Theme'}))return;
   action.disabled=true;
   try{const k=action.dataset.itccSave,changes=k==='unlock'?{rollout_locked:false}:k==='lock'?{rollout_locked:true}:{theme_enabled:!row.theme_enabled};await itccRequest('POST',{scopeKey:row.scope_key,changes});toast('บันทึกการตั้งค่าและ Audit Log แล้ว');if(window.AMZ_SCOPE)AMZ_SCOPE.refresh();await ocControlLoad();}
   catch(err){toast(err.message);action.disabled=false;}return;
