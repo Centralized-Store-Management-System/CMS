@@ -5,6 +5,9 @@ USERS = {
  'tok_appr_1234': {'role':'manager','uid':'U2','code':'appr','name':'Approver B','perms':[]},
  'tok_view_1234': {'role':'staff','uid':'U3','code':'view','name':'Viewer C','perms':[]},
  'tok_nobody_12': {'role':'staff','uid':'U4','code':'nob','name':'No Access','perms':[]},
+ 'tok_mgr_12345': {'role':'manager','uid':'U5','code':'mgr','name':'Manager M','perms':[]},
+ 'tok_staff_1234': {'role':'staff','uid':'U6','code':'stf','name':'Staff S','perms':[]},
+ 'tok_verifier_12': {'role':'staff','uid':'U7','code':'ver','name':'Partner Verifier','perms':[]},
 }
 CALLS = {'me':0,'bootstrap':0}
 class H(http.server.BaseHTTPRequestHandler):
