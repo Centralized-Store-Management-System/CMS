@@ -1,0 +1,4 @@
+project_id = "ytxbnqosenolojifeikf"
+
+[functions.finance-api]
+verify_jwt = false
