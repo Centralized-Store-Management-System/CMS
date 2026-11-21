@@ -134,7 +134,9 @@ export async function listJournals(url: URL, u: User) {
 export async function getJournal(url: URL, u: User) {
   const id = uuid(url.searchParams.get("id"), "สมุดรายวัน")!;
   const sql = db();
-  const [je] = await sql`select * from finance.journal_entries where id = ${id}::uuid and company_id = ${u.companyId}::uuid`;
+  const [je] = await sql`select j.*, (select display_name from finance.user_roles r where r.company_id = j.company_id and r.cms_actor_ref = j.created_by) as created_by_name,
+      (select display_name from finance.user_roles r where r.company_id = j.company_id and r.cms_actor_ref = coalesce(j.posted_by, j.approved_by)) as posted_by_name
+    from finance.journal_entries j where j.id = ${id}::uuid and j.company_id = ${u.companyId}::uuid`;
   if (!je) fail(404, "ไม่พบสมุดรายวัน");
   const lines = await sql`select jl.line_no, jl.debit, jl.credit, jl.description, a.account_code, a.account_name, p.display_name as partner_name
     from finance.journal_lines jl join finance.chart_of_accounts a on a.id = jl.account_id left join finance.partners p on p.id = jl.partner_id

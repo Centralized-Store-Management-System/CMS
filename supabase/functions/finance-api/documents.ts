@@ -274,12 +274,16 @@ export async function listDocuments(url: URL, u: User) {
 export async function getDocument(url: URL, u: User) {
   const id = uuid(url.searchParams.get("id"), "รหัสเอกสาร")!;
   const sql = db();
-  const [doc] = await sql`select d.*, p.display_name as partner_name, p.tax_id as partner_tax_id from finance.documents d left join finance.partners p on p.id = d.partner_id
+  const [doc] = await sql`select d.*, p.display_name as partner_name, p.tax_id as partner_tax_id,
+      (select display_name from finance.user_roles r where r.company_id = d.company_id and r.cms_actor_ref = d.created_by) as created_by_name,
+      (select display_name from finance.user_roles r where r.company_id = d.company_id and r.cms_actor_ref = d.approved_by) as approved_by_name
+    from finance.documents d left join finance.partners p on p.id = d.partner_id
     where d.id = ${id}::uuid and d.company_id = ${u.companyId}::uuid`;
   if (!doc) fail(404, "ไม่พบเอกสาร");
   const [lines, events, journal, payments] = await Promise.all([
     sql`select line_no, description, quantity, unit_price, vat_rate, vat_amount, wht_rate, wht_amount, account_code, line_total from finance.document_lines where document_id = ${id}::uuid order by line_no`,
-    sql`select action, actor_ref, note, created_at from finance.approval_events where company_id = ${u.companyId}::uuid and entity_type = 'document' and entity_id = ${id}::uuid order by created_at`,
+    sql`select e.action, e.actor_ref, r.display_name as actor_name, e.note, e.created_at from finance.approval_events e left join finance.user_roles r on r.company_id = e.company_id and r.cms_actor_ref = e.actor_ref
+      where e.company_id = ${u.companyId}::uuid and e.entity_type = 'document' and e.entity_id = ${id}::uuid order by e.created_at`,
     sql`select je.id, je.journal_number, je.status, je.journal_date from finance.journal_entries je where je.company_id = ${u.companyId}::uuid and je.source_document_id = ${id}::uuid order by je.created_at`,
     sql`select id, payment_type, payment_date, amount, status, method from finance.payments where company_id = ${u.companyId}::uuid and document_id = ${id}::uuid order by created_at`,
   ]);
