@@ -71,7 +71,7 @@ const F_EMP = e => [
   { k: 'nickname', label: 'ชื่อเล่น', half: 1 }, { k: 'nameEn', label: 'ชื่อ-นามสกุล (อังกฤษ)', half: 1, help: 'ใช้ตรวจตอนลงทะเบียน LINE เช่น Somchai Jaidee' }, { k: 'scanId', label: 'รหัสในเครื่องสแกนนิ้ว', half: 1, help: 'ว่าง = ใช้รหัสพนักงาน (เครื่องที่ใช้เลข 1, 001 จับคู่กับ A001 ให้เอง)' }, { k: 'phone', label: 'เบอร์โทร', half: 1, type: 'tel' }, { k: 'email', label: 'อีเมล', half: 1, type: 'email', help: 'คนไม่มี LINE: ใช้รับรหัสตั้ง PIN เข้าเว็บ (ลืม PIN ก็ใช้ได้)' },
   { k: 'idCard', label: 'เลขบัตรประชาชน', half: 1, inputmode: 'numeric' }, { k: 'birthDate', label: 'วันเกิด', half: 1, type: 'date' },
   { k: 'address', label: 'ที่อยู่', type: 'textarea' },
-  { k: 'position', label: 'ตำแหน่ง', half: 1, type: 'select', options: POSITIONS }, { k: 'startDate', label: 'วันเริ่มงาน', half: 1, type: 'date' },
+  { k: 'position', label: 'ตำแหน่ง', half: 1, type: 'select', options: HR_POSITIONS.filter(p=>p.status==='active').map(p=>p.name_th) }, { k: 'startDate', label: 'วันเริ่มงาน', half: 1, type: 'date' },
   { k: 'payType', label: 'รูปแบบค่าจ้าง', half: 1, type: 'select', options: PAYTYPES }, { k: 'rate', label: 'อัตราค่าจ้าง (บาท)', half: 1, type: 'number', req: 1 },
   { k: 'endDate', label: 'วันสุดท้าย (ถ้าลาออก)', half: 1, type: 'date' },
   { k: 'probationEnd', label: 'ครบทดลองงาน', half: 1, type: 'date', help: 'เว้นว่าง = วันเริ่มงาน + 119 วัน (แจ้งเตือนเฉพาะสถานะทดลองงาน)' }, { k: 'contractEnd', label: 'สัญญาจ้างสิ้นสุด (ถ้ามี)', half: 1, type: 'date' },
