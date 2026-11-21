@@ -137,11 +137,20 @@ export async function verifyPaymentDocuments(body: Record<string, unknown>, u: U
   const paymentId = uuid(body.payment_id, "รายการจ่าย")!;
   if (body.confirm_complete !== true) fail(400, "กรุณาติ๊กยืนยันว่าเอกสารครบถ้วนก่อน");
   return await db().begin(async (tx: Tx) => {
-    const [p] = await tx`select id, status, payment_type from finance.payments
+    const [p] = await tx`select id, status, payment_type, created_by, approved_by from finance.payments
       where id = ${paymentId}::uuid and company_id = ${u.companyId}::uuid for update`;
     if (!p) fail(404, "ไม่พบรายการจ่าย");
     if (p.payment_type !== "disbursement") fail(409, "ขั้นตอนตรวจเอกสารนี้ใช้กับรายการจ่ายเงินเท่านั้น");
     if (p.status !== "paid") fail(409, "ตรวจเอกสารได้หลังจ่ายเงินจริงแล้วเท่านั้น");
+    const [paidEvent] = await tx`select actor_ref from finance.payment_events
+      where company_id = ${u.companyId}::uuid and payment_id = ${paymentId}::uuid and action = 'paid'
+      order by created_at desc limit 1`;
+    if ([p.created_by, p.approved_by, paidEvent?.actor_ref].filter(Boolean).includes(u.actorRef)) {
+      fail(403, "ผู้สร้าง ผู้อนุมัติ หรือผู้ดำเนินการจ่าย ไม่สามารถเป็นผู้ตรวจเอกสารขั้นสุดท้ายของรายการเดียวกันได้ (Segregation of Duties)");
+    }
+    const [alreadyVerified] = await tx`select id from finance.payment_verifications
+      where company_id = ${u.companyId}::uuid and payment_id = ${paymentId}::uuid and status = 'verified'`;
+    if (alreadyVerified) fail(409, "รายการนี้ผ่านการตรวจเอกสารขั้นสุดท้ายแล้ว");
     const [counts] = await tx`select count(*)::int as total,
       count(*) filter (where file_category = 'payment_evidence')::int as evidence
       from finance.document_files where company_id = ${u.companyId}::uuid and payment_id = ${paymentId}::uuid and deleted_at is null`;
