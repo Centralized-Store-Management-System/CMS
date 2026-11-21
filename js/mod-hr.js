@@ -94,6 +94,7 @@ function empRow(e) {
     return `<button class="row" data-a="emp:${e.id}">${avatar(e)}<span class="main"><span class="t">${esc(fullName(e))}</span><span class="s">${esc(e.code || '')} ${esc(e.position || '')}, ${payLabel(e)}${pt ? `, กะ จ–อา: ${esc(pt)}` : ''}</span><span class="chips">${c.join('')}</span></span></button>`;
 }
 function pEmp() {
+  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});}
   const list = S.t.employees.filter(e => myEmp(e) && inBr(e.branch)).sort((a, b) => (a.status === 'ลาออก') - (b.status === 'ลาออก') || String(a.code || '').localeCompare(String(b.code || '')));
   const groups = !S.branch && multiBranch() ? myBranches().map(b => [b, list.filter(e => e.branch === b.code)]).filter(g => g[1].length) : [[null, list]];
   const bd0 = today(), bd1 = addDays(bd0, 1), key = d => String(d || '').slice(5, 10);
@@ -142,6 +143,7 @@ const F_APP = () => [
   { k: 'availability', label: 'วันและเวลาที่ทำงานได้' }, { k: 'note', label: 'ผลสัมภาษณ์/บันทึก', type: 'textarea' }
 ];
 function pApp() {
+  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});}
   const list = S.t.applicants.filter(a => !S.branch || a.branch === S.branch || !a.branch).sort((a, b) => APP_STAT.indexOf(a.status) - APP_STAT.indexOf(b.status) || String(b.appliedDate || '').localeCompare(String(a.appliedDate || '')));
   const cnt = APP_STAT.map(s => [s, list.filter(a => a.status === s).length]).filter(x => x[1]);
   return `<div class="h2">ผู้สมัคร ${list.length} คน<span class="spacer"></span><button class="btn primary" data-a="newApp">เพิ่มผู้สมัคร</button></div>
