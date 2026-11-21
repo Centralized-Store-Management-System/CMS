@@ -13,8 +13,9 @@ function render(kind,root){
  const $=id=>root.querySelector('#'+id), form=$('fmTxnForm'), lines=$('fmTxnLines');
  const num=v=>Math.max(0,Number(v)||0);
  function calculate(){
-  let subtotal=0;lines.querySelectorAll('tr').forEach(row=>{const q=num(row.querySelector('[name=line_qty]').value),p=num(row.querySelector('[name=line_price]').value),v=q*p;subtotal+=v;row.querySelector('.fm-line-total').textContent=money(v)});
-  const vr=form.elements.vat_rate.value,wr=num(form.elements.wht_rate.value),vat=vr==='exempt'||vr==='none'?0:subtotal*num(vr)/100,wht=subtotal*wr/100;
+  let subtotal=0,vat=0,wht=0;const vr=form.elements.vat_rate.value,wr=num(form.elements.wht_rate.value),vatRate=vr==='exempt'||vr==='none'?0:num(vr);
+  lines.querySelectorAll('tr').forEach(row=>{const q=num(row.querySelector('[name=line_qty]').value),p=num(row.querySelector('[name=line_price]').value),v=Math.round((q*p+Number.EPSILON)*100)/100;subtotal+=v;vat+=Math.round((v*vatRate/100+Number.EPSILON)*100)/100;wht+=Math.round((v*wr/100+Number.EPSILON)*100)/100;row.querySelector('.fm-line-total').textContent=money(v)});
+  subtotal=Math.round((subtotal+Number.EPSILON)*100)/100;vat=Math.round((vat+Number.EPSILON)*100)/100;wht=Math.round((wht+Number.EPSILON)*100)/100;
   $('fmSubtotal').textContent=money(subtotal);$('fmVat').textContent=money(vat);$('fmWht').textContent=money(wht);$('fmGrand').textContent=money(subtotal+vat-wht);
  }
  $('fmAddLine').onclick=()=>{const tr=document.createElement('tr');tr.innerHTML='<td><input name="line_desc" required placeholder="ระบุรายการ"></td><td><input name="line_qty" type="number" min="0.001" step="0.001" value="1" required></td><td><input name="line_price" type="number" min="0" step="0.01" value="0" required></td><td class="fm-line-total">฿0.00</td><td><button type="button" class="fm-icon-close" data-remove-line aria-label="ลบรายการ">×</button></td>';lines.appendChild(tr);calculate()};
