@@ -2,6 +2,7 @@
  * Owner ตั้งค่าทั้งร้านที่ System > Design (เก็บใน settings.theme) แต่ละคนปรับโหมดมืด/ขนาดตัวอักษรเฉพาะเครื่องตัวเองได้ */
 'use strict';
 const THEME_PRESETS = {
+  international: { name: 'International', th: 'เขียว Amazon · ครีม · ทอง', primary: '#0B6842', accent: '#C99A45', bg: '#F5F7F4', mods: 'multi' },
   forest: { name: 'Forest', th: 'เขียวเข้ม', primary: '#1E4D38', accent: '#2F7D55', bg: '#F1F4F1', mods: 'multi' },
   espresso: { name: 'Espresso', th: 'น้ำตาลกาแฟ', primary: '#5B3A29', accent: '#9A6B45', bg: '#F5F1EC', mods: 'multi' },
   ocean: { name: 'Ocean', th: 'น้ำเงิน', primary: '#1F4E79', accent: '#2E7BBF', bg: '#F0F3F7', mods: 'multi' },
