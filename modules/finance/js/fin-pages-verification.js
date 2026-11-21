@@ -26,7 +26,7 @@
         const verified = p.verification_status === "verified";
         const uploadForm = canUpload ? `<form class="fm-form-grid" data-upload-form="${esc(p.id)}">
           <label class="fm-field"><span>ประเภทเอกสาร</span><select name="category">${Object.entries(categoryLabel).map(([k,v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
-          <label class="fm-field"><span>เลือกไฟล์ (PDF / JPG / PNG / WEBP)</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required></label>
+          <label class="fm-field"><span>เลือกไฟล์ (PDF / JPG / PNG / WEBP · ไม่เกิน 20 MB)</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required></label>
           <div class="fm-form-actions fm-field-full"><button class="fm-btn fm-btn-primary" type="submit" ${verified ? "disabled" : ""}>＋ แนบเอกสาร</button></div>
         </form>` : "";
         const verifyAction = canVerify && !verified ? `<div class="fm-panel" style="margin-top:12px">
@@ -55,15 +55,19 @@
           const file = form.querySelector('input[name="file"]').files[0];
           if (!file) { F.toast("กรุณาเลือกไฟล์", "bad"); return; }
           const button = form.querySelector("button[type=submit]");
-          await run(button, () => F.upload("file.upload", { payment_id: id, category: form.category.value }, file), "แนบเอกสารแล้ว");
-          F.reload();
+          const uploaded = await run(button, () => F.upload("file.upload", { payment_id: id, category: form.querySelector('[name="category"]').value }, file), "แนบเอกสารแล้ว");
+          if (uploaded) F.reload();
         });
       });
       el.addEventListener("click", async e => {
         const open = e.target.closest("[data-open-file]");
         if (open) {
+          const tab = window.open("about:blank", "_blank");
           const r = await run(open, () => api.get("file-url", { file_id: open.dataset.openFile }));
-          if (r && r.url) window.open(r.url, "_blank", "noopener");
+          if (r && r.url) {
+            if (tab) tab.location.href = r.url;
+            else window.location.href = r.url;
+          } else if (tab) tab.close();
           return;
         }
         const verify = e.target.closest("[data-verify]");
