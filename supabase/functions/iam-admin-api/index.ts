@@ -94,5 +94,6 @@ Deno.serve(async(req)=>{
  }catch(e){const code=(e as {code?:string})?.code;const status=e instanceof HttpError?e.status:code==="23505"?409:500;if(status===500)console.error("iam-admin-api",e);return reply({ok:false,error:status===409?"ข้อมูลซ้ำหรือชนกับรายการเดิม":e instanceof Error?e.message:"เกิดข้อผิดพลาด"},status,origin);}
 });
 async function audit(actor:string,action:string,target:string,id:string,state:unknown){
+ if(!sql)throw new Error("IAM database connection unavailable");
  await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state) values(${actor},${action},${target},${id},${sql.json(state)})`;
 }
