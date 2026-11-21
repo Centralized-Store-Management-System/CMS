@@ -1,6 +1,6 @@
 import json, urllib.request, uuid, subprocess, concurrent.futures as cf
 API = 'http://localhost:8000/'
-OWN, ACC, APR, VIEW, NOB = 'tok_owner_123', 'tok_acc_12345', 'tok_appr_1234', 'tok_view_1234', 'tok_nobody_12'
+OWN, ACC, APR, VIEW, NOB, MGR, STF, VER = 'tok_owner_123', 'tok_acc_12345', 'tok_appr_1234', 'tok_view_1234', 'tok_nobody_12', 'tok_mgr_12345', 'tok_staff_1234', 'tok_verifier_12'
 R = []
 def ok(name, cond, extra=''):
     R.append(bool(cond)); print(('✓ ' if cond else '✗ ') + name, ('' if cond else extra))
@@ -30,12 +30,20 @@ s, r = get(None, 'session'); ok('ไม่มี token → 401', s == 401)
 s, r = get('tok_expired_xx', 'session'); ok('Session หมดอายุ → 401 + ข้อความให้เข้าสู่ระบบใหม่', s == 401 and 'เข้าสู่ระบบ' in r['error'], r)
 s, r = get(OWN, 'session'); ok('Owner ของ CMS → Finance Owner อัตโนมัติ', s == 200 and r['data']['actor']['role'] == 'owner' and r['data']['actor']['ref'] == 'owner', r)
 s, r = get(NOB, 'session'); ok('ผู้ใช้ที่ยังไม่ได้รับสิทธิ์ → 403', s == 403 and 'สิทธิ์' in r['error'], r)
-s, r = get(OWN, 'cms-users'); ok('Owner ดึงรายชื่อผู้ใช้ CMS (ไม่รวม owner)', s == 200 and {x['actor_ref'] for x in r['data']['items']} == {'u:U1', 'u:U2', 'u:U3', 'u:U4'}, r)
+s, r = get(OWN, 'cms-users'); ok('Owner ดึงรายชื่อผู้ใช้ CMS (ไม่รวม owner)', s == 200 and {x['actor_ref'] for x in r['data']['items']} == {'u:U1', 'u:U2', 'u:U3', 'u:U4', 'u:U5', 'u:U6', 'u:U7'}, r)
 for ref, role, name in [('u:U1', 'accountant', 'Accountant A'), ('u:U2', 'approver', 'Approver B'), ('u:U3', 'viewer', 'Viewer C')]:
     s, r = post(OWN, 'user.set', actor_ref=ref, role=role, display_name=name); ok(f'ให้สิทธิ์ {role}', s == 200, r)
 s, r = post(OWN, 'user.set', actor_ref='u:U4', role='owner'); ok('ให้สิทธิ์ owner กับผู้ใช้อื่นไม่ได้', s == 400, r)
+for ref, role, name in [('u:U5', 'manager', 'Manager M'), ('u:U6', 'staff', 'Staff S'), ('u:U7', 'verifier', 'Partner Verifier')]:
+    s, r = post(OWN, 'user.set', actor_ref=ref, role=role, display_name=name); ok(f'กำหนด Finance role {role}', s == 200 and r['data']['role_code'] == role, r)
+s, r = get(MGR, 'session'); ok('Manager สร้างคำขอได้แต่อนุมัติไม่ได้', s == 200 and r['data']['capabilities']['request'] and not r['data']['capabilities']['approve'] and not r['data']['capabilities']['verify'], r)
+s, r = get(STF, 'session'); ok('Staff สร้างคำขอได้แต่อนุมัติไม่ได้', s == 200 and r['data']['capabilities']['request'] and not r['data']['capabilities']['approve'], r)
+s, r = get(VER, 'session'); ok('Final Verifier ตรวจเอกสารได้ แต่อนุมัติ/บันทึกไม่ได้', s == 200 and r['data']['capabilities']['verify'] and not r['data']['capabilities']['approve'] and not r['data']['capabilities']['request'] and not r['data']['capabilities']['write'], r)
+s, r = get(MGR, 'approvals'); ok('Manager เปิดคิวอนุมัติไม่ได้', s == 403, r)
+s, r = get(STF, 'summary'); ok('Staff ดูภาพรวมทางการเงินทั้งบริษัทไม่ได้', s == 403, r)
+s, r = get(VER, 'summary'); ok('Final Verifier ดูรายงานทางการเงินไม่ได้', s == 403, r)
 s, r = post(ACC, 'user.set', actor_ref='u:U4', role='viewer'); ok('ผู้บันทึกบัญชีจัดการผู้ใช้ไม่ได้', s == 403, r)
-s, r = get(ACC, 'session'); ok('ผู้บันทึกบัญชีเข้าได้ role=accountant', s == 200 and r['data']['actor']['role'] == 'accountant' and r['data']['capabilities'] == {'read': True, 'write': True, 'approve': False, 'admin': False}, r)
+s, r = get(ACC, 'session'); ok('ผู้บันทึกบัญชีเข้าได้ role=accountant', s == 200 and r['data']['actor']['role'] == 'accountant' and r['data']['capabilities'] == {'read': True, 'request': True, 'write': True, 'approve': False, 'verify': False, 'admin': False}, r)
 s, r = post(VIEW, 'partner.save', partner_type='vendor', display_name='X'); ok('ผู้ดูอย่างเดียวบันทึกไม่ได้', s == 403, r)
 s, r = post(ACC, 'setup.defaults'); ok('ผู้บันทึกบัญชีตั้งค่าเริ่มต้นไม่ได้', s == 403, r)
 
@@ -193,6 +201,34 @@ s, r = post(ACC, 'document.create', idem=k(), document_type='expense', document_
 s, r = get(OWN, 'document', id=psql(f"insert into finance.documents(company_id,document_type,document_date) values ('{other}','expense','2026-11-01') returning id").splitlines()[0]); ok('อ่านเอกสารของบริษัทอื่นไม่ได้', s == 404, r)
 psql(f"delete from finance.documents where company_id='{other}'"); psql(f"delete from finance.partners where company_id='{other}'"); psql(f"delete from finance.companies where id='{other}'")
 
+print('— Manager / Staff / Final Verifier —')
+s, r = post(STF, 'document.create', idem=k(), document_type='expense', document_date=D + '23', partner_id=vend, submit=True,
+            lines=[{'description': 'อุปกรณ์สำนักงาน', 'quantity': 1, 'unit_price': 500, 'account_code': '5200'}])
+staff_doc = r['data']; ok('Staff สร้างคำขอรายจ่ายและส่ง Owner ได้', s == 201 and staff_doc['status'] == 'pending_review', r)
+s, r = post(MGR, 'document.approve', document_id=staff_doc['id']); ok('Manager อนุมัติเอกสารไม่ได้', s == 403, r)
+s, r = post(STF, 'document.approve', document_id=staff_doc['id']); ok('Staff อนุมัติเอกสารไม่ได้', s == 403, r)
+s, r = post(OWN, 'document.approve', document_id=staff_doc['id']); ok('Owner อนุมัติคำขอ Staff', s == 200 and staff_doc['id'] == r['data']['id'], r)
+s, r = post(STF, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '23', amount=500, method='bank_transfer', document_id=staff_doc['id'])
+staff_pay = r['data']['id']; ok('Staff สร้างคำขอจ่ายเงินได้', s == 201 and r['data']['status'] == 'pending', r)
+s, r = post(MGR, 'payment.approve', payment_id=staff_pay); ok('Manager อนุมัติการจ่ายไม่ได้', s == 403, r)
+s, r = post(STF, 'payment.approve', payment_id=staff_pay); ok('Staff อนุมัติการจ่ายไม่ได้', s == 403, r)
+s, r = post(OWN, 'payment.approve', payment_id=staff_pay); ok('Owner อนุมัติการจ่าย', s == 200 and r['data']['status'] == 'approved', r)
+s, r = post(STF, 'payment.mark-paid', payment_id=staff_pay); ok('Staff บันทึกว่าจ่ายเงินจริงหลัง Owner อนุมัติ', s == 200 and r['data']['status'] == 'paid', r)
+s, r = get(STF, 'document', id=bill['id']); ok('Staff เปิดเอกสารของผู้ใช้อื่นไม่ได้', s == 404, r)
+s, r = get(STF, 'payments'); ok('Staff เห็นเฉพาะรายการรับ/จ่ายของตนเอง', s == 200 and all(x['created_by'] == 'u:U6' for x in r['data']['items']), r)
+s, r = get(MGR, 'summary'); ok('Manager ดูภาพรวมตามสิทธิ์ได้', s == 200 and 'kpi' in r['data'], r)
+company_id = psql('select id from finance.companies order by created_at limit 1')
+psql(f"insert into finance.document_files(company_id,payment_id,storage_bucket,object_path,original_name,mime_type,size_bytes,uploaded_by,file_category) values ('{company_id}','{staff_pay}','finance-private-documents','{company_id}/{staff_pay}/proof-test.pdf','proof-test.pdf','application/pdf',123,'u:U6','payment_evidence')")
+s, r = get(VER, 'verification-queue'); q = [x for x in r['data']['items'] if x['id'] == staff_pay]
+ok('Final Verifier เห็นหลักฐานของรายการจ่ายที่ชำระแล้ว', s == 200 and len(q) == 1 and q[0]['file_count'] == 1 and q[0]['evidence_count'] == 1, q)
+s, r = post(MGR, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Manager ยืนยันเอกสารขั้นสุดท้ายไม่ได้', s == 403, r)
+s, r = post(STF, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Staff ยืนยันเอกสารขั้นสุดท้ายไม่ได้', s == 403, r)
+s, r = post(VER, 'payment.approve', payment_id=staff_pay); ok('Final Verifier อนุมัติการจ่ายไม่ได้', s == 403, r)
+s, r = post(VER, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Final Verifier ติ๊กยืนยันเอกสารครบถ้วน', s == 200 and r['data']['status'] == 'verified' and r['data']['verified_by'] == 'u:U7', r)
+s, r = get(VER, 'verification-queue'); q = [x for x in r['data']['items'] if x['id'] == staff_pay]
+ok('ระบบบันทึกผู้ตรวจและสถานะ Verified & Completed', s == 200 and len(q) == 1 and q[0]['verification_status'] == 'verified' and q[0]['verified_by'] == 'u:U7', q)
+s, r = get(VER, 'payments'); ok('Final Verifier ไม่สามารถเปิดหน้ารายการรับ/จ่ายทั่วไปได้', s == 403, r)
+
 print('— ล้างข้อมูลทดสอบ / เริ่มใช้งานจริง —')
 s, r = post(OWN, 'company.purge-test-data', confirm='ผิด'); ok('ล้างข้อมูลต้องพิมพ์ยืนยัน', s == 400, r)
 s, r = post(APR, 'company.purge-test-data', confirm='ล้างข้อมูลทดสอบ'); ok('ผู้อนุมัติล้างข้อมูลไม่ได้', s == 403, r)
@@ -200,6 +236,8 @@ s, r = post(OWN, 'company.purge-test-data', confirm='ล้างข้อมู
 ok('หลังล้าง: เอกสาร 0, ผังบัญชี 29, คู่ค้า 3, รอบบัญชีเปิดทั้งหมด, ประวัติ = เฉพาะการล้าง',
    psql("select count(*) from finance.documents")+'|'+psql("select count(*) from finance.chart_of_accounts")+'|'+psql("select count(*) from finance.partners")+'|'+psql("select count(*) from finance.accounting_periods where status<>'open'")+'|'+psql("select string_agg(action,',') from finance.audit_events") == '0|29|3|0|purge_test_data',
    psql("select string_agg(action,',') from finance.audit_events"))
+ok('หลังล้าง: ลบประวัติ final verification และ metadata ไฟล์แนบแล้ว',
+   psql("select count(*) from finance.payment_verifications") == '0' and psql("select count(*) from finance.document_files") == '0')
 s, r = post(OWN, 'company.go-live', confirm='เริ่มใช้งานจริง'); ok('ชื่อบริษัทยังเป็นชื่อทดสอบ → เริ่มใช้งานจริงไม่ได้', s == 409, r)
 post(OWN, 'company.update', legal_name='บริษัท คาเฟ่ ทดลอง จำกัด'.replace('ทดลอง', 'ตัวอย่าง'), tax_id='0105566000001', vat_registered=True)
 s, r = post(OWN, 'company.go-live', confirm='เริ่มใช้งานจริง'); ok('เริ่มใช้งานจริง', s == 200 and r['data']['environment'] == 'production', r)
