@@ -10,6 +10,7 @@ import * as T from "./tax.ts";
 import * as R from "./reports.ts";
 import * as A from "./admin.ts";
 import * as V from "./verification.ts";
+import * as C from "./expense-clearances.ts";
 
 const ORIGINS = new Set([
   "https://centralized-store-management.github.io",
@@ -27,6 +28,7 @@ const READ: Record<string, Reader> = {
   documents: D.listDocuments, document: D.getDocument,
   payments: P.listPayments, "open-documents": P.openDocuments,
   "verification-queue": V.verificationQueue, "payment-files": V.listPaymentFiles, "file-url": V.fileUrl,
+  "expense-clearances": C.listClearances,
   journals: J.listJournals, journal: J.getJournal, periods: J.listPeriods,
   "tax-report": T.taxReport, filings: T.listFilings,
   summary: R.summary, "trial-balance": R.trialBalance, "profit-loss": R.profitLoss, "balance-sheet": R.balanceSheet, ledger: R.ledger, aging: R.aging,
@@ -38,6 +40,7 @@ const WRITE: Record<string, Writer> = {
   "document.void": D.voidDocument, "document.approve": D.approveDocument, "document.reverse": D.reverseDocument,
   "payment.create": P.createPayment, "payment.approve": P.approvePayment, "payment.reject": P.rejectPayment, "payment.cancel": P.cancelPayment, "payment.mark-paid": P.markPaid,
   "payment.verify-documents": V.verifyPaymentDocuments,
+  "expense-clearance.submit": C.submitClearance, "expense-clearance.approve": C.approveClearance, "expense-clearance.return": C.returnClearance,
   "journal.create": J.createJournal, "journal.submit": J.submitJournal, "journal.post": J.postJournal, "journal.reject": J.rejectJournal, "journal.delete": J.deleteDraftJournal, "journal.reverse": J.reverseJournal,
   "period.create-year": J.createPeriods, "period.close": J.closePeriod, "period.reopen": J.reopenPeriod,
   "tax.prepare": T.prepareFiling, "tax.submit-review": T.submitFilingReview, "tax.return": T.returnFiling, "tax.approve": T.approveFiling, "tax.mark-submitted": T.markFiled, "tax.mark-paid": T.markFilingPaid,
@@ -72,8 +75,8 @@ Deno.serve(async (req: Request) => {
         capabilities: capabilities(user),
       } }, 200, origin);
       const limitedReads: Record<string, string[]> = {
-        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url"],
-        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url"],
+        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances"],
+        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances"],
         verifier: ["verification-queue", "payment-files", "file-url"],
       };
       const allowedReads = limitedReads[user.role];
@@ -101,8 +104,8 @@ Deno.serve(async (req: Request) => {
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "รูปแบบข้อมูลไม่ถูกต้อง");
     const action = text(body.action, 40);
     const limitedWrites: Record<string, string[]> = {
-      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel"],
-      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel"],
+      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit"],
+      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit"],
       verifier: ["payment.verify-documents"],
     };
     const allowedWrites = limitedWrites[user.role];
