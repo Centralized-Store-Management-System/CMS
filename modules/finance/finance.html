@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6b45">
+<meta name="robots" content="noindex,nofollow">
+<title>Finance · CMS</title>
+<link rel="stylesheet" href="css/finance.css?v=0.4.0">
+<link rel="stylesheet" href="css/cms-theme-bridge.css?v=0.1.1">
+<link rel="stylesheet" href="css/fin-ui.css?v=1.0.0">
+</head>
+<body>
+<div class="fm-app" id="financeApp">
+  <aside class="fm-sidebar" id="fmSidebar" aria-label="เมนู Finance">
+    <a class="fm-brand" href="#dashboard" aria-label="Finance หน้าแรก"><span class="fm-brand-mark">F</span><span><b data-cms-theme-title>FINANCE</b><small>การเงิน บัญชี และภาษี</small></span></a>
+    <div class="fm-company"><span class="fm-company-dot"></span><span><b id="fmCompanyName">บริษัท</b><small id="fmCompanyEnv">กำลังโหลด…</small></span></div>
+    <nav class="fm-nav" id="fmNav">
+      <button class="fm-nav-item" data-page="dashboard"><span class="fm-icon">▦</span><span>ภาพรวม</span></button>
+      <button class="fm-nav-item" data-page="approvals" data-need="approve" hidden><span class="fm-icon">✓</span><span>รออนุมัติ</span><b class="fm-count" id="fmApprovalsBadge" hidden>0</b></button>
+      <div class="fm-nav-group">
+        <button class="fm-nav-item fm-group-toggle" aria-expanded="true" aria-controls="fmGroupBusiness"><span class="fm-icon">▤</span><span>รายรับ–รายจ่าย</span><span class="fm-chevron">⌄</span></button>
+        <div class="fm-subnav" id="fmGroupBusiness">
+          <button data-page="income">รายรับ / ลูกหนี้</button>
+          <button data-page="expense">รายจ่าย / เจ้าหนี้</button>
+          <button data-page="payments">รับ–จ่ายเงิน</button>
+          <button data-page="partners">คู่ค้า</button>
+        </div>
+      </div>
+      <div class="fm-nav-group">
+        <button class="fm-nav-item fm-group-toggle" aria-expanded="true" aria-controls="fmGroupTax"><span class="fm-icon">▧</span><span>ภาษี</span><span class="fm-chevron">⌄</span></button>
+        <div class="fm-subnav" id="fmGroupTax">
+          <button data-page="vat">ภาษีซื้อ–ภาษีขาย (VAT)</button>
+          <button data-page="wht">ภาษีหัก ณ ที่จ่าย</button>
+          <button data-page="filings">แบบภาษี (ภ.พ.30 / ภ.ง.ด.)</button>
+        </div>
+      </div>
+      <div class="fm-nav-group">
+        <button class="fm-nav-item fm-group-toggle" aria-expanded="true" aria-controls="fmGroupAccounting"><span class="fm-icon">▥</span><span>บัญชี</span><span class="fm-chevron">⌄</span></button>
+        <div class="fm-subnav" id="fmGroupAccounting">
+          <button data-page="journals">สมุดรายวัน</button>
+          <button data-page="accounts">ผังบัญชี</button>
+          <button data-page="periods">รอบบัญชี</button>
+        </div>
+      </div>
+      <div class="fm-nav-group">
+        <button class="fm-nav-item fm-group-toggle" aria-expanded="false" aria-controls="fmGroupReports"><span class="fm-icon">▨</span><span>รายงาน</span><span class="fm-chevron">⌄</span></button>
+        <div class="fm-subnav" id="fmGroupReports" hidden>
+          <button data-page="profit-loss">งบกำไรขาดทุน</button>
+          <button data-page="balance-sheet">งบแสดงฐานะการเงิน</button>
+          <button data-page="trial-balance">งบทดลอง</button>
+          <button data-page="ledger">บัญชีแยกประเภท</button>
+          <button data-page="aging">อายุลูกหนี้ / เจ้าหนี้</button>
+        </div>
+      </div>
+      <div class="fm-nav-group">
+        <button class="fm-nav-item fm-group-toggle" aria-expanded="false" aria-controls="fmGroupSystem"><span class="fm-icon">⚙</span><span>ตั้งค่า</span><span class="fm-chevron">⌄</span></button>
+        <div class="fm-subnav" id="fmGroupSystem" hidden>
+          <button data-page="company">ข้อมูลบริษัท</button>
+          <button data-page="users" data-need="admin" hidden>ผู้ใช้งาน Finance</button>
+          <button data-page="audit" data-need="approve" hidden>ประวัติการทำรายการ</button>
+          <button data-page="settings" data-need="admin" hidden>ตั้งค่าระบบ</button>
+        </div>
+      </div>
+    </nav>
+    <div class="fm-sidebar-foot"><span class="fm-avatar">U</span><span><b id="fmUserName">ผู้ใช้</b><small id="fmUserRole"></small></span></div>
+  </aside>
+  <main class="fm-main">
+    <header class="fm-topbar">
+      <button class="fm-menu-btn" id="fmMenuBtn" aria-label="เปิดเมนู">☰</button>
+      <div class="fm-breadcrumb"><a href="../../owner.html" class="fm-back" title="กลับแอป Owner">CMS</a> <span>/</span> Finance <span>/</span> <b id="fmCrumb">ภาพรวม</b></div>
+      <div class="fm-top-actions"><span class="fm-mode" id="fmMode"><i></i>…</span><span class="fm-avatar">U</span></div>
+    </header>
+    <section class="fm-content" id="fmContent" aria-live="polite"></section>
+  </main>
+</div>
+<div class="fm-backdrop" id="fmBackdrop"></div>
+<script src="js/cms-theme-bridge.js?v=0.1.1" defer></script>
+<script src="js/fin-core.js?v=1.0.0" defer></script>
+</body>
+</html>
