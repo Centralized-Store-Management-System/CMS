@@ -232,11 +232,11 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
       throw new HttpError(400, "รายละเอียด จำนวน หรือราคาของรายการที่ " + (index + 1) + " ไม่ถูกต้อง");
     }
     const amount = round2(quantity * unitPrice);
-    return { description, quantity, unitPrice, amount };
+    return { description, quantity, unitPrice, amount, vatAmount: round2(amount * vatRate / 100), whtAmount: round2(amount * whtRate / 100) };
   });
   const subtotal = round2(normalized.reduce((sum, line) => sum + line.amount, 0));
-  const vat = round2(subtotal * vatRate / 100);
-  const wht = round2(subtotal * whtRate / 100);
+  const vat = round2(normalized.reduce((sum, line) => sum + line.vatAmount, 0));
+  const wht = round2(normalized.reduce((sum, line) => sum + line.whtAmount, 0));
   const grand = round2(subtotal + vat - wht);
   const [doc] = await db!.begin(async tx => {
     if (idempotencyKey) {
@@ -263,7 +263,7 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
           (document_id, line_no, description, quantity, unit_price, vat_rate, vat_amount, wht_rate, wht_amount, line_total)
         values
           (${String(created.id)}::uuid, ${i + 1}, ${line.description}, ${line.quantity}, ${line.unitPrice},
-           ${vatRate}, ${round2(line.amount * vatRate / 100)}, ${whtRate}, ${round2(line.amount * whtRate / 100)}, ${line.amount})
+           ${vatRate}, ${line.vatAmount}, ${whtRate}, ${line.whtAmount}, ${line.amount})
       `;
     }
     await tx.`
