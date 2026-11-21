@@ -29,8 +29,9 @@ export async function createPayment(body: Record<string, unknown>, u: User, rid:
     if (ex) return { ...ex, duplicate: true };
     let partnerId = uuid(body.partner_id, "คู่ค้า", false);
     if (docId) {
-      const [doc] = await tx`select id, document_type, status, partner_id from finance.documents where id = ${docId}::uuid and company_id = ${u.companyId}::uuid for update`;
+      const [doc] = await tx`select id, document_type, status, partner_id, created_by from finance.documents where id = ${docId}::uuid and company_id = ${u.companyId}::uuid for update`;
       if (!doc) fail(400, "ไม่พบเอกสาร");
+      if (u.role === "staff" && doc.created_by !== u.actorRef) fail(403, "Staff สร้างรายการรับ/จ่ายได้เฉพาะเอกสารที่ตนเองจัดทำ");
       if (doc.status !== "posted") fail(409, "รับ/จ่ายได้เฉพาะเอกสารที่อนุมัติและลงบัญชีแล้ว");
       if (doc.document_type === "credit_note") fail(400, "ใบลดหนี้ไม่ต้องรับ/จ่ายเงินผ่านเมนูนี้");
       const want = REVENUE_DOCS.includes(doc.document_type) ? "receipt" : "disbursement";
@@ -89,14 +90,14 @@ export async function rejectPayment(body: Record<string, unknown>, u: User, rid:
 }
 
 export async function cancelPayment(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "write");
+  need(u, "request");
   const id = uuid(body.payment_id, "รายการ")!;
   const note = text(body.note, 500);
   if (!note) fail(400, "กรุณาระบุเหตุผลที่ยกเลิก");
   return await db().begin(async (tx: Tx) => {
     const p = await lockPayment(tx, u, id);
     if (!["pending", "approved"].includes(p.status)) fail(409, "ยกเลิกได้เฉพาะรายการที่ยังไม่ได้รับ/จ่ายจริง");
-    if (p.created_by !== u.actorRef && !["owner", "approver"].includes(u.role)) fail(403, "ยกเลิกได้เฉพาะผู้สร้างรายการ หรือผู้อนุมัติ");
+    if (p.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "ยกเลิกได้เฉพาะผู้สร้างรายการ หรือ Manager");
     const [out] = await tx`update finance.payments set status = 'cancelled' where id = ${id}::uuid returning id, status`;
     await tx`insert into finance.payment_events (company_id, payment_id, actor_ref, action, note, request_id) values (${u.companyId}::uuid, ${id}::uuid, ${u.actorRef}, 'cancelled', ${note}, ${rid})`;
     await audit(tx, u, "cancel", "payment", id, out, rid);
@@ -156,7 +157,8 @@ export async function listPayments(url: URL, u: User) {
       left join finance.partners pt2 on pt2.id = d.partner_id
       left join finance.chart_of_accounts ca on ca.id = p.cash_account_id
       left join finance.chart_of_accounts oa on oa.id = p.offset_account_id
-    where p.company_id = ${u.companyId}::uuid and (${status} = '' or p.status = ${status}) and (${type} = '' or p.payment_type = ${type})
+    where p.company_id = ${u.companyId}::uuid and (${u.role !== "staff"} or p.created_by = ${u.actorRef})
+      and (${status} = '' or p.status = ${status}) and (${type} = '' or p.payment_type = ${type})
     order by p.payment_date desc, p.created_at desc limit ${limit} offset ${offset}`;
   return { items: rows, limit, offset };
 }
@@ -169,6 +171,7 @@ export async function openDocuments(url: URL, u: User) {
       d.grand_total - coalesce((select sum(x.amount) from finance.payments x where x.document_id = d.id and x.status in ('pending','approved','paid')), 0) as outstanding
     from finance.documents d left join finance.partners p on p.id = d.partner_id
     where d.company_id = ${u.companyId}::uuid and d.status = 'posted' and d.document_type = any(${types})
+      and (${u.role !== "staff"} or d.created_by = ${u.actorRef})
       and d.grand_total - coalesce((select sum(x.amount) from finance.payments x where x.document_id = d.id and x.status in ('pending','approved','paid')), 0) > 0.004
     order by d.document_date limit 200`;
   return { items: rows };
