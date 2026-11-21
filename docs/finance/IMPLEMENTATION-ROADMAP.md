@@ -19,7 +19,7 @@
 ## Phase 2 — Identity and access
 - [x] Read existing auth contract: custom CMS token validated via `backoffice?action=bootstrap`; claims include `me.role`, `me.perms`, `me.scope` (from existing HR Documents function).
 - [x] Implement isolated Finance authorization Edge Function source and lazy frontend adapter (not deployed).
-- [ ] Verify stable actor reference against real, non-production CMS session before enabling writes.
+- [ ] Verify stable actor reference against a real CMS session fixture before enabling writes.\n- [x] Add isolated Finance host bridge using the verified `sessionStorage` key `amz.tok`; do not change CMS Login/PIN.
 - [x] Implement server-side Owner/Accounting checks plus company-scoped role mapping in the isolated Finance API source (not deployed).
 - [x] Write audit events for supported partner, account and draft-document create actions; database immutability controls are drafted, not executed.\n- [ ] RLS and authorization integration tests.
 - [ ] No changes to current login, PIN or session flow.
@@ -30,9 +30,9 @@
 - [x] Build isolated master-data UI for company/tax profile, partners and chart of accounts.\n- [x] Add API-backed partner and chart-of-accounts workflows in source; company setup remains local/manual provisioning.
 - [x] Add isolated transaction UI for revenue, expenses and payments. Revenue/expense draft-document API calls are implemented in source but require deployment and a provisioned database.
 - [ ] Deploy reviewed Finance schema to isolated staging, then run API persistence tests. No schema has been applied.
-- [ ] Categories and document numbering service.
-- [ ] Private document storage.
-- [x] Draft approval events and audit event tables.
+- [ ] Categories and document numbering service.\n- [ ] Payment/journal/tax workflow APIs and accounting-rule validation (schema draft exists; APIs remain disabled).
+- [ ] Private document storage (metadata draft exists; bucket and upload/download API not created).
+- [x] Draft approval events and audit event tables.\n- [x] Add draft 004 for payment allocations/events, journal sequence and balance control, tax filing snapshots, and private document metadata (not applied).
 - [x] Add draft transaction controls, monetary constraints, updated_at triggers and append-only audit guard (003; not applied).
 - [ ] Add automated audit immutability and role-based tests.
 
@@ -83,3 +83,11 @@ A failed Finance feature must not block or degrade any existing CMS workflow. An
 - No SQL draft has been executed; no database, storage bucket, or production data has been changed.
 
 - [x] Run direct JavaScript calculation checks for VAT 7%, WHT 3%, zero VAT, per-line rounding and invalid input rejection (2026-11-21).
+
+
+## Parallel work update (2026-11-21)
+- Added the isolated CMS session bridge and 3 automated tests; all 3 passed with Node's built-in test runner.
+- Added SQL draft 004 for payment, journal, VAT/WHT filing snapshots and document metadata. It is review-only and has not been applied.
+- Corrected malformed PL/pgSQL dollar-quote delimiters in SQL draft 003.
+- Staging remains blocked: no separate database has been provisioned, no role mapping/company data exists, and no Finance API or Storage bucket has been deployed.
+- The actor identifier is still unverified against a real CMS bootstrap fixture. The host bridge reads the confirmed token key only; it does not infer the actor identity.
