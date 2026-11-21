@@ -103,3 +103,20 @@ Supabase Health Advisor returned no findings. Security Advisor reported `rls_ena
 - API actions still include HTTP 501 placeholders for approval, period close, journal posting, and tax submission.
 - Journal line company/account consistency needs a follow-up database invariant; `journal_lines` currently has no `company_id` column.
 - Full end-to-end workflow testing has not yet been performed.
+
+
+### Journal-line tenant integrity completed
+
+A second additive migration, `finance_journal_line_tenant_integrity`, was applied successfully and verified:
+
+- Added `finance.journal_lines.company_id` as NOT NULL.
+- Backfilled from the parent journal entry (the table had no rows at migration time).
+- Added composite foreign keys to enforce same-company journal entry, account, and partner references.
+- Added a trigger that derives `company_id` from the parent journal entry on insert/update, so the API does not need to trust a client-supplied company ID.
+- Verified the column is NOT NULL, all four company-related foreign keys exist, and the trigger is installed.
+- Supabase Health Advisor returned no findings after the change.
+
+Migration source:
+`supabase/migrations/202611210002_finance_journal_line_tenant_integrity.sql`
+
+No Finance transaction records were created or changed. Current key row counts remain: companies=1 (UAT workspace), partners=0, documents=0, payments=0, journal_entries=0, journal_lines=0, audit_events=0.
