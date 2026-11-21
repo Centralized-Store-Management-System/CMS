@@ -123,6 +123,24 @@ async function audit(user: { actorRef: string; companyId: string }, action: stri
 async function listData(url: URL, user: { companyId: string }, action: string) {
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 25));
   const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+  if (action === "company") {
+    const [company] = await db!.`select id, legal_name, tax_id, branch_type, branch_number, address, vat_registered, fiscal_year_start_month, currency_code, status from finance.companies where id = ${user.companyId}::uuid limit 1`;
+    return { company };
+  }
+  if (action === "audit") {
+    const rows = await db!.`select id, actor_ref, action, entity_type, entity_id, request_id, created_at from finance.audit_events where company_id = ${user.companyId}::uuid order by created_at desc limit ${limit} offset ${offset}`;
+    return { items: rows, limit, offset };
+  }
+  if (action === "summary") {
+    const [summary] = await db!.`
+      select
+        coalesce(sum(case when document_type in ('invoice','tax_invoice','receipt') and document_date >= date_trunc('month', current_date)::date then grand_total else 0 end),0) as revenue_mtd,
+        coalesce(sum(case when document_type in ('expense','bill','payment_voucher') and document_date >= date_trunc('month', current_date)::date then grand_total else 0 end),0) as expense_mtd,
+        count(*) filter (where status in ('draft','pending_review')) as pending_documents
+      from finance.documents where company_id = ${user.companyId}::uuid
+    `;
+    return summary;
+  }
   if (action === "partners") {
     const rows = await db!.`
       select id, partner_type, display_name, legal_name, tax_id, branch_number, email, phone,
@@ -175,6 +193,23 @@ async function createPartner(body: Record<string, unknown>, user: { companyId: s
       values (${user.companyId}::uuid, ${user.actorRef}, 'create', 'partner', ${String(partner.id)}, ${tx.json(partner)}, ${requestId})
     `;
     return [partner];
+  });
+  return row;
+}
+async function createAccount(body: Record<string, unknown>, user: { companyId: string; actorRef: string; role: string }, requestId: string) {
+  requireOwner(user);
+  const code = asText(body.account_code, 20), name = asText(body.account_name, 200);
+  const type = asText(body.account_type, 20);
+  if (!/^[0-9A-Za-z.-]{2,20}$/.test(code)) throw new HttpError(400, "รหัสบัญชีต้องมี 2–20 ตัวอักษร");
+  if (!name) throw new HttpError(400, "กรุณาระบุชื่อบัญชี");
+  if (!["asset", "liability", "equity", "revenue", "expense"].includes(type)) throw new HttpError(400, "ประเภทบัญชีไม่ถูกต้อง");
+  const [row] = await db!.begin(async tx => {
+    const [account] = await tx.`insert into finance.chart_of_accounts (company_id, account_code, account_name, account_type)
+      values (${user.companyId}::uuid, ${code}, ${name}, ${type})
+      returning id, account_code, account_name, account_type, parent_id, is_active`;
+    await tx.`insert into finance.audit_events (company_id, actor_ref, action, entity_type, entity_id, after_data, request_id)
+      values (${user.companyId}::uuid, ${user.actorRef}, 'create', 'chart_of_account', ${String(account.id)}, ${tx.json(account)}, ${requestId})`;
+    return [account];
   });
   return row;
 }
@@ -272,6 +307,10 @@ Deno.serve(async (req: Request) => {
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "รูปแบบข้อมูลไม่ถูกต้อง");
     const action = asText(body.action, 40);
     const idempotencyKey = asText(req.headers.get("idempotency-key") || body.idempotency_key, 120);
+    if (action === "account.create") {
+      const account = await createAccount(body, user, requestId);
+      return json({ ok: true, data: account }, 201, origin);
+    }
     if (action === "partner.create") {
       const partner = await createPartner(body, user, requestId);
       return json({ ok: true, data: partner }, 201, origin);
