@@ -9,12 +9,12 @@
 - [ ] Capture current production performance baseline (requires authorized monitoring access).
 
 ## Phase 1 — UI shell
-- [ ] Build Finance standalone route and responsive shell.
-- [ ] Create expandable Finance navigation; default view shows concise dashboard/status.
-- [ ] Add role-aware navigation for Owner and Accounting.
-- [ ] Keep route unlinked from production Owner Portal until auth tests pass.
+- [x] Build Finance standalone route and responsive shell.
+- [x] Create expandable Finance navigation; default view shows concise dashboard/status.
+- [ ] Add role-aware navigation for Owner and Accounting (blocked on verified CMS identity contract).
+- [x] Keep route unlinked from production Owner Portal until auth tests pass.
 
-## Phase 2 — Identity and access
+- [x] Add Finance-only CMS Theme Bridge (brand colors, typography, logo, light/dark, scale, radius, density) without importing CMS runtime or shared CSS.\n\n## Phase 2 — Identity and access
 - [ ] Read existing auth contract and implement a narrow adapter.
 - [ ] Server-side Owner/Accounting authorization.
 - [ ] RLS tests and audit trail.
