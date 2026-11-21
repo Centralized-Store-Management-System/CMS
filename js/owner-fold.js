@@ -134,6 +134,7 @@
   }
   const STOP = el => el.matches('h1, h3.h3, .oc-it-section-head, section, .ocf, .oc-it-hero, .oc-it-summary, .oc-it-actions, style, script');
 
+  const NOFOLD = /^(Theme Rollout|Owner Theme Preview)/;   // IT Control Center: ไม่ย่อ (เจ้าของขอ 21 พ.ย.)
   const SKIP = { dash: 1 };   // หน้าที่ไม่ย่อ: แดชบอร์ด (กราฟ + แตะวันดูรายละเอียด) แสดงแบบเดิม
   function process(main) {
     if (SKIP[view()]) return;
@@ -149,6 +150,7 @@
       if (sec.closest('.ocf') || sec.querySelector(':scope > .ocf-wrapped')) return;
       const title = sec.querySelector(':scope > .h2, :scope > h2, :scope > .oc-ops-head, :scope > h3');
       if (!title) return;
+      if (NOFOLD.test(String(title.textContent || '').trim())) return;   // การ์ดที่ใช้บ่อย แสดงเต็มเสมอ
       const rest = [...sec.children].filter(x => x !== title);
       if (!rest.length) return;
       sec.classList.add('ocf-host');
