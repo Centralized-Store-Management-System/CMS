@@ -165,7 +165,27 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
       : await db!.`select id, document_type, document_number, document_date, due_date, partner_id, status, subtotal, discount_total, vat_total, wht_total, grand_total, currency_code, created_at from finance.documents where company_id = ${user.companyId}::uuid order by document_date desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
-  throw new HttpError(404, "ไม่พบ Finance API action");
+  
+  if (action === "payments") {
+    const status = asText(url.searchParams.get("status"), 20);
+    const rows = status
+      ? await db!.\`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid and status = ${status} order by payment_date desc, created_at desc limit ${limit} offset ${offset}\`
+      : await db!.\`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid order by payment_date desc, created_at desc limit ${limit} offset ${offset}\`;
+    return { items: rows, limit, offset };
+  }
+  if (action === "tax-transactions") {
+    const rows = await db!.\`select id, document_id, tax_type, tax_period, tax_base, tax_rate, tax_amount, counterparty_id, tax_form_code, status, created_at from finance.tax_transactions where company_id = ${user.companyId}::uuid order by tax_period desc, created_at desc limit ${limit} offset ${offset}\`;
+    return { items: rows, limit, offset };
+  }
+  if (action === "journals") {
+    const rows = await db!.\`select id, journal_number, journal_date, description, status, total_debit, total_credit, created_by, approved_by, posted_at, created_at from finance.journal_entries where company_id = ${user.companyId}::uuid order by journal_date desc, created_at desc limit ${limit} offset ${offset}\`;
+    return { items: rows, limit, offset };
+  }
+  if (action === "periods") {
+    const rows = await db!.\`select id, period_code, starts_on, ends_on, status, closed_at from finance.accounting_periods where company_id = ${user.companyId}::uuid order by starts_on desc limit ${limit} offset ${offset}\`;
+    return { items: rows, limit, offset };
+  }
+throw new HttpError(404, "ไม่พบ Finance API action");
 }
 async function createPartner(body: Record<string, unknown>, user: { companyId: string; actorRef: string }, requestId: string) {
   const name = asText(body.display_name, 200);
@@ -275,6 +295,76 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
   });
   return doc;
 }
+
+async function createPayment(body: Record<string, unknown>, user: { companyId: string; actorRef: string }, requestId: string, idempotencyKey: string) {
+  if (!idempotencyKey || idempotencyKey.length < 8) throw new HttpError(400, "ต้องมี Idempotency Key เพื่อป้องกันการบันทึกซ้ำ");
+  const type = asText(body.payment_type, 20);
+  if (!["receipt", "disbursement", "refund"].includes(type)) throw new HttpError(400, "ประเภทการชำระเงินไม่ถูกต้อง");
+  const date = validDate(body.payment_date, "วันที่ชำระเงิน");
+  const amount = asMoney(body.amount, "จำนวนเงิน");
+  if (amount <= 0) throw new HttpError(400, "จำนวนเงินต้องมากกว่า 0");
+  const method = asText(body.method, 30);
+  if (!["cash", "bank_transfer", "credit_card", "cheque", "other"].includes(method)) throw new HttpError(400, "ช่องทางชำระเงินไม่ถูกต้อง");
+  const documentId = asText(body.document_id, 36);
+  if (documentId && !/^[0-9a-f-]{36}$/i.test(documentId)) throw new HttpError(400, "รหัสเอกสารไม่ถูกต้อง");
+  const [payment] = await db!.begin(async tx => {
+    await tx.\`select pg_advisory_xact_lock(hashtextextended(${user.companyId + ":payment:" + idempotencyKey}, 0))\`;
+    const [existing] = await tx.\`select id, payment_type, payment_date, amount, method, reference_number, status, created_at from finance.payments where company_id=${user.companyId}::uuid and idempotency_key=${idempotencyKey} limit 1\`;
+    if (existing) return [existing];
+    if (documentId) {
+      const [doc] = await tx.\`select id from finance.documents where id=${documentId}::uuid and company_id=${user.companyId}::uuid and status in ('approved','posted') limit 1\`;
+      if (!doc) throw new HttpError(400, "ไม่พบเอกสารที่อนุมัติแล้วในบริษัทนี้");
+    }
+    const [row] = await tx.\`
+      insert into finance.payments
+        (company_id, document_id, payment_type, payment_date, amount, method, reference_number, status, created_by, idempotency_key)
+      values
+        (${user.companyId}::uuid, ${documentId || null}::uuid, ${type}, ${date}::date, ${amount}, ${method},
+         ${asText(body.reference_number,120) || null}, 'pending', ${user.actorRef}, ${idempotencyKey})
+      returning id, document_id, payment_type, payment_date, amount, method, reference_number, status, created_by, created_at
+    \`;
+    await tx.\`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id)
+      values (${user.companyId}::uuid,${String(row.id)}::uuid,${user.actorRef},'created',${asText(body.note,500)||null},${requestId})\`;
+    await tx.\`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id)
+      values (${user.companyId}::uuid,${user.actorRef},'create','payment',${String(row.id)},${tx.json(row)},${requestId})\`;
+    return [row];
+  });
+  return payment;
+}
+async function approvePayment(body: Record<string, unknown>, user: { companyId: string; actorRef: string; role: string }, requestId: string) {
+  requireOwner(user);
+  const id = asText(body.payment_id,36);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400,"รหัสการชำระเงินไม่ถูกต้อง");
+  const [payment] = await db!.begin(async tx => {
+    const [row] = await tx.\`select id,status,created_by from finance.payments where id=${id}::uuid and company_id=${user.companyId}::uuid for update\`;
+    if (!row) throw new HttpError(404,"ไม่พบรายการชำระเงิน");
+    if (row.created_by === user.actorRef) throw new HttpError(403,"ผู้สร้างรายการไม่สามารถอนุมัติรายการของตนเองได้");
+    if (row.status !== "pending") throw new HttpError(409,"รายการนี้ไม่ได้อยู่ในสถานะรออนุมัติ");
+    const [updated] = await tx.\`update finance.payments set status='approved', approved_by=${user.actorRef} where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,payment_type,payment_date,amount,method,reference_number,status,approved_by,created_by,created_at\`;
+    await tx.\`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id) values (${user.companyId}::uuid,${id}::uuid,${user.actorRef},'approved',${asText(body.note,500)||null},${requestId})\`;
+    await tx.\`insert into finance.approval_events (company_id,entity_type,entity_id,action,actor_ref,note,request_id) values (${user.companyId}::uuid,'payment',${id}::uuid,'approved',${user.actorRef},${asText(body.note,500)||null},${requestId})\`;
+    await tx.\`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'approve','payment',${id},${tx.json(updated)},${requestId})\`;
+    return [updated];
+  });
+  return payment;
+}
+async function markPaymentPaid(body: Record<string, unknown>, user: { companyId: string; actorRef: string; role: string }, requestId: string) {
+  requireOwner(user);
+  const id=asText(body.payment_id,36);
+  if(!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400,"รหัสการชำระเงินไม่ถูกต้อง");
+  const paidAt=body.paid_at?new Date(String(body.paid_at)):new Date();
+  if(Number.isNaN(paidAt.getTime())) throw new HttpError(400,"วันเวลาชำระเงินจริงไม่ถูกต้อง");
+  const [payment]=await db!.begin(async tx=>{
+    const [row]=await tx.\`select id,status from finance.payments where id=${id}::uuid and company_id=${user.companyId}::uuid for update\`;
+    if(!row) throw new HttpError(404,"ไม่พบรายการชำระเงิน");
+    if(row.status!=="approved") throw new HttpError(409,"ต้องอนุมัติรายการก่อนบันทึกว่าชำระแล้ว");
+    const [updated]=await tx.\`update finance.payments set status='paid',paid_at=${paidAt.toISOString()}::timestamptz where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,status,paid_at,approved_by\`;
+    await tx.\`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id) values (${user.companyId}::uuid,${id}::uuid,${user.actorRef},'marked_paid',${asText(body.note,500)||null},${requestId})\`;
+    await tx.\`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'mark_paid','payment',${id},${tx.json(updated)},${requestId})\`;
+    return [updated];
+  });
+  return payment;
+}
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   if (origin && !ORIGINS.has(origin)) return json({ ok: false, error: "origin_not_allowed" }, 403);
@@ -320,9 +410,21 @@ Deno.serve(async (req: Request) => {
       const document = await createDocument(body, user, requestId, idempotencyKey);
       return json({ ok: true, data: document }, 201, origin);
     }
-    if (action === "payment.approve" || action === "period.close" || action === "journal.post" || action === "tax.submit") {
+    if (action === "payment.create") {
+      const payment = await createPayment(body, user, requestId, idempotencyKey);
+      return json({ ok: true, data: payment }, 201, origin);
+    }
+    if (action === "payment.approve") {
+      const payment = await approvePayment(body, user, requestId);
+      return json({ ok: true, data: payment }, 200, origin);
+    }
+    if (action === "payment.mark-paid") {
+      const payment = await markPaymentPaid(body, user, requestId);
+      return json({ ok: true, data: payment }, 200, origin);
+    }
+    if (action === "period.close" || action === "journal.post" || action === "tax.submit") {
       requireOwner(user);
-      throw new HttpError(501, "ขั้นตอนอนุมัตินี้ยังไม่เปิดใช้จนกว่าจะเพิ่ม Workflow และทดสอบใน Staging");
+      throw new HttpError(501, "Workflow นี้ยังไม่เปิดใช้");
     }
     throw new HttpError(404, "ไม่พบ Finance API action");
   } catch (error) {
