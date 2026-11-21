@@ -143,13 +143,14 @@
   // ---------- เส้นทางหน้า + โหลดโมดูลตามต้องใช้ ----------
   const PAGES = {};
   const MODULES = {
-    'js/fin-pages-main.js?v=1.0.0': ['dashboard', 'approvals'],
-    'js/fin-pages-docs.js?v=1.1.4': ['income', 'expense', 'document', 'payments'],
+    'js/fin-pages-main.js?v=1.1.0': ['dashboard', 'approvals'],
+    'js/fin-pages-docs.js?v=1.2.0': ['income', 'expense', 'document', 'payments'],
     'js/fin-pages-acct.js?v=1.0.0': ['journals', 'journal', 'accounts', 'periods'],
     'js/fin-pages-tax.js?v=1.0.0': ['vat', 'wht', 'filings'],
     'js/fin-pages-reports.js?v=1.0.0': ['trial-balance', 'profit-loss', 'balance-sheet', 'ledger', 'aging'],
     'js/fin-pages-admin.js?v=1.0.1': ['company', 'partners', 'users', 'audit', 'settings'],
     'js/fin-pages-verification.js?v=1.0.0': ['verification'],
+    'js/fin-pages-flow.js?v=1.0.0': ['expflow'],
   };
   const loaded = {};
   function loadFor(key) {
@@ -166,12 +167,12 @@
     if (!content) return;
     const role = FIN.session && FIN.session.actor && FIN.session.actor.role;
     const rolePages = {
-      manager: ['dashboard', 'income', 'expense', 'document', 'payments', 'verification'],
-      staff: ['income', 'expense', 'document', 'payments', 'verification'],
-      verifier: ['verification'],
+      manager: ['dashboard', 'expflow', 'income', 'expense', 'document', 'payments', 'verification'],
+      staff: ['expflow', 'income', 'expense', 'document', 'payments', 'verification'],
+      verifier: ['expflow', 'verification'],
     };
-    if (role === 'staff' && key === 'dashboard') { key = 'expense'; if (EMB) W.location.hash = '#fin/expense'; else W.location.hash = '#expense'; return go('#' + key, opt0); }
-    if (role === 'verifier' && key === 'dashboard') { key = 'verification'; if (EMB) W.location.hash = '#fin/verification'; else W.location.hash = '#verification'; return go('#' + key, opt0); }
+    // Staff / ผู้ตรวจสุดท้าย เริ่มที่หน้าเบิก–เคลียร์ (งานหลักของบทบาท)
+    if ((role === 'staff' || role === 'verifier') && key === 'dashboard') { key = 'expflow'; W.location.hash = EMB ? '#fin/expflow' : '#expflow'; return go('#' + key, opt0); }
     if (rolePages[role] && !rolePages[role].includes(key)) {
       content.innerHTML = head('FINANCE', 'ไม่มีสิทธิ์เข้าถึง') + errorBox('บทบาทของคุณไม่มีสิทธิ์เข้าถึงหน้านี้');
       return;
@@ -249,6 +250,9 @@
       if (EMB && EMB.onBadge) EMB.onBadge(FIN.can('approve') ? n : 0);
       return s;
     } catch (_) { return null; }
+    finally {   // งานเบิก–เคลียร์ที่ต้องทำ (ทุกบทบาท — Staff/ผู้ตรวจดูภาพรวมไม่ได้แต่ต้องเห็นงานของตัวเอง)
+      api.get('expense-flow', { tab: 'todo' }).then(f => { FIN.flowTodo = (f.counts && f.counts.todo) || 0; if (EMB && EMB.onFlowBadge) EMB.onFlowBadge(FIN.flowTodo); }).catch(() => {});
+    }
   };
 
   // โหมดฝัง: หน้าหลังร้านเรียก FIN.mount(พื้นที่แสดงผล) ทุกครั้งที่เปิดเมนู Finance

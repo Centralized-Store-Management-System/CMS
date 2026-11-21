@@ -199,6 +199,7 @@
       const committed = r.payments.filter(p => ['pending', 'approved', 'paid'].includes(p.status)).reduce((a, p) => a + Number(p.amount), 0);
       const left = r2(Number(d.grand_total) - committed);
       const acts = [];
+      if (EXPENSE.includes(d.document_type) && !['voided'].includes(d.status)) acts.push(`<button class="fm-btn fm-btn-primary" data-go="#expflow/${d.id}">ขั้นตอนเบิก–เคลียร์</button>`);
       if (d.status === 'draft' && F.can('request')) acts.push(`<button class="fm-btn fm-btn-light" data-go="#document/edit:${d.id}">แก้ไข</button>`, '<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>', '<button class="fm-btn fm-btn-primary" data-a="submit">ส่งอนุมัติ</button>');
       if (d.status === 'pending_review') {
         if (F.can('request')) acts.push('<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>');
@@ -232,7 +233,7 @@
         let ok;
         if (a === 'wht-print') { await printWhtCertificates(d, r); return; }
         if (a === 'submit') ok = await run(b, () => api.post('document.submit', { document_id: d.id }), 'ส่งอนุมัติแล้ว');
-        if (a === 'approve') ok = await run(b, () => api.post('document.approve', { document_id: d.id }), x => 'อนุมัติแล้ว · ลงบัญชี ' + x.journal_number);
+        if (a === 'approve') ok = await run(b, () => api.post('document.approve', { document_id: d.id }), x => x && x.accounting_posted === false ? 'อนุมัติคำขอเบิกแล้ว — รอผู้เบิกจ่ายเงินและเคลียร์ (ลงบัญชีตอนปิดงาน)' : 'อนุมัติแล้ว · ลงบัญชี ' + x.journal_number);
         if (a === 'return') { const n = await F.ask('ตีกลับเอกสาร', 'เอกสารจะกลับเป็นฉบับร่าง', { input: true, required: true }); if (n) ok = await run(b, () => api.post('document.return', { document_id: d.id, note: n }), 'ตีกลับแล้ว'); }
         if (a === 'void') { const n = await F.ask('ยกเลิกเอกสาร', 'เอกสารที่ยกเลิกแล้วจะใช้ต่อไม่ได้ (เลขที่เอกสารไม่ถูกนำกลับมาใช้)', { input: true, required: true, danger: true, ok: 'ยกเลิกเอกสาร' }); if (n) ok = await run(b, () => api.post('document.void', { document_id: d.id, reason: n }), 'ยกเลิกแล้ว'); }
         if (a === 'reverse') { const n = await F.ask('กลับรายการเอกสาร', 'ระบบจะลงบัญชีกลับด้าน (ใช้เมื่อบันทึกผิด) — ถ้าเป็นการคืนสินค้า/ลดราคา ให้ออกใบลดหนี้แทน', { input: true, required: true, danger: true, ok: 'กลับรายการ' }); if (n) ok = await run(b, () => api.post('document.reverse', { document_id: d.id, reason: n }), x => 'กลับรายการแล้ว · ' + x.reversal_journal); }

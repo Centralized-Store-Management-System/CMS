@@ -26,6 +26,34 @@ def ctx(p, browser, tok, mobile=False):
     pg.goto(FIN); pg.wait_for_selector('.fm-page-head h1', timeout=15000)
     return c, pg
 
+import urllib.request, uuid
+def apipost(tok, action, **body):
+    req = urllib.request.Request('http://localhost:8000/', data=json.dumps({'action': action, **body}).encode(), method='POST', headers={'content-type': 'application/json', 'x-cms-session': tok})
+    try:
+        with urllib.request.urlopen(req) as r: return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b'{}')
+def apiupload(tok, fields):
+    bd = '----t' + uuid.uuid4().hex; parts = []
+    for k, v in fields.items(): parts += [f'--{bd}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()]
+    parts += [f'--{bd}\r\nContent-Disposition: form-data; name="file"; filename="slip.pdf"\r\nContent-Type: application/pdf\r\n\r\n'.encode(), b'%PDF-1.4 x\r\n', f'--{bd}--\r\n'.encode()]
+    req = urllib.request.Request('http://localhost:8000/', data=b''.join(parts), method='POST', headers={'content-type': f'multipart/form-data; boundary={bd}', 'x-cms-session': tok})
+    with urllib.request.urlopen(req) as r: return json.loads(r.read())
+# รายจ่ายลงบัญชีตอนปิดงานเคลียร์ (ทดสอบหน้าจอเคลียร์เต็มใน flow_ui.py) — ที่นี่ปิดผ่าน API ให้ตัวเลขภาษี/งบถูกต้อง
+def close_bills(maker, approver, verifier):
+    import subprocess
+    ids = subprocess.run(['psql', '-h', '127.0.0.1', '-p', '5544', '-U', 'postgres', '-d', 'fin', '-tA', '-c',
+        "select d.id||'|'||d.grand_total||'|'||d.document_date from finance.documents d where d.status='approved' and d.document_type in ('expense','bill','payment_voucher')"], capture_output=True, text=True).stdout.split()
+    n = 0
+    for row in ids:
+        did, amt, dd = row.split('|')
+        body = dict(document_id=did, actual_paid_amount=float(amt), actual_expense_amount=float(amt), payment_date=dd, payment_method='bank_transfer')
+        s, r = apipost(maker, 'expense-clearance.submit', submit=False, **body)
+        apiupload(maker, {'action': 'expense-clearance.file.upload', 'clearance_id': r['data']['id'], 'category': 'payment_evidence'})
+        apipost(maker, 'expense-clearance.submit', **body)
+        apipost(approver, 'expense-clearance.approve', clearance_id=r['data']['id'])
+        s, r = apipost(verifier, 'expense-clearance.verify', clearance_id=r['data']['id'], confirm_complete=True); n += s == 200
+    return n
+
 def toast(pg, timeout=12000):
     t = pg.wait_for_selector('.fm-toast:not(.out)', timeout=timeout)
     s = t.inner_text(); pg.evaluate("document.querySelectorAll('.fm-toast').forEach(t=>t.remove())"); return s
@@ -63,7 +91,7 @@ with sync_playwright() as p:
     t = a.inner_text('#fmContent'); ok('บันทึกและส่งอนุมัติ → หน้าเอกสาร สถานะรออนุมัติ', 'รออนุมัติ' in t and 'TIV-' in t, s + t[:200])
     doc_url = a.evaluate('location.hash')
     go(a, '#expense/new')
-    a.select_option('[name=document_type]', 'bill'); a.select_option('[name=wht_rate]', '3')
+    a.select_option('[name=document_type]', 'bill'); a.check('[name=wht_enabled][value=yes]'); a.select_option('[name=wht_rate]', '3')
     a.fill('#fmLines tr:nth-child(1) [name=description]', 'ค่าเช่าเครื่องชงกาแฟ'); a.fill('#fmLines tr:nth-child(1) [name=unit_price]', '2000'); a.select_option('#fmLines tr:nth-child(1) [name=account_code]', '5200')
     tot = a.inner_text('#fmTot'); ok('บิลหัก 3%: 2,000 + 140 − 60 = 2,080', '2,080.00' in tot and '60.00' in tot, tot)
     a.click('[data-mode=submit]'); toast(a)
@@ -75,8 +103,10 @@ with sync_playwright() as p:
     ok('ตัวเลขรออนุมัติบนเมนู = 2', v.inner_text('#fmApprovalsBadge') == '2', v.inner_text('#fmApprovalsBadge'))
     go(v, '#approvals')
     n0 = v.locator('[data-act=doc-approve]').count()
-    v.locator('[data-act=doc-approve]').first.click(); s = toast(v); ok('อนุมัติเอกสารจากกล่องรออนุมัติ → ลงบัญชี', 'ลงบัญชี JV-' in s, s)
+    v.locator('[data-act=doc-approve]').first.click(); s = toast(v); ok('อนุมัติเอกสารจากกล่องรออนุมัติ (รายได้ → ลงบัญชีทันที · รายจ่าย → รอเคลียร์)', 'ลงบัญชี JV-' in s or 'ลงบัญชีตอนปิดงาน' in s, s)
     v.wait_for_timeout(600); v.locator('[data-act=doc-approve]').first.click(); s = toast(v); ok('อนุมัติเอกสารที่ 2', 'ลงบัญชี' in s, s)
+    apipost('tok_owner_123', 'user.set', actor_ref='u:U7', role='verifier', display_name='Verifier V')
+    ok('บิลค่าเช่า: เคลียร์ + ผู้ตรวจสุดท้ายปิดงาน (ผ่าน API) → ลงบัญชี', close_bills('tok_acc_12345', 'tok_appr_1234', 'tok_verifier_12') == 1)
 
     # ---- รับเงิน (accountant) ----
     go(a, doc_url.lstrip('#') and doc_url)

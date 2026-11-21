@@ -6,30 +6,30 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.1.4', BASE = 'modules/finance/';
+  const V = '1.2.0', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
 
   // ---------- เมนูย่อย ----------
   const MENU = [
-    ['', [['dashboard', 'ภาพรวม']]],
+    ['', [['dashboard', 'ภาพรวม'], ['expflow', 'เบิก–เคลียร์ค่าใช้จ่าย']]],
     ['รายการธุรกรรม', [['income', 'รายรับ / ลูกหนี้'], ['expense', 'รายจ่าย / เจ้าหนี้'], ['payments', 'รับ–จ่ายเงิน'], ['partners', 'คู่ค้า']]],
-    ['อนุมัติและตรวจสอบ', [['approvals', 'รออนุมัติ', 'approve'], ['verification', 'ตรวจเอกสารหลังจ่าย']]],
+    ['อนุมัติและตรวจสอบ', [['approvals', 'รออนุมัติ', 'approve']]],
     ['ภาษี', [['vat', 'ภาษีซื้อ–ภาษีขาย (VAT)'], ['wht', 'ภาษีหัก ณ ที่จ่าย'], ['filings', 'แบบภาษี (ภ.พ.30 / ภ.ง.ด.)']]],
     ['บัญชี', [['journals', 'สมุดรายวัน'], ['accounts', 'ผังบัญชี'], ['periods', 'รอบบัญชี']]],
     ['รายงาน', [['profit-loss', 'งบกำไรขาดทุน'], ['balance-sheet', 'งบแสดงฐานะการเงิน'], ['trial-balance', 'งบทดลอง'], ['ledger', 'บัญชีแยกประเภท'], ['aging', 'อายุลูกหนี้ / เจ้าหนี้']]],
     ['ตั้งค่า', [['company', 'ข้อมูลบริษัท'], ['users', 'ผู้ใช้งาน Finance', 'admin'], ['audit', 'ประวัติการทำรายการ', 'approve'], ['settings', 'ตั้งค่าระบบ', 'admin']]],
   ];
-  const ST = { page: 'dashboard', title: 'ภาพรวม', pending: 0, open: null };   // open: null = ตามหน้าปัจจุบัน
+  const ST = { page: 'dashboard', title: 'ภาพรวม', pending: 0, flow: 0, open: null };   // open: null = ตามหน้าปัจจุบัน
   const FINX = () => window.FIN;
   const canSee = need => !need || (FINX() && FINX().session ? FINX().can(need) : false);
   const canSeePage = key => {
     const role = FINX() && FINX().session && FINX().session.actor && FINX().session.actor.role;
     const pages = {
-      manager: ['dashboard', 'income', 'expense', 'document', 'payments', 'verification'],
-      staff: ['income', 'expense', 'document', 'payments', 'verification'],
-      verifier: ['verification'],
+      manager: ['dashboard', 'expflow', 'income', 'expense', 'document', 'payments', 'verification'],
+      staff: ['expflow', 'income', 'expense', 'document', 'payments', 'verification'],
+      verifier: ['expflow', 'verification'],
     };
     return !pages[role] || pages[role].includes(key);
   };
@@ -41,7 +41,8 @@
       const vis = items.filter(i => canSee(i[2]) && canSeePage(i[0]));
       if (!vis.length) return '';
       const links = vis.map(([k, label]) => {
-        const n = k === 'approvals' && ST.pending ? `<b class="${cls}-n">${ST.pending > 99 ? '99+' : ST.pending}</b>` : '';
+        const c = k === 'approvals' ? ST.pending : k === 'expflow' ? ST.flow : 0;
+        const n = c ? `<b class="${cls}-n">${c > 99 ? '99+' : c}</b>` : '';
         return `<a href="#fin/${k}" data-fin-page="${k}"${k === cur ? ' aria-current="page"' : ''}>${esc(label)}${n}</a>`;
       }).join('');
       if (!g) return links;
@@ -75,8 +76,14 @@
     if (!document.getElementById('fin-embed-css')) { const l = document.createElement('link'); l.id = 'fin-embed-css'; l.rel = 'stylesheet'; l.href = BASE + 'css/fin-embed.css?v=' + V; document.head.appendChild(l); }
     window.FIN_EMBED = {
       base: BASE, prefix: '#fin/',
-      onNav(key, title) { ST.page = key || ST.page; ST.title = title || ''; decorate(); const s = document.querySelector('.mhead[data-header="fin"] h1 small'); if (s) s.textContent = desc(); },
+      onNav(key, title) {
+        ST.page = key || ST.page; ST.title = title || ''; decorate();
+        const s = document.querySelector('.mhead[data-header="fin"] h1 small'); if (s) s.textContent = desc();
+        const m = document.querySelector('.fin-mnav summary span'); if (m) m.textContent = ST.title;
+        document.querySelectorAll('.fin-mnav a[data-fin-page]').forEach(x => { if (x.dataset.finPage === ST.page) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+      },
       onBadge(n) { ST.pending = n || 0; decorate(); },
+      onFlowBadge(n) { ST.flow = n || 0; decorate(); },
     };
     ready = new Promise((ok, no) => { const s = document.createElement('script'); s.src = BASE + 'js/fin-core.js?v=' + V; s.onload = ok; s.onerror = () => { ready = null; no(new Error('โหลด Finance ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')); }; document.head.appendChild(s); });
     return ready;
@@ -107,7 +114,7 @@
   defMod({
     key: 'fin', mod: 'acct', label: 'Finance & Accounting', icon: 'fin', perm: [PERM], noBranch: true,
     get desc() { return desc(); },
-    view, badge: () => ST.pending,
+    view, badge: () => Math.max(ST.pending, ST.flow),
     summary: () => 'รายรับ รายจ่าย ภาษี บัญชี รายงาน',
   });
   const at = Math.max(GROUPS.findIndex(g => g[0] === 'Order System'), GROUPS.findIndex(g => g[0] === 'Operations'));
@@ -128,7 +135,15 @@
     box.innerHTML = subLinks('fin-subnav');
   }
   const r0 = renderNav;
-  window.renderNav = renderNav = function () { const r = r0.apply(this, arguments); decorate(); check(); return r; };
+  let fixing = false;
+  window.renderNav = renderNav = function () {
+    const r = r0.apply(this, arguments); decorate(); check();
+    // เปิดลิงก์ #fin/… ตรงๆ แต่หน้าหลังร้านวาดหน้าอื่นไปก่อน (สิทธิ์/โมดูลยังไม่พร้อม) → วาดใหม่ครั้งเดียวเมื่อพร้อม
+    if (!fixing && location.hash.split('/')[0] === '#fin' && S.route && S.route.mod !== 'fin' && typeof allowed === 'function' && allowed(modBy('fin'))) {
+      fixing = true; setTimeout(() => { try { App.render(); } finally { fixing = false; } }, 0);
+    }
+    return r;
+  };
   const ar = App.render;
   App.render = function () { grant(); if ((location.hash.split('/')[0]) !== '#fin') ST.open = null; return ar.apply(this, arguments); };
   document.addEventListener('click', e => {
@@ -140,6 +155,9 @@
       decorate();
     }
   });
+
+  // ข้อมูลหลังร้าน (JSONP) อาจมาถึงก่อนไฟล์นี้โหลดเสร็จ → หน้าแรกถูกวาดโดยยังไม่มี Finance (เปิดลิงก์ #fin/… แล้วไปค้างที่ Today) → วาดใหม่
+  if (typeof S === 'object' && S.me && location.hash.split('/')[0] === '#fin' && (!S.route || S.route.mod !== 'fin')) setTimeout(() => App.render(), 0);
 
   const css = document.createElement('style');
   css.textContent = [

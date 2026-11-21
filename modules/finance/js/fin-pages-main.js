@@ -70,7 +70,7 @@
         const b = e.target.closest('[data-act]'); if (!b) return;
         const id = b.dataset.id, a = b.dataset.act;
         const done = () => { F.refreshBadges(); F.reload(); };
-        if (a === 'doc-approve') { if (await run(b, () => api.post('document.approve', { document_id: id }), r => 'อนุมัติแล้ว · ลงบัญชี ' + r.journal_number)) done(); }
+        if (a === 'doc-approve') { if (await run(b, () => api.post('document.approve', { document_id: id }), x => x && x.accounting_posted === false ? 'อนุมัติคำขอเบิกแล้ว — รอผู้เบิกจ่ายเงินและเคลียร์ (ลงบัญชีตอนปิดงาน)' : 'อนุมัติแล้ว · ลงบัญชี ' + x.journal_number)) done(); }
         if (a === 'doc-return') { const n = await F.ask('ตีกลับเอกสาร', 'เอกสารจะกลับเป็นฉบับร่างให้ผู้บันทึกแก้ไข', { input: true, required: true, label: 'เหตุผล' }); if (n && await run(b, () => api.post('document.return', { document_id: id, note: n }), 'ตีกลับแล้ว')) done(); }
         if (a === 'pay-approve') { if (await run(b, () => api.post('payment.approve', { payment_id: id }), 'อนุมัติแล้ว')) done(); }
         if (a === 'pay-reject') { const n = await F.ask('ปฏิเสธรายการ', 'รายการนี้จะถูกปิด สร้างใหม่ได้ภายหลัง', { input: true, required: true, label: 'เหตุผล', danger: true, ok: 'ปฏิเสธ' }); if (n && await run(b, () => api.post('payment.reject', { payment_id: id, note: n }), 'ปฏิเสธแล้ว')) done(); }
