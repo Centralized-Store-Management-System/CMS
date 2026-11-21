@@ -1,25 +1,47 @@
-/* แอปติดตั้งจากเว็บ (PWA): เปิดเร็วขึ้นจากไฟล์ที่จำไว้ในเครื่อง
- * - หน้าเว็บ (html): ถามเน็ตก่อนเสมอ (ได้เวอร์ชันล่าสุด) เน็ตหลุดค่อยใช้ที่จำไว้
- * - ไฟล์ js/css/รูป ของเว็บนี้: ถามเน็ตก่อน (ได้ไฟล์ล่าสุดเสมอ) เน็ตช้าเกิน 3 วิ/หลุด ใช้ที่จำไว้
- * - ข้อมูลจาก Google (Apps Script), LINE, ฟอนต์: ไม่แตะ ไม่เก็บ (ข้อมูลสดเสมอ) */
-const CACHE = 'amz-app-v3';
-self.addEventListener('install', e => { self.skipWaiting(); });
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('amz-app-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+/* CMS PWA update strategy
+ * Navigation: network-first, cached fallback.
+ * Same-origin static assets: network-first with a short cache fallback.
+ * Retain two prior caches to keep already-open clients resilient during rollout.
+ */
+const CACHE = 'cms-app-v4';
+const CACHE_PREFIX = 'cms-app-';
+self.addEventListener('install', event => { self.skipWaiting(); });
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = (await caches.keys()).filter(k => k.startsWith(CACHE_PREFIX)).sort().reverse();
+    const keep = new Set([CACHE, ...keys.filter(k => k !== CACHE).slice(0, 2)]);
+    await Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
-self.addEventListener('fetch', e => {
-  const req = e.request, url = new URL(req.url);
+self.addEventListener('fetch', event => {
+  const req = event.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(res => { const c = res.clone(); caches.open(CACHE).then(ca => ca.put(url.pathname, c)); return res; })
-      .catch(() => caches.match(url.pathname).then(r => r || caches.match(url.pathname.replace(/[^/]*$/, 'index.html')))));
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req, { cache: 'no-store' });
+        if (res && res.ok) { const c = await caches.open(CACHE); c.put(url.pathname, res.clone()).catch(() => {}); }
+        return res;
+      } catch (_) {
+        return (await caches.match(url.pathname)) || (await caches.match(url.pathname.replace(/[^/]*$/, 'index.html'))) || Response.error();
+      }
+    })());
     return;
   }
-  if (!/\.(js|css|png|svg|webmanifest|woff2?)$/.test(url.pathname)) return;
-  // ถามเน็ตก่อน (ได้ไฟล์ล่าสุดเสมอ แม้ชื่อไฟล์เดิม) ถ้าเน็ตช้าเกิน 3 วินาทีหรือหลุด ใช้ที่จำไว้
-  e.respondWith(caches.open(CACHE).then(ca => {
-    const net = fetch(req).then(res => { if (res.ok) ca.put(req, res.clone()); return res; });
-    const slow = new Promise(r => setTimeout(r, 3000)).then(() => ca.match(req)).then(hit => hit || net);
-    return Promise.race([net.catch(() => ca.match(req)), slow]).then(r => r || net);
-  }));
+  if (!/\.(js|css|png|svg|webmanifest|woff2?|json)$/.test(url.pathname)) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(req);
+    try {
+      const res = await Promise.race([
+        fetch(req, { cache: 'no-store' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 2500))
+      ]);
+      if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
+      return res;
+    } catch (_) {
+      return cached || (await caches.match(req)) || Response.error();
+    }
+  })());
 });
