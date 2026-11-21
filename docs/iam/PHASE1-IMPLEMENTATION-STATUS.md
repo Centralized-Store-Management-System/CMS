@@ -4,6 +4,17 @@ Date: 21 Nov 2026
 Branch: feat/hr-position-id-sync-phase1
 Base: feat/hr-position-iam-email-line
 
+## Implemented in this branch / UAT
+
+Updated: 21 Nov 2026, UAT project `ytxbnqosenolojifeikf`.
+
+- Applied `dynamic_org_iam_foundation` migration to UAT (version `20261121150539`).
+- Applied `iam_null_scope_unique_indexes` migration (version `20261121150758`).
+- Deployed `hr-position-api` v3 to UAT. It now returns Position Master, Department Master and queue status; creates/updates positions transactionally with audit + outbox; supports department create/update; maps duplicate-key errors to HTTP 409.
+- Seeded 10 draft application registrations, 2 draft roles (Final Verifier and Accounting), 3 departments, linked the 7 existing positions to departments, and created 2 draft position-role bindings. No active grants were created.
+- Added `iam-admin-api` v1 to UAT and the owner-side Centralized IAM catalog UI on this feature branch. The API supports draft application/permission/role catalogs, role-permission assignment, draft position-role bindings and retrying failed outbox records. It explicitly rejects activating a position-role binding until protected backends enforce authorization.
+- Added dynamic Department Master create flow to the HR Position Master UI on this feature branch.
+
 ## Implemented in this branch
 
 1. Added an additive schema migration for dynamic organizations/departments, application registry, permission catalog, roles, role-permission links, position-role bindings, scoped principal grants, sync outbox and IAM audit log.
@@ -15,27 +26,33 @@ Base: feat/hr-position-iam-email-line
 
 ## Important limitations — not yet complete
 
-- The new migration has NOT been applied to Supabase.
-- The updated Edge Function has NOT been deployed.
-- The outbox has no worker/consumer yet; events remain pending until the IT-side consumer is implemented. UI must not label them Synced.
-- The new normalized IAM tables are schema foundation only. IT Admin CRUD UI, app/permission catalog seeding, position-to-role assignment workflow and backend authorization enforcement remain pending.
+- The feature branch UI has not been merged/deployed to the live Back Office / Owner site. UAT schema and Edge Functions are deployed, but the HR screen visible in the current live site may still be the previous version.
+- The outbox has no per-application consumer/acknowledgement worker yet. Events remain pending; they are not synchronized across business applications.
+- The IAM catalog UI/API currently creates and edits draft catalogs only. Permission catalog entries are not yet seeded because real module permission contracts have not been audited.
+- Runtime authorization enforcement is not implemented in Finance, HR, Payroll, Inventory, Orders, Schedule, LINE or LIFF. Binding activation is intentionally blocked by the API.
+- Email invitation registration and verified Email+LINE linking are not implemented. Existing Apps Script user identity and LINE onboarding remain unchanged.
+- Full HR ↔ Users canonical identity sync and automated provisioning from position changes are not yet implemented.
 - Existing it_position_permissions remains as a legacy compatibility path; it is not yet replaced.
 - No business module is claimed as centrally enforced until its backend and RLS policies have been individually upgraded and tested.
 - Email invitation registration and verified Email+LINE linking are not implemented in this phase.
 - No change has been made to production login, LINE onboarding, Finance workflow or existing role enforcement.
 
-## Required validation before UAT migration/deployment
+## Required validation before opening HR UAT to the user
 
-1. Apply migration in a disposable test database and verify all constraints/RLS/grants.
-2. Run static/type checks on hr-position-api.
-3. Verify create/update position writes HR row, HR audit and outbox row atomically.
-4. Verify duplicate position code returns a controlled conflict response.
-5. Verify API denies unauthenticated users and non-HR users.
-6. Verify HR user can create position but cannot activate IT grants.
-7. Verify IT Admin can configure only approved role/permission mappings.
-8. Verify employee records persist UUID positionId and preserve existing display values.
-9. Verify a failed Position API prevents new/changed position assignments rather than persisting fallback IDs.
-10. Run regression checks on Recruitment → Hire → Employee and HR ↔ Users synchronization.
+1. Publish the feature branch UI to a controlled UAT URL without merging unrelated feature work or Finance changes.
+2. Run static/type checks on both Edge Functions and browser JavaScript.
+3. Verify authenticated HR GET and create/update position requests.
+4. Verify create/update position writes HR row, HR audit and outbox row atomically.
+5. Verify duplicate position code returns HTTP 409.
+6. Verify unauthenticated users and non-HR users are denied.
+7. Verify HR can create a position but cannot activate IT grants.
+8. Verify Owner/IT Admin can manage draft applications, permissions, roles and bindings.
+9. Verify direct API calls cannot activate bindings; verify outbox retry and idempotency.
+10. Verify employee records persist UUID positionId and preserve existing display values.
+11. Verify failed Position API prevents new/changed position assignments rather than persisting fallback IDs.
+12. Implement and test the per-application consumer/acknowledgement flow.
+13. Implement verified Email invitation and LINE identity linking, then regression-test duplicate account prevention.
+14. Run Recruitment → Hire → Employee and HR ↔ Users synchronization regression tests.
 
 ## Safety decision
 

@@ -2,3 +2,9 @@ project_id = "ytxbnqosenolojifeikf"
 
 [functions.finance-api]
 verify_jwt = false
+
+[functions.hr-position-api]
+verify_jwt = false
+
+[functions.iam-admin-api]
+verify_jwt = false
