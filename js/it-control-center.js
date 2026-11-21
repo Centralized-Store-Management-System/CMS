@@ -58,7 +58,7 @@ function ocControlPage(){
  .itcc-audit{font-size:12px;padding:9px 0;border-bottom:1px solid var(--line)}
  @media(max-width:900px){.itcc-grid{grid-template-columns:1fr}.itcc-device{max-width:100%}}
  </style>
- <h1>IT Control Center <button class="btn" onclick="itccPositionAccess()">Position Permissions</button></h1><p class="muted">ควบคุม Theme, rollout และ Authentication Policy แยกตามระบบ ผู้ใช้ อุปกรณ์ และช่องทางติดตั้ง</p>
+ <h1>IT Control Center <button class="btn" onclick="itccPositionAccess()">Legacy Position Permissions</button> <button class="btn primary" onclick="iamAdminOpen()">Centralized IAM</button></h1><p class="muted">ควบคุม Theme, rollout และ Authentication Policy แยกตามระบบ ผู้ใช้ อุปกรณ์ และช่องทางติดตั้ง</p>
  <div class="kpis" style="margin:12px 0"><div class="kpi ok"><b>${ownerRows.filter(x=>x.theme_enabled).length}</b><span>Owner Theme scopes ON</span></div><div class="kpi"><b>${ITCC.rows.length}</b><span>Scopes ที่ลงทะเบียน</span></div><div class="kpi warn"><b>OFF</b><span>Auth Enforcement</span></div></div>
  <div class="note">การตั้งค่า Theme และ Authentication แยกจากกัน · การแก้ไข Login ปัจจุบันยังไม่เปิดใช้ · ทุกการบันทึกเก็บ Audit Log บนฐานข้อมูล</div>
  <div class="itcc-grid" style="margin-top:14px">
