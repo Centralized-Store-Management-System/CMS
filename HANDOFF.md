@@ -20,6 +20,7 @@
 - **แก้บั๊ก live:** อัปโหลดหลักฐานเคลียร์ไม่ได้ (check `document_files`), Owner อนุมัติ/ผู้ตรวจยืนยันเคลียร์ error (check `approval_events.action`), ล้างข้อมูลทดสอบล้มเมื่อมีรายการเคลียร์, ชื่อไฟล์ภาษาไทยเพี้ยน, deep link `#fin/...` ค้างหน้า Today
 - **ทดสอบ:** API E2E 178/178 · flow_ui 28/28 · ui 38/38 · embed 29/29 · live smoke 401 ไทย
 - **ตั้งค่าก่อนใช้:** Finance › ตั้งค่า › ผู้ใช้งาน → กำหนด manager / staff / verifier (ผู้ตรวจต้องเป็นคนอื่น)
+- **เปลี่ยนหน้า Finance ลื่น (V 1.2.2):** `fin-core.go` วาดแต่ละหน้าลงกล่องใหม่ `.fm-host` — หน้าเดิมแสดงจาง (`#fmContent.fm-busy`) จนหน้าใหม่พร้อม (เกิน 0.7 วิ ค่อยแสดงสถานะโหลด) · แก้บั๊กตัวดักคลิกของหน้า (เบิก–เคลียร์/ตรวจเอกสาร/ผู้ใช้/ผังบัญชี) ซ้อนบน `#fmContent` จนกดครั้งเดียวยิง API หลายรอบ
 - **กดเมนูย่อย Finance ไม่ refresh ทั้งหน้าแล้ว** (`finance-embed.js` V 1.2.1): ย้ายหน้า `#fin/a → #fin/b` ข้าม `App.render` ของหลังร้าน เปลี่ยนเฉพาะเนื้อหา Finance (`FIN.go`) · กลุ่มเมนูที่กางไว้ไม่หุบ · ไม่แก้ `app.js`
 
 ## Finance & Accounting (21 พ.ย. 2569 — Claude, branch `feature/finance-module-foundation`, PR #6) — merge เข้า main แล้ว 21 พ.ย. 2569 16:3x (`63669a0`) หน้า Finance ขึ้นจริงแล้ว

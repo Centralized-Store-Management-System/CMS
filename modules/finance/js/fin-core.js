@@ -183,11 +183,27 @@
     if (!p) { content.innerHTML = errorBox('ไม่พบหน้า'); return; }
     if (p.need && !FIN.can(p.need)) { content.innerHTML = head('FINANCE', p.title) + `<div class="fm-notice"><span>ⓘ</span><div><b>สิทธิ์ไม่พอ</b><small>หน้านี้สำหรับ ${esc(p.need === 'admin' ? 'Owner' : p.need === 'approve' ? 'ผู้อนุมัติ' : 'ผู้บันทึกบัญชี')} เท่านั้น</small></div></div>`; markNav(p.nav || key, p.title); return; }
     markNav(p.nav || key, p.title);
-    content.innerHTML = loading();
-    content.scrollTop = 0; if (!EMB || !opt0.keepScroll) W.scrollTo(0, 0);
-    try { await p.render(content, arg ? decodeURIComponent(arg) : ''); }
-    catch (e) { if (e.status !== 401) content.innerHTML = head('FINANCE', p.title) + errorBox(e.message); }
+    // แต่ละหน้าวาดลงกล่องใหม่ของตัวเอง (.fm-host):
+    // - หน้าเดิมยังแสดงอยู่ (จางลง) จนหน้าใหม่พร้อม → ไม่กระพริบเป็นหน้าโหลดทุกครั้งที่กดเมนู (เกิน 0.7 วิ ค่อยสลับให้เห็นสถานะโหลด)
+    // - ตัวดักคลิกของหน้าเก่าหายไปพร้อมกล่องเก่า → ไม่ซ้อนกันจนกดครั้งเดียวทำงานหลายรอบ
+    const my = ++navSeq;
+    const host = document.createElement('div'); host.className = 'fm-host'; host.innerHTML = loading();
+    const prev = content.querySelector(':scope > .fm-host:not([hidden])');
+    let shown = false;
+    const show = () => {
+      if (shown || my !== navSeq) return; shown = true;
+      [...content.children].forEach(n => { if (n !== host) n.remove(); });
+      host.hidden = false; content.classList.remove('fm-busy');
+      content.scrollTop = 0; if (!EMB || !opt0.keepScroll) W.scrollTo(0, 0);
+    };
+    if (prev) { content.querySelectorAll(':scope > .fm-host[hidden]').forEach(n => n.remove()); host.hidden = true; content.appendChild(host); content.classList.add('fm-busy'); }
+    else { content.innerHTML = ''; content.appendChild(host); show(); }
+    const timer = setTimeout(show, 700);
+    try { await p.render(host, arg ? decodeURIComponent(arg) : ''); }
+    catch (e) { if (e.status !== 401) host.innerHTML = head('FINANCE', p.title) + errorBox(e.message); }
+    finally { clearTimeout(timer); if (my === navSeq) show(); else if (!shown) host.remove(); }
   }
+  let navSeq = 0;
   function markNav(key, title) {
     FIN.title = title || '';
     if (EMB) { if (EMB.onNav) EMB.onNav(key, title); return; }
