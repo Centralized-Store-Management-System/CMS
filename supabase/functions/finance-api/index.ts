@@ -72,7 +72,7 @@ async function authenticate(token: string) {
   const cmsOwner = String(me.role).toLowerCase() === "owner";
   const cmsAccounting = Array.isArray(me.perms) && me.perms.map(String).includes("acct");
   if (!cmsOwner && !cmsAccounting) throw new HttpError(403, "บัญชีนี้ไม่มีสิทธิ์ Finance");
-  const [mapping] = await db!.`
+  const [mapping] = await db!`
     select ur.company_id, ur.role_code, c.legal_name, c.currency_code
     from finance.user_roles ur
     join finance.companies c on c.id = ur.company_id
@@ -115,7 +115,7 @@ function validDate(value: unknown, label: string) {
   return s;
 }
 async function audit(user: { actorRef: string; companyId: string }, action: string, entityType: string, entityId: string, after: unknown, requestId: string) {
-  await db!.`
+  await db!`
     insert into finance.audit_events (company_id, actor_ref, action, entity_type, entity_id, after_data, request_id)
     values (${user.companyId}::uuid, ${user.actorRef}, ${action}, ${entityType}, ${entityId}, ${db!.json(after)}, ${requestId})
   `;
@@ -124,15 +124,15 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 25));
   const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
   if (action === "company") {
-    const [company] = await db!.`select id, legal_name, tax_id, branch_type, branch_number, address, vat_registered, fiscal_year_start_month, currency_code, status from finance.companies where id = ${user.companyId}::uuid limit 1`;
+    const [company] = await db!`select id, legal_name, tax_id, branch_type, branch_number, address, vat_registered, fiscal_year_start_month, currency_code, status from finance.companies where id = ${user.companyId}::uuid limit 1`;
     return { company };
   }
   if (action === "audit") {
-    const rows = await db!.`select id, actor_ref, action, entity_type, entity_id, request_id, created_at from finance.audit_events where company_id = ${user.companyId}::uuid order by created_at desc limit ${limit} offset ${offset}`;
+    const rows = await db!`select id, actor_ref, action, entity_type, entity_id, request_id, created_at from finance.audit_events where company_id = ${user.companyId}::uuid order by created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "summary") {
-    const [summary] = await db!.`
+    const [summary] = await db!`
       select
         coalesce(sum(case when document_type in ('invoice','tax_invoice','receipt') and document_date >= date_trunc('month', current_date)::date then grand_total else 0 end),0) as revenue_mtd,
         coalesce(sum(case when document_type in ('expense','bill','payment_voucher') and document_date >= date_trunc('month', current_date)::date then grand_total else 0 end),0) as expense_mtd,
@@ -142,7 +142,7 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
     return summary;
   }
   if (action === "partners") {
-    const rows = await db!.`
+    const rows = await db!`
       select id, partner_type, display_name, legal_name, tax_id, branch_number, email, phone,
              address, default_wht_type, default_wht_rate, is_active, created_at, updated_at
       from finance.partners where company_id = ${user.companyId}::uuid
@@ -151,7 +151,7 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
     return { items: rows, limit, offset };
   }
   if (action === "accounts") {
-    const rows = await db!.`
+    const rows = await db!`
       select id, account_code, account_name, account_type, parent_id, is_active
       from finance.chart_of_accounts where company_id = ${user.companyId}::uuid
       order by account_code asc limit ${limit} offset ${offset}
@@ -161,8 +161,8 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
   if (action === "documents") {
     const status = asText(url.searchParams.get("status"), 30);
     const rows = status
-      ? await db!.`select id, document_type, document_number, document_date, due_date, partner_id, status, subtotal, discount_total, vat_total, wht_total, grand_total, currency_code, created_at from finance.documents where company_id = ${user.companyId}::uuid and status = ${status} order by document_date desc, created_at desc limit ${limit} offset ${offset}`
-      : await db!.`select id, document_type, document_number, document_date, due_date, partner_id, status, subtotal, discount_total, vat_total, wht_total, grand_total, currency_code, created_at from finance.documents where company_id = ${user.companyId}::uuid order by document_date desc, created_at desc limit ${limit} offset ${offset}`;
+      ? await db!`select id, document_type, document_number, document_date, due_date, partner_id, status, subtotal, discount_total, vat_total, wht_total, grand_total, currency_code, created_at from finance.documents where company_id = ${user.companyId}::uuid and status = ${status} order by document_date desc, created_at desc limit ${limit} offset ${offset}`
+      : await db!`select id, document_type, document_number, document_date, due_date, partner_id, status, subtotal, discount_total, vat_total, wht_total, grand_total, currency_code, created_at from finance.documents where company_id = ${user.companyId}::uuid order by document_date desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   
