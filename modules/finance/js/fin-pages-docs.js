@@ -86,7 +86,13 @@
     if (d && d.partner_id) form.partner_id.value = d.partner_id;
     form.partner_id.addEventListener('change', () => {
       const p = partners.find(x => x.id === form.partner_id.value);
-      if (p && p.default_wht_rate != null && !d) form.wht_rate.value = String(Number(p.default_wht_rate));
+      if (p && p.default_wht_rate != null && !d) {
+        form.wht_rate.value = String(Number(p.default_wht_rate));
+        const useWht = Number(p.default_wht_rate) > 0;
+        form.querySelector('[name="wht_enabled"][value="yes"]').checked = useWht;
+        form.querySelector('[name="wht_enabled"][value="no"]').checked = !useWht;
+        form.wht_rate.disabled = !useWht;
+      }
       calc();
     });
     const addLine = l => {
@@ -123,7 +129,13 @@
       const match = partners.find(x => x.id === p.id);
       const o = document.createElement('option'); o.value = p.id; o.textContent = (match && match.display_name) || p.display_name;
       form.partner_id.appendChild(o); form.partner_id.value = p.id;
-      if (match && match.default_wht_rate != null) form.wht_rate.value = String(Number(match.default_wht_rate));
+      if (match && match.default_wht_rate != null) {
+        form.wht_rate.value = String(Number(match.default_wht_rate));
+        const useWht = Number(match.default_wht_rate) > 0;
+        form.querySelector('[name="wht_enabled"][value="yes"]').checked = useWht;
+        form.querySelector('[name="wht_enabled"][value="no"]').checked = !useWht;
+        form.wht_rate.disabled = !useWht;
+      }
       calc();
     });
     const key = F.idem();
