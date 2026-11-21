@@ -7,6 +7,7 @@ create unique index if not exists finance_documents_company_id_id_uq on finance.
 create unique index if not exists finance_payments_company_id_id_uq on finance.payments(company_id,id);
 create unique index if not exists finance_tax_filings_company_id_id_uq on finance.tax_filings(company_id,id);
 create unique index if not exists finance_tax_transactions_company_id_id_uq on finance.tax_transactions(company_id,id);
+create unique index if not exists finance_chart_of_accounts_company_id_id_uq on finance.chart_of_accounts(company_id,id);
 
 do $$
 begin
