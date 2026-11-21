@@ -1,6 +1,51 @@
 /* ระบบ HR บุคคล (Owner และ HR): ข้อมูลพนักงานทุกอย่าง รูปถ่าย สิทธิ์ใช้งาน PIN สาขาประจำ สาขาที่ดูแล และผู้สมัคร
  * กะและวันหยุดของแต่ละคน ตั้งที่เมนู ตารางงาน > รูปแบบกะ */
-const POSITIONS = ['ผู้จัดการร้าน', 'ผู้ช่วยผู้จัดการ', 'บาริสต้า', 'แคชเชียร์', 'พาร์ทไทม์'];
+let HR_POSITIONS = [
+  { id:'legacy-manager', position_code:'MANAGER', name_th:'ผู้จัดการร้าน', status:'active' },
+  { id:'legacy-assistant', position_code:'ASST_MANAGER', name_th:'ผู้ช่วยผู้จัดการ', status:'active' },
+  { id:'legacy-barista', position_code:'BARISTA', name_th:'บาริสต้า', status:'active' },
+  { id:'legacy-cashier', position_code:'CASHIER', name_th:'แคชเชียร์', status:'active' },
+  { id:'legacy-parttime', position_code:'PARTTIME', name_th:'พาร์ทไทม์', status:'active' },
+  { id:'legacy-final-verifier', position_code:'FINAL_VERIFIER', name_th:'Final Verifier', department:'Finance', status:'active' },
+  { id:'legacy-accounting', position_code:'ACCOUNTING', name_th:'Accounting', department:'Finance & Accounting', status:'active' }
+];
+const POSITIONS = HR_POSITIONS.filter(p => p.status === 'active').map(p => p.name_th);
+const HR_POSITION_API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/hr-position-api';
+async function hrPositionRequest(method='GET', body=null) {
+  const r=await fetch(HR_POSITION_API,{method,headers:{'content-type':'application/json','x-cms-session':S.token||''},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+  const p=await r.json().catch(()=>({}));
+  if(!r.ok||!p.ok) throw new Error(p.error||'โหลดข้อมูลตำแหน่งไม่สำเร็จ');
+  return p;
+}
+async function hrLoadPositions() {
+  try { const p=await hrPositionRequest(); if(Array.isArray(p.positions)&&p.positions.length) HR_POSITIONS=p.positions; }
+  catch(e) { console.warn('HR position master unavailable; using compatibility list',e.message); }
+}
+function pPositions() {
+ const rows=HR_POSITIONS;
+ return `<div class="h2">Position Master <span class="spacer"></span><button class="btn primary" data-a="newPosition">Create Position</button></div>
+ <p class="note">HR เป็นเจ้าของข้อมูลตำแหน่ง ส่วนการเปิดสิทธิ์ใช้งานแต่ละระบบต้องกำหนดและอนุมัติผ่าน IT Control Center ก่อน</p>
+ <div class="group">${rows.map(p=>`<button class="row" data-a="position:${esc(p.id)}"><span class="main"><span class="t">${esc(p.name_th)}</span><span class="s">${esc(p.position_code)} · ${esc(p.department||'ไม่ระบุแผนก')}</span></span><span class="chip ${p.status==='active'?'ok':'warn'}">${p.status==='active'?'Active':'Inactive'}</span></button>`).join('')||empty('ยังไม่มีตำแหน่ง')}</div>`;
+}
+function openPosition(id) {
+ const p=id?HR_POSITIONS.find(x=>x.id===id):{status:'active'};
+ if(id&&!p)return;
+ openForm({title:id?'แก้ไขตำแหน่ง':'Create Position',fields:[
+  {k:'position_code',label:'Position Code',req:1,help:'ภาษาอังกฤษ ตัวเลข _ หรือ -'},
+  {k:'name_th',label:'ชื่อตำแหน่ง (ไทย)',req:1},
+  {k:'name_en',label:'Position Name (English)'},
+  {k:'department',label:'Department'},
+  {k:'level',label:'Position Level'},
+  {k:'description',label:'รายละเอียดหน้าที่',type:'textarea'},
+  {k:'status',label:'สถานะ',type:'select',options:[['active','Active'],['inactive','Inactive']]}
+ ],data:p,onSave:async v=>{
+  const x=await hrPositionRequest('POST',{action:'save-position',...v,id:id||undefined});
+  const i=HR_POSITIONS.findIndex(z=>z.id===x.position.id);
+  if(i<0)HR_POSITIONS.push(x.position);else HR_POSITIONS[i]=x.position;
+  HR_POSITIONS.sort((a,b)=>a.name_th.localeCompare(b.name_th,'th'));
+  toast('บันทึก Position Master แล้ว · IT ต้องกำหนดสิทธิ์ก่อนใช้งาน');
+ },onDelete:null});
+}
 const PAYTYPES = [['monthly', 'รายเดือน'], ['daily', 'รายวัน'], ['hourly', 'รายชั่วโมง (พาร์ทไทม์)']];
 const EMP_STAT = ['ทดลองงาน', 'ประจำ', 'ลาออก'];
 const APP_STAT = ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์', 'ไม่ผ่าน', 'รับเข้าทำงานแล้ว'];
@@ -120,9 +165,10 @@ defMod({
   key: 'hr', mod: 'hr', label: 'HR', icon: 'hr', group: 'People', desc: 'ประวัติพนักงาน รูป สิทธิ์ใช้งาน ผู้สมัคร', perm: ['hr'],
   subs: [
     { key: 'emp', label: 'Employees', view: pEmp },
+    { key: 'positions', label: 'Positions', view: pPositions },
     { key: 'app', label: 'Recruitment', view: pApp },
     { key: 'docs', label: 'Documents', view: () => window.HRDocuments ? window.HRDocuments.view() : '<p class="note">กำลังโหลดเมนู Documents…</p>' }
   ],
   summary: () => { const n = activeEmps().length, a = S.t.applicants.filter(x => ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์'].includes(x.status)).length; return `พนักงาน ${n} คน${a ? `, ผู้สมัครรอดำเนินการ ${a}` : ''}`; },
-  acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id) }
+  acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id), newPosition: () => openPosition(), position: id => openPosition(id) }
 });
