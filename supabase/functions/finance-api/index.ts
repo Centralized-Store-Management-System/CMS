@@ -112,7 +112,7 @@ function asMoney(value: unknown, label: string) {
 function round2(n: number) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 function validDate(value: unknown, label: string) {
   const s = asText(value, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s))) throw new HttpError(400, label + " ไม่ถูกต้อง");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s)) || new Date(s + "T00:00:00Z").toISOString().slice(0, 10) !== s) throw new HttpError(400, label + " ไม่ถูกต้อง");
   return s;
 }
 async function audit(user: { actorRef: string; companyId: string }, action: string, entityType: string, entityId: string, after: unknown, requestId: string) {
@@ -184,6 +184,7 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
   if (!["invoice", "tax_invoice", "receipt", "expense", "bill", "payment_voucher", "credit_note", "debit_note", "other"].includes(type)) throw new HttpError(400, "ประเภทเอกสารไม่ถูกต้อง");
   const date = validDate(body.document_date, "วันที่เอกสาร");
   const due = body.due_date ? validDate(body.due_date, "วันครบกำหนด") : null;
+  if (due && due < date) throw new HttpError(400, "วันครบกำหนดต้องไม่ก่อนวันที่เอกสาร");
   const partnerId = asText(body.partner_id, 36);
   if (partnerId && !/^[0-9a-f-]{36}$/i.test(partnerId)) throw new HttpError(400, "รหัสคู่ค้าไม่ถูกต้อง");
   const lines = Array.isArray(body.lines) ? body.lines as Record<string, unknown>[] : [];
