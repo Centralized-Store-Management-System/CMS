@@ -43,7 +43,7 @@ export async function verificationQueue(_url: URL, u: User) {
       left join finance.partners pt on pt.id = p.partner_id
       left join finance.partners pt2 on pt2.id = d.partner_id
       left join finance.payment_verifications v on v.company_id = p.company_id and v.payment_id = p.id
-    where p.company_id = ${u.companyId}::uuid and p.status = 'paid'
+    where p.company_id = ${u.companyId}::uuid and p.status = 'paid' and p.payment_type = 'disbursement'
       and (${ownOnly} = false or p.created_by = ${u.actorRef})
     order by p.paid_at desc nulls last, p.created_at desc limit 200`;
   return { items: rows.map((r: Record<string, unknown>) => ({
@@ -95,9 +95,10 @@ export async function uploadPaymentFile(form: FormData, u: User, rid: string) {
   if (file.size < 1 || file.size > MAX_BYTES) fail(400, "ไฟล์ต้องมีขนาดไม่เกิน 20 MB");
   if (!MIME.has(file.type)) fail(400, "รองรับเฉพาะ PDF, JPG, PNG และ WEBP");
   const sql = db();
-  const [p] = await sql`select id, status, created_by, document_id from finance.payments
+  const [p] = await sql`select id, status, payment_type, created_by, document_id from finance.payments
     where id = ${paymentId}::uuid and company_id = ${u.companyId}::uuid`;
   if (!p) fail(404, "ไม่พบรายการจ่าย");
+  if (p.payment_type !== "disbursement") fail(409, "ขั้นตอนตรวจเอกสารนี้ใช้กับรายการจ่ายเงินเท่านั้น");
   if (p.status !== "paid") fail(409, "แนบหลักฐานได้หลังบันทึกว่าจ่ายเงินจริงแล้วเท่านั้น");
   canManagePayment(u, p.created_by);
   const [existingVerification] = await sql`select status from finance.payment_verifications
@@ -136,9 +137,10 @@ export async function verifyPaymentDocuments(body: Record<string, unknown>, u: U
   const paymentId = uuid(body.payment_id, "รายการจ่าย")!;
   if (body.confirm_complete !== true) fail(400, "กรุณาติ๊กยืนยันว่าเอกสารครบถ้วนก่อน");
   return await db().begin(async (tx: Tx) => {
-    const [p] = await tx`select id, status from finance.payments
+    const [p] = await tx`select id, status, payment_type from finance.payments
       where id = ${paymentId}::uuid and company_id = ${u.companyId}::uuid for update`;
     if (!p) fail(404, "ไม่พบรายการจ่าย");
+    if (p.payment_type !== "disbursement") fail(409, "ขั้นตอนตรวจเอกสารนี้ใช้กับรายการจ่ายเงินเท่านั้น");
     if (p.status !== "paid") fail(409, "ตรวจเอกสารได้หลังจ่ายเงินจริงแล้วเท่านั้น");
     const [counts] = await tx`select count(*)::int as total,
       count(*) filter (where file_category = 'payment_evidence')::int as evidence
