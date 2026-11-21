@@ -4,6 +4,36 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const money=n=>new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:2}).format(Number(n)||0);
 const field=(label,name,type='text',required=false,placeholder='')=>'<label class="fm-field"><span>'+label+(required?' <i>*</i>':'')+'</span><input name="'+name+'" type="'+type+'" '+(required?'required':'')+' placeholder="'+placeholder+'"></label>';
 function render(kind,root){
+ if(kind==='payments'){
+  root.innerHTML='<div class="fm-page-head"><div><div class="fm-eyebrow">CASH MANAGEMENT · PAYMENT CONTROL</div><h1>การชำระเงิน</h1><p>บันทึกรายการรับ/จ่ายเงิน พร้อมขั้นตอน Maker–Checker และประวัติอนุมัติ</p></div><span class="fm-status-pill">LIVE DATA</span></div><div class="fm-notice"><span>ⓘ</span><div><b>รายการทดสอบ UAT</b><small>รายการที่บันทึกเป็นข้อมูลทดสอบ ไม่ใช่หลักฐานการรับหรือจ่ายเงินจริง</small></div></div><section class="fm-panel"><div class="fm-filter-row"><select id="fmPaymentFilter"><option value="">ทุกรายการ</option><option value="pending">รออนุมัติ</option><option value="approved">อนุมัติแล้ว</option><option value="paid">ชำระแล้ว</option><option value="rejected">ไม่อนุมัติ</option></select><button class="fm-btn fm-btn-primary" id="fmPaymentAdd">＋ บันทึกรายการรับ/จ่าย</button></div><div class="fm-table-wrap"><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>จำนวนเงิน</th><th>ช่องทาง</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead><tbody id="fmPaymentRows"><tr><td colspan="6" class="fm-empty-cell">กำลังโหลด…</td></tr></tbody></table></div></section><div class="fm-modal" id="fmPaymentModal" hidden><div class="fm-modal-card"><div class="fm-panel-head"><div><h2>บันทึกรายการรับ/จ่ายเงิน</h2><p>ระบบจะสร้างรายการสถานะรออนุมัติ</p></div><button class="fm-icon-close" type="button" data-close>×</button></div><form id="fmPaymentForm" class="fm-form-grid"><label class="fm-field"><span>ประเภทรายการ</span><select name="payment_type"><option value="receipt">รับเงิน</option><option value="disbursement">จ่ายเงิน</option><option value="refund">คืนเงิน</option></select></label><label class="fm-field"><span>วันที่</span><input name="payment_date" type="date" required></label><label class="fm-field"><span>จำนวนเงิน (บาท)</span><input name="amount" type="number" min="0.01" step="0.01" required></label><label class="fm-field"><span>ช่องทาง</span><select name="method"><option value="cash">เงินสด</option><option value="bank_transfer">โอนธนาคาร</option><option value="credit_card">บัตรเครดิต</option><option value="cheque">เช็ค</option><option value="other">อื่น ๆ</option></select></label><label class="fm-field"><span>เลขที่อ้างอิง</span><input name="reference_number" maxlength="120"></label><label class="fm-field"><span>Document ID (ถ้ามี)</span><input name="document_id" placeholder="UUID เอกสารที่อนุมัติแล้ว"></label><label class="fm-field fm-field-full"><span>หมายเหตุ</span><textarea name="note" rows="2"></textarea></label><div class="fm-form-actions"><button type="button" class="fm-btn fm-btn-light" data-close>ยกเลิก</button><button type="submit" class="fm-btn fm-btn-primary">บันทึกรายการ UAT</button></div></form><div class="fm-inline-result" id="fmPaymentResult" role="status"></div></div></div>';
+  const $=id=>root.querySelector('#'+id), body=$('fmPaymentRows'), modal=$('fmPaymentModal'), form=$('fmPaymentForm');
+  const close=()=>modal.hidden=true;
+  root.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+  $('fmPaymentAdd').onclick=()=>{form.elements.payment_date.value=new Date().toISOString().slice(0,10);modal.hidden=false};
+  async function load(){
+   body.innerHTML='<tr><td colspan="6" class="fm-empty-cell">กำลังโหลด…</td></tr>';
+   try{
+    const query=$('fmPaymentFilter').value, result=await window.FinanceAuth.request('payments'+(query?'&status='+encodeURIComponent(query):''));
+    const items=result.items||[];
+    if(!items.length){body.innerHTML='<tr><td colspan="6" class="fm-empty-cell">ยังไม่มีรายการชำระเงิน</td></tr>';return}
+    body.innerHTML='';
+    items.forEach(row=>{
+     const tr=document.createElement('tr');
+     const vals=[row.payment_date,row.payment_type==='receipt'?'รับเงิน':row.payment_type==='refund'?'คืนเงิน':'จ่ายเงิน',money(row.amount),row.method,row.status];
+     vals.forEach(v=>{const td=document.createElement('td');td.textContent=String(v??'—');tr.appendChild(td)});
+     const td=document.createElement('td');
+     if(row.status==='pending'){const b=document.createElement('button');b.className='fm-btn fm-btn-light';b.textContent='อนุมัติ';b.onclick=()=>act('payment.approve',{payment_id:row.id});td.appendChild(b)}
+     else if(row.status==='approved'){const b=document.createElement('button');b.className='fm-btn fm-btn-light';b.textContent='ยืนยันชำระแล้ว';b.onclick=()=>act('payment.mark-paid',{payment_id:row.id});td.appendChild(b)}
+     else td.textContent='—';
+     tr.appendChild(td);body.appendChild(tr);
+    });
+   }catch(err){body.innerHTML='';const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='fm-empty-cell';td.textContent=err.message||'โหลดข้อมูลไม่สำเร็จ';tr.appendChild(td);body.appendChild(tr)}
+  }
+  async function act(action,payload){try{await window.FinanceAuth.request(action,{method:'POST',body:payload});await load()}catch(err){alert(err.message||'ดำเนินการไม่สำเร็จ')}}
+  $('fmPaymentFilter').onchange=load;
+  form.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(form));const out=$('fmPaymentResult');out.textContent='กำลังบันทึก…';try{await window.FinanceAuth.request('payment.create',{method:'POST',body:d,idempotencyKey:crypto.randomUUID()});out.textContent='บันทึกรายการ UAT แล้ว และส่งรออนุมัติ';form.reset();close();await load()}catch(err){out.textContent=err.message||'บันทึกไม่สำเร็จ';out.classList.add('error')}};
+  load();return;
+ }
  const cfg={
  revenue:{eyebrow:'TRANSACTION · ACCOUNTS RECEIVABLE',title:'รายรับ / ลูกหนี้',desc:'บันทึกใบแจ้งหนี้ ใบเสร็จรับเงิน และติดตามยอดค้างชำระ',doc:'invoice',counter:'ลูกค้า'},
  expenses:{eyebrow:'TRANSACTION · ACCOUNTS PAYABLE',title:'รายจ่าย / เจ้าหนี้',desc:'บันทึกค่าใช้จ่าย ใบรับสินค้า และยอดเจ้าหนี้',doc:'expense',counter:'ผู้ขาย'},
