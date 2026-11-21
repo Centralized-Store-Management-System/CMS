@@ -171,6 +171,15 @@ export async function approveDocument(body: Record<string, unknown>, u: User, ri
       where d.id = ${id}::uuid and d.company_id = ${u.companyId}::uuid for update of d`;
     if (!doc) fail(404, "ไม่พบเอกสาร");
     if (doc.status !== "pending_review") fail(409, "อนุมัติได้เฉพาะเอกสารที่รออนุมัติ");
+    // Expense request approval only authorizes spending. It must not create a journal entry or tax transaction.
+    if (EXPENSE_DOCS.includes(doc.document_type)) {
+      const self = makerChecker(u, doc.created_by);
+      const [out] = await tx`update finance.documents set status = 'approved', approved_by = ${u.actorRef}, posted_at = null
+        where id = ${id}::uuid returning id, document_number, status, grand_total, approved_by`;
+      await approvalEvent(tx, u, "document", id, "approved", self ? "อนุมัติคำขอเบิก — ยังไม่บันทึกค่าใช้จ่าย" : "อนุมัติคำขอเบิก — อนุญาตให้ดำเนินการจ่ายเงินจริง", rid);
+      await audit(tx, u, self ? "approve_self" : "approve_expense_request", "document", id, out, rid);
+      return { ...out, accounting_posted: false, next_step: "expense_clearance" };
+    }
     const self = makerChecker(u, doc.created_by);
     const dd = doc.document_date instanceof Date ? doc.document_date.toISOString().slice(0, 10) : String(doc.document_date);
     const lines = await tx`select * from finance.document_lines where document_id = ${id}::uuid order by line_no`;
