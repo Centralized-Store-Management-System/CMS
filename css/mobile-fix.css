@@ -7,3 +7,6 @@
   .row>.mini:has(>:nth-child(3)) .btn{flex:0 0 auto}
 }
 @media (max-width:380px){ .row>.mini:has(>:nth-child(3)){padding-left:0} }
+
+/* ป๊อปอัป/หน้าต่าง (.scrim) ต้องอยู่เหนือเมนูล่าง — Theme ตั้งเมนูล่าง z-index 50 ทำให้บังปุ่มบันทึกในป๊อปอัป */
+.scrim{z-index:60}

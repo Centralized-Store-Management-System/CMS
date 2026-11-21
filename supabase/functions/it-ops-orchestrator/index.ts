@@ -8,7 +8,7 @@ class HttpError extends Error { status:number; constructor(status:number,message
 function out(body:unknown,status=200,origin=""){return new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store, private","vary":"Origin",...(origin?{"access-control-allow-origin":origin,"access-control-allow-headers":"content-type, x-cms-session","access-control-allow-methods":"GET, POST, OPTIONS","access-control-max-age":"600"}:{})}});}
 function asJson(value:unknown,fallback:any){if(typeof value==="string"){try{return JSON.parse(value)}catch(_){return fallback}}return value??fallback;}
 function parseJsonp(t:string){try{return JSON.parse(t)}catch(_){} const a=t.indexOf("("),b=t.lastIndexOf(")");if(a<0||b<=a)throw new HttpError(401,"Owner session ไม่ถูกต้อง");try{return JSON.parse(t.slice(a+1,b))}catch(_){throw new HttpError(401,"Owner session ไม่ถูกต้อง")}}
-async function owner(token:string){if(!token||token.length>4096)throw new HttpError(401,"กรุณาเข้าสู่ระบบ Owner ใหม่");const u=new URL(BACKOFFICE_URL);u.searchParams.set("action","bootstrap");u.searchParams.set("t",token);u.searchParams.set("callback","_it_ops_orchestrator_auth");u.searchParams.set("_",String(Date.now()));const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw new HttpError(401,"Session หมดอายุ");const p=parseJsonp(await r.text()),b=p.data||p;if(!b.me||b.me.role!=="owner")throw new HttpError(403,"เฉพาะ Owner เท่านั้น");return String(b.me.email||b.me.username||"owner");}
+async function owner(token:string){if(!token||token.length>4096)throw new HttpError(401,"กรุณาเข้าสู่ระบบ Owner ใหม่");const u=new URL(BACKOFFICE_URL);u.searchParams.set("action","bootstrap");u.searchParams.set("t",token);u.searchParams.set("callback","_it_ops_orchestrator_auth");u.searchParams.set("_",String(Date.now()));const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw new HttpError(401,"Session หมดอายุ");const p=parseJsonp(await r.text()),b=p.data||p;if(!b.me||b.me.role!=="owner")throw new HttpError(403,"เฉพาะ Owner เท่านั้น");return String(b.me.username||b.me.code||"owner"); /* ไม่เก็บอีเมลลง audit */}
 const SAFE_ACTIONS:Record<string,{title:string,risk:"low"|"medium",why:string}>={
  CRON_DISABLED:{title:"ตรวจสอบและกู้คืน Backoffice Cron",risk:"medium",why:"ต้องตรวจ job history และปลายทางก่อนเปิด Cron"},
  CRON_STALE:{title:"ตรวจสอบ Backoffice heartbeat",risk:"medium",why:"ตรวจ pg_cron และ Edge Function logs ก่อน restart"},
@@ -89,6 +89,33 @@ function buildDiagnosis(findings:any[],metrics:Record<string,any>,history:any[])
  const forecasts=trends.filter(x=>x.metric==="outboxErrors24h"||x.metric==="staleOrders").map(x=>({metric:x.metric,nextCheckEstimate:x.current,method:"latest-value baseline only",confidence:"low",warning:"ไม่ใช่การพยากรณ์เชิงสถิติ; ต้องมีข้อมูลหลายรอบก่อนประเมินแนวโน้ม"}));
  return {rootCauses:causes,trends,forecast:forecasts,confidence:causes.some(x=>x.confidence==="high")?"medium":causes.length?"low":"low"};
 }
+function median(values:number[]){const a=[...values].sort((x,y)=>x-y);if(!a.length)return 0;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;}
+async function detectAnomalies(run:any,metrics:Record<string,any>){
+ const keys=["outboxErrors24h","staleOrders","orderSyncErrors","orderSsoFailures24h","supaHeartbeatAgeMinutes","orderHeartbeatAgeMinutes"];
+ const history=await sql`select metrics from public.it_ops_metric_history where monitor_run_id<>${run.id} order by captured_at desc limit 30`;
+ const results:any[]=[];
+ for(const key of keys){
+  const current=metricValue(metrics,key); if(current===null)continue;
+  const vals=history.map((h:any)=>metricValue(asJson(h.metrics,{}),key)).filter((v:any)=>v!==null);
+  let abnormal=false,severity:"info"|"warning"|"critical"="info",baseline:number|null=null,confidence:"low"|"medium"|"high"="low",reason="";
+  if(key.endsWith("AgeMinutes")&&current>10){abnormal=true;severity=current>30?"critical":"warning";baseline=10;confidence="medium";reason="Heartbeat age exceeded 10-minute threshold";}
+  else if(vals.length>=5){
+   baseline=median(vals);const delta=current-baseline;
+   const threshold=Math.max(3,baseline*2);
+   if(delta>threshold){abnormal=true;severity=delta>=Math.max(10,baseline*4)?"critical":"warning";confidence=vals.length>=20?"high":"medium";reason="Current value exceeds historical median threshold";}
+  }
+  if(abnormal){
+   const anomalyKey="metric:"+key,deviation=baseline===null?current:Number((current-baseline).toFixed(2));
+   const [event]=await sql`insert into public.it_ops_anomaly_events(anomaly_key,metric_key,severity,window_start,window_end,observed_value,baseline_value,deviation,sample_count,confidence,evidence,status)
+    values(${anomalyKey},${key},${severity},now()-interval '24 hours',${run.checked_at},${current},${baseline},${deviation},${vals.length},${confidence},${JSON.stringify({reason,monitorRunId:run.id,baselineMethod:baseline===null?"fixed_threshold":"median_of_previous_samples"})}::jsonb,'open')
+    on conflict(anomaly_key) do update set severity=excluded.severity,window_end=excluded.window_end,observed_value=excluded.observed_value,baseline_value=excluded.baseline_value,deviation=excluded.deviation,sample_count=excluded.sample_count,confidence=excluded.confidence,evidence=excluded.evidence,status=case when public.it_ops_anomaly_events.status='suppressed' then 'suppressed' else 'open' end,updated_at=now()
+    returning id,metric_key,severity,observed_value,baseline_value,sample_count,confidence,status`;
+   results.push(event);
+  }else await sql`update public.it_ops_anomaly_events set status='resolved',updated_at=now() where anomaly_key=${"metric:"+key} and status in ('open','acknowledged')`;
+ }
+ return results;
+}
+
 async function analyzeRun(run:any){
  const metrics=asJson(run.metrics,{}), findings=asJson(run.findings,[]);
  await sql`insert into public.it_ops_metric_history(monitor_run_id,captured_at,status,risk_score,metrics)
@@ -108,6 +135,7 @@ async function runCycle(){
  if(!run)throw new HttpError(409,"ยังไม่มีผลตรวจจาก IT Monitor");
  const parsedFindings=asJson(run.findings,[]); const findings=Array.isArray(parsedFindings)?parsedFindings:[];
  const diagnosis=await analyzeRun(run);
+ const anomalies=await detectAnomalies(run,asJson(run.metrics,{}));
  let upserts=0,proposals=0;
  for(const f of findings){
   const code=String(f.code||"UNKNOWN").slice(0,60); if(code==="ALL_CLEAR") continue; const level=["critical","warning","info"].includes(f.level)?f.level:"info";
@@ -119,16 +147,20 @@ async function runCycle(){
   upserts++;
   const safe=SAFE_ACTIONS[code];
   if(safe && incident.status!=="muted" && incident.status!=="resolved"){
+   // เสนอ 1 รายการต่อปัญหาที่ยังเปิดอยู่ — ถ้ายังมีรายการรออนุมัติ/อนุมัติแล้วที่ยังไม่หมดอายุ ไม่ต้องเสนอซ้ำทุก 5 นาที
+   const actionCode="inspect_"+code.toLowerCase();
+   const [openItem]=await sql`select id from public.it_ops_action_queue where incident_id=${incident.id} and action_code=${actionCode} and status in ('pending_approval','approved') and expires_at>now() limit 1`;
+   if(openItem)continue;
    const idem=code.toLowerCase()+":"+String(run.id);
    const [q]=await sql`insert into public.it_ops_action_queue(incident_id,action_code,title,rationale,risk_level,status,requires_owner_approval,proposed_by,idempotency_key)
-    values(${incident.id},${"inspect_"+code.toLowerCase()},${safe.title},${safe.why},${safe.risk},'pending_approval',true,'system',${idem})
+    values(${incident.id},${actionCode},${safe.title},${safe.why},${safe.risk},'pending_approval',true,'system',${idem})
     on conflict(idempotency_key) do nothing returning id`;
    if(q)proposals++;
   }
  }
  await sql`update public.it_ops_incidents set status='resolved',updated_at=now() where status in ('open','acknowledged') and last_seen_at < ${run.checked_at} - interval '15 minutes'`;
  await sql`insert into public.it_ops_audit(actor,event_type,entity_type,details) values('system','monitor_triaged','monitor_run',${JSON.stringify({runId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,mode:'observe_only'})}::jsonb)`;
- return {monitorRunId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,diagnosis,mode:"observe_only"};
+ return {monitorRunId:run.id,findings:findings.length,incidentsUpserted:upserts,proposalsCreated:proposals,diagnosis,anomalies,mode:"observe_only"};
 }
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get("origin")||"";
@@ -148,6 +180,18 @@ Deno.serve(async(req:Request)=>{
     const id=Number(body.id); if(!Number.isSafeInteger(id)||id<=0)throw new HttpError(400,"รหัสรายการไม่ถูกต้อง");
     return out({ok:true,result:await simulateApprovedAction(id,actor)},200,origin);
    }
+   if(body.type==="learning_feedback"){
+    const diagnosticId=body.diagnosticId==null?null:Number(body.diagnosticId), anomalyId=body.anomalyEventId==null?null:Number(body.anomalyEventId);
+    const allowed=["correct","incorrect","helpful","not_helpful","false_positive","missed_issue"], feedbackType=String(body.feedbackType||"");
+    if(!allowed.includes(feedbackType))throw new HttpError(400,"ประเภท Feedback ไม่ถูกต้อง");
+    if(diagnosticId!==null&&(!Number.isSafeInteger(diagnosticId)||diagnosticId<=0))throw new HttpError(400,"Diagnostic ID ไม่ถูกต้อง");
+    if(anomalyId!==null&&(!Number.isSafeInteger(anomalyId)||anomalyId<=0))throw new HttpError(400,"Anomaly ID ไม่ถูกต้อง");
+    const note=String(body.note||"").slice(0,500), corrected=String(body.correctedCategory||"").slice(0,80)||null;
+    const [saved]=await sql`insert into public.it_ops_learning_feedback(diagnostic_id,anomaly_event_id,feedback_type,corrected_category,note,actor)
+      values(${diagnosticId},${anomalyId},${feedbackType},${corrected},${note},${actor}) returning id,created_at,feedback_type`;
+    await sql`insert into public.it_ops_audit(actor,event_type,entity_type,entity_id,details) values(${actor},'learning_feedback_submitted','it_ops_learning_feedback',${saved.id},${JSON.stringify({feedbackType,diagnosticId,anomalyId})}::jsonb)`;
+    return out({ok:true,item:saved},200,origin);
+   }
    const id=Number(body.id),decision=String(body.decision||"");
    if(!Number.isSafeInteger(id)||id<=0||!["approve","reject"].includes(decision))throw new HttpError(400,"คำขอไม่ถูกต้อง");
    const next=decision==="approve"?"approved":"rejected";
@@ -158,15 +202,18 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==="GET"){
    await owner(req.headers.get("x-cms-session")||"");
-   const [incidents,queue,audit,actionRuns,diagnostics,metricHistory]=await Promise.all([
+   const [incidents,queue,audit,actionRuns,diagnostics,metricHistory,anomalyEvents,dependencies,learningFeedback]=await Promise.all([
     sql`select id,fingerprint,severity,code,title,detail,recommendation,status,first_seen_at,last_seen_at,occurrence_count from public.it_ops_incidents order by case severity when 'critical' then 0 when 'warning' then 1 else 2 end,last_seen_at desc limit 40`,
     sql`select q.id,q.incident_id,q.action_code,q.title,q.rationale,q.risk_level,q.status,q.requires_owner_approval,q.created_at,q.expires_at,i.code as incident_code from public.it_ops_action_queue q left join public.it_ops_incidents i on i.id=q.incident_id order by q.created_at desc limit 40`,
     sql`select id,actor,event_type,entity_type,entity_id,details,created_at from public.it_ops_audit order by created_at desc limit 30`,
     sql`select id,action_queue_id,action_code,status,executed_by,preflight,simulation,rollback_check,created_at from public.it_ops_action_runs order by created_at desc limit 20`,
     sql`select id,monitor_run_id,overall_status,root_causes,trends,forecast,confidence,created_at from public.it_ops_diagnostics order by created_at desc limit 12`,
-    sql`select monitor_run_id,captured_at,status,risk_score,metrics from public.it_ops_metric_history order by captured_at desc limit 12`
+    sql`select monitor_run_id,captured_at,status,risk_score,metrics from public.it_ops_metric_history order by captured_at desc limit 12`,
+    sql`select id,anomaly_key,metric_key,severity,detected_at,observed_value,baseline_value,deviation,sample_count,confidence,status,evidence from public.it_ops_anomaly_events order by detected_at desc limit 30`,
+    sql`select dependency_key,component,depends_on,dependency_type,criticality,description,verification_hint from public.it_ops_dependency_map where enabled=true order by criticality desc,component`,
+    sql`select id,diagnostic_id,anomaly_event_id,feedback_type,corrected_category,note,actor,created_at from public.it_ops_learning_feedback order by created_at desc limit 20`
    ]);
-   return out({ok:true,mode:"phase_2_2_read_only",incidents,queue,audit,actionRuns,diagnostics,metricHistory},200,origin);
+   return out({ok:true,mode:"phase_2_3_observe_only",incidents,queue,audit,actionRuns,diagnostics,metricHistory,anomalyEvents,dependencies,learningFeedback},200,origin);
   }
   throw new HttpError(405,"Method not allowed");
  }catch(e){const status=e instanceof HttpError?e.status:500;if(!(e instanceof HttpError))console.error("it-ops-orchestrator",String(e).slice(0,240));return out({ok:false,error:e instanceof HttpError?e.message:"IT Ops Orchestrator error"},status,origin);}

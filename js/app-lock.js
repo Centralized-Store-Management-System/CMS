@@ -201,7 +201,7 @@
       try {
         const r = await busy(ev.target, () => API.call('devReg', { t: S.token, code: c1, device: devName() }), 'กำลังตั้ง…');
         const salt = r.id + ':' + Math.random().toString(36).slice(2);
-        setDev({ id: r.id, secret: r.secret, name: r.name, username: r.username, photo: (S.me && S.me.photo) || (C.my && C.my.photo) || '', salt, ph: await derive(c1, salt), at: Date.now() });
+        setDev({ id: r.id, secret: r.secret, name: r.name, username: r.username, photo: (typeof S !== 'undefined' && S.me && S.me.photo) || (typeof C !== 'undefined' && C.my && C.my.photo) || '',   /* C มีเฉพาะหน้าลงเวลา (clock) — หน้าหลังร้านไม่มี */ salt, ph: await derive(c1, salt), at: Date.now() });
         mem = c1; unlocked = true; closeSheet();
         if (typeof toast === 'function') toast('ตั้งรหัสปลดล็อกแล้ว ครั้งต่อไปเปิดแอปใส่รหัสนี้ได้เลย');
       } catch (x) { err.textContent = x.message; }

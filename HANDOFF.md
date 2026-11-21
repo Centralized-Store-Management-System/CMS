@@ -259,3 +259,17 @@
 - Verified both existing cron jobs remain active at */5 * * * *.
 - Scope delivered: production database foundation only. Phase 2.4–2.9 application workflows, Owner UI, alert dispatch integrations, forecast engine, recovery execution, and end-to-end/stress testing are NOT complete yet. Existing orchestrator function was intentionally not replaced in this migration because current deployed implementation and repository source need reconciliation before a safe production function deployment.
 - No production business/order/customer data changed; no cron schedules or secrets changed; no autonomous remediation enabled.
+
+## ตรวจงาน GPT + แก้ 6 จุด (21 พ.ย. 2569 · Claude)
+ตรวจ 78 commit ของ GPT (48ee867 → 6bb1cca) — แก้แล้ว:
+1. **IT Ops Control Center ตอบ 500 ทุกครั้ง** (`URL is not a constructor`): `supabase/functions/it-ops-control-center` ตั้งตัวแปรชื่อ `URL` ทับ `new URL()` → เปลี่ยนเป็น `SUPABASE_URL` · deploy v5 · **อย่าตั้งชื่อตัวแปรทับของระบบ (URL, Request, Response, fetch)**
+2. **หลังร้านมือถือ: เมนูล่างบังปุ่มในป๊อปอัปทุกอัน** — Theme Prototype/Owner ตั้ง `.bottom{z-index:50}` สูงกว่า `.scrim{z-index:20}` → `css/mobile-fix.css` ตั้ง `.scrim{z-index:60}` · เพิ่ม fixed element ใหม่ให้ต่ำกว่า 60 ถ้าไม่ใช่ป๊อปอัป
+3. **Mgr/Staff ตั้งรหัสแอปบนหน้าหลังร้านไม่ได้** (`C is not defined`) — `js/app-lock.js` อ้าง `C` ที่มีเฉพาะ clock → ตรวจ `typeof C` ก่อน · เครื่องที่ผูกค้างจากช่วงพัง ลบได้ที่ ระบบ IT > วิธีเข้าระบบ
+4. **`owner.html` มี `\n` ตัวอักษรจริง 2 จุด** (หลุดขึ้นจอ + CSS/สคริปต์ไปอยู่ใน body) → แก้เป็นขึ้นบรรทัดจริง
+5. **IT Ops เสนองานตรวจซ้ำทุก 5 นาที** (95 รายการใน 11 ชม.) — `it-ops-orchestrator` v10: เสนอ 1 รายการต่อ incident+งาน ถ้ายังมีรายการรออนุมัติ/อนุมัติแล้วที่ยังไม่หมดอายุ · รายการซ้ำเดิม 47 รายการเปลี่ยนเป็น `expired` (ไม่ลบ)
+   - **ไฟล์ใน repo เดิมเก่ากว่าที่ deploy** (ขาด anomaly/learning feedback) — ตอนนี้ `supabase/functions/it-ops-orchestrator/index.ts` = ตัวที่ deploy จริง · **deploy แล้วต้อง commit ต้นฉบับทุกครั้ง**
+6. **ข้อมูล IT Ops ไม่มีการลบของเก่า** (~1.4 MB/วัน) — migration `it_ops_dedupe_queue_and_retention`: `private.it_ops_prune()` + pg_cron `it-ops-prune-daily` 03:23 น.: ผลตรวจ/diagnostics/metric 90 วัน, คิวที่จบแล้ว 90 วัน, anomaly ที่ปิดแล้ว 90 วัน, audit 365 วัน
+- เพิ่ม: IT Ops ไม่เก็บอีเมล Owner ลง audit แล้ว (ใช้ username)
+- ไม่แก้ตามเจ้าของสั่ง: #7 ผู้ช่วย AI (`it-ai-ops`) พักไว้ — ต้องซื้อ API ก่อน · #8 toast กลางจอทุกแอป — เจ้าของยืนยันให้คงไว้
+- ทดสอบ: Owner lock 27/27 + 4/4, Theme scope 18/18, ชุดแก้ใหม่ 5/5, ฟังก์ชัน IT Ops ทดสอบด้วย stub (เดิม 500 → 200, dedupe ถูก) — ยังไม่ได้ลองกดหน้า IT Ops ด้วย session Owner จริง
+- ยังค้าง (เล็ก): Line-Order มีไฟล์ทดลองค้างบนเว็บ (`sw.js`, `manifest.webmanifest` ไม่มีใครใช้, `international-sidebar-prototype.html`, `native-app/` GPS) · `it-dialog.js` ไม่ล้างตัวดักคีย์บอร์ดเมื่อปิดด้วยคลิก

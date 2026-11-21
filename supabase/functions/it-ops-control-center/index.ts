@@ -1,12 +1,13 @@
 import postgres from "npm:postgres@3.4.5";
-const URL=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");
+// อย่าตั้งชื่อตัวแปรว่า URL — จะทับคำสั่ง new URL() ของระบบ (เคยทำให้ฟังก์ชันตอบ 500 ทุกครั้ง)
+const SUPABASE_URL=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");
 const DB=Deno.env.get("SUPABASE_DB_URL")||"";
 const sql=DB?postgres(DB,{max:3,idle_timeout:10,connect_timeout:10}):null;
 const ORIGINS=new Set(["https://centralized-store-management.github.io","https://centralized-store-management-system.github.io"]);
 class HttpError extends Error{status:number;constructor(status:number,message:string){super(message);this.status=status;}}
 const reply=(x:unknown,s=200,o="")=>new Response(JSON.stringify(x),{status:s,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store, private","vary":"Origin",...(o?{"access-control-allow-origin":o,"access-control-allow-headers":"content-type, x-cms-session","access-control-allow-methods":"GET, POST, OPTIONS"}:{})}});
 function parse(t:string){try{return JSON.parse(t)}catch(_){const a=t.indexOf("("),b=t.lastIndexOf(")");if(a<0||b<=a)throw new HttpError(401,"Owner session ไม่ถูกต้อง");return JSON.parse(t.slice(a+1,b));}}
-async function owner(token:string){if(!token||token.length>4096)throw new HttpError(401,"กรุณาเข้าสู่ระบบ Owner ใหม่");const u=new URL(URL+"/functions/v1/backoffice");u.searchParams.set("action","bootstrap");u.searchParams.set("t",token);u.searchParams.set("callback","_it_ops_control_auth");u.searchParams.set("_",String(Date.now()));const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw new HttpError(401,"Session หมดอายุ");const p=parse(await r.text()),b=p.data||p;if(!b.me||b.me.role!=="owner")throw new HttpError(403,"เฉพาะ Owner เท่านั้น");return String(b.me.email||b.me.username||"owner");}
+async function owner(token:string){if(!token||token.length>4096)throw new HttpError(401,"กรุณาเข้าสู่ระบบ Owner ใหม่");const u=new URL(SUPABASE_URL+"/functions/v1/backoffice");u.searchParams.set("action","bootstrap");u.searchParams.set("t",token);u.searchParams.set("callback","_it_ops_control_auth");u.searchParams.set("_",String(Date.now()));const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw new HttpError(401,"Session หมดอายุ");const p=parse(await r.text()),b=p.data||p;if(!b.me||b.me.role!=="owner")throw new HttpError(403,"เฉพาะ Owner เท่านั้น");return String(b.me.username||b.me.code||"owner"); /* ไม่เก็บอีเมลลง audit */}
 const arr=(v:any)=>typeof v==="string"?JSON.parse(v):v;
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get("origin")||"";
