@@ -55,7 +55,10 @@ begin
     raise exception 'Finance record is locked; create a reversal or adjustment instead'
       using errcode = '55000';
   end if;
-  return case when tg_op = 'DELETE' then old else new end;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
 end $$;
 
 drop trigger if exists trg_documents_guard_posted on finance.documents;
