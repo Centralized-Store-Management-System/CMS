@@ -41,7 +41,7 @@ create table if not exists finance.payment_verifications (
 );
 alter table finance.payment_verifications drop constraint if exists payment_verifications_company_payment_fk;
 alter table finance.payment_verifications add constraint payment_verifications_company_payment_fk
-  foreign key (company_id, payment_id) references finance.payments(company_id, id) on delete restrict;
+  foreign key (company_id, payment_id) references finance.payments(company_id, id) on delete cascade;
 
 create index if not exists payment_verifications_company_status_idx
   on finance.payment_verifications(company_id, status, updated_at desc);
@@ -51,6 +51,27 @@ grant all on finance.payment_verifications to service_role;
 alter table finance.document_files enable row level security;
 revoke all on finance.document_files from anon, authenticated;
 grant all on finance.document_files to service_role;
+
+
+-- Keep private Storage objects in sync when UAT purge removes finance.document_files rows.
+create or replace function finance.delete_document_file_storage_object()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $
+begin
+  delete from storage.objects
+    where bucket_id = old.storage_bucket and name = old.object_path;
+  return old;
+end;
+$;
+revoke all on function finance.delete_document_file_storage_object() from public, anon, authenticated;
+grant execute on function finance.delete_document_file_storage_object() to service_role;
+drop trigger if exists trg_document_files_delete_storage_object on finance.document_files;
+create trigger trg_document_files_delete_storage_object
+  after delete on finance.document_files
+  for each row execute function finance.delete_document_file_storage_object();
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('finance-private-documents', 'finance-private-documents', false, 20971520,
