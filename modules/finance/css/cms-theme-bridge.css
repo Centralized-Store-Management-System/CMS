@@ -1,0 +1,30 @@
+/* Shared CMS theme contract: Finance-only overrides; no dependency on CMS application CSS. */
+:root{--fm-font:"IBM Plex Sans Thai","Leelawadee UI","Noto Sans Thai",sans-serif;--fm-display:"Prompt","IBM Plex Sans Thai","Leelawadee UI",sans-serif}
+body{font-family:var(--fm-font);background:var(--bg);color:var(--ink)}
+.fm-app{font-family:var(--fm-font);background:var(--bg);color:var(--ink)}
+.fm-brand-mark{background:var(--green)}
+.fm-sidebar{background:var(--surface);border-color:var(--line)}
+.fm-company,.fm-kpi,.fm-panel{background:var(--surface);border-color:var(--line)}
+.fm-main{background:var(--bg)}
+.fm-topbar{background:var(--surface);border-color:var(--line)}
+.fm-nav-item.active,.fm-subnav button.active{background:color-mix(in srgb,var(--green) 11%,var(--surface));color:var(--green)}
+.fm-nav-item:hover,.fm-subnav button:hover{background:var(--sunk);color:var(--brand)}
+.fm-brand,.fm-page-head h1,.fm-kpi strong{color:var(--ink)}
+.fm-eyebrow,.fm-btn-primary{color:var(--green)}
+.fm-btn-primary{background:var(--green);border-color:var(--green)}
+.fm-brand-mark.has-logo{overflow:hidden;padding:0}
+.fm-brand-mark img{width:100%;height:100%;object-fit:contain;border-radius:inherit}
+.fm-nav-item,.fm-subnav button,.fm-btn,.fm-topbar,.fm-content{font-family:var(--fm-font)}
+h1,h2,.fm-kpi strong{font-family:var(--fm-display)}
+.fm-app{zoom:var(--fm-scale,1)}
+.fm-kpi,.fm-panel,.fm-company{border-radius:var(--fm-radius)}
+.fm-notice{background:color-mix(in srgb,var(--green) 7%,var(--surface));border-color:color-mix(in srgb,var(--green) 18%,var(--line))}
+.fm-notice b,.fm-notice small{color:var(--ink)}
+.fm-mode{background:var(--sunk);color:var(--muted)}
+html[data-theme="dark"] body,html[data-theme="dark"] .fm-app{background:var(--bg);color:var(--ink)}
+html[data-theme="dark"] .fm-sidebar,html[data-theme="dark"] .fm-topbar,html[data-theme="dark"] .fm-kpi,html[data-theme="dark"] .fm-panel,html[data-theme="dark"] .fm-company{background:var(--surface);border-color:var(--line)}
+html[data-theme="dark"] .fm-nav-item,html[data-theme="dark"] .fm-subnav button{color:var(--muted)}
+html[data-theme="dark"] .fm-nav-item.active,html[data-theme="dark"] .fm-subnav button.active{background:var(--sunk);color:var(--brand)}
+html[data-theme="dark"] .fm-page-head h1,html[data-theme="dark"] .fm-kpi strong,html[data-theme="dark"] .fm-panel h2{color:var(--ink)}
+html[data-theme="dark"] .fm-table-wrap th,html[data-theme="dark"] .fm-table-wrap td{border-color:var(--line)}
+@media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) .fm-sidebar,html:not([data-theme="light"]):not([data-theme="dark"]) .fm-topbar,html:not([data-theme="light"]):not([data-theme="dark"]) .fm-kpi,html:not([data-theme="light"]):not([data-theme="dark"]) .fm-panel{background:var(--surface);border-color:var(--line)}}
