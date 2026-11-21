@@ -16,7 +16,9 @@
     const font=String(theme.font||defaults.font).replace(/["\\]/g,'');
     const head=String(theme.head||defaults.head).replace(/["\\]/g,'');
     root.style.setProperty('--green',primary);
-    root.style.setProperty('--brand',primary);\n    root.style.setProperty('--bg',bg);\n    root.style.setProperty('--line', 'color-mix(in srgb,'+primary+' 15%,'+bg+')');
+    root.style.setProperty('--brand',primary);
+    root.style.setProperty('--bg',bg);
+    root.style.setProperty('--line', 'color-mix(in srgb,'+primary+' 15%,'+bg+')');
     root.style.setProperty('--dark',primary);
     root.style.setProperty('--fm-accent',accent);
     root.style.setProperty('--fm-bg',bg);
