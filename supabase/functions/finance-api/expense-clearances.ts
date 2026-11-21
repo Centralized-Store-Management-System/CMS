@@ -147,3 +147,61 @@ export async function verifyClearance(body:Record<string,unknown>,u:User,rid:str
     return {clearance:out,document:doc,journal_number:je.journal_number,accounting_posted:true};
   });
 }
+
+
+const CLEARANCE_BUCKET="finance-private-documents";
+const CLEARANCE_MAX_BYTES=20*1024*1024;
+const CLEARANCE_MIME=new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+function clearanceStorage(){const base=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";if(!base||!key)fail(503,"ระบบจัดเก็บเอกสารยังไม่ได้ตั้งค่า");return{base,key};}
+function clearancePath(path:string){return path.split("/").map(encodeURIComponent).join("/");}
+function canManageClearance(u:User,creator:string){if(creator===u.actorRef||["owner","manager","approver"].includes(u.role))return;fail(403,"ไม่มีสิทธิ์จัดการเอกสารเคลียร์นี้");}
+
+export async function listClearanceFiles(url:URL,u:User){
+  need(u,"read");const id=uuid(url.searchParams.get("clearance_id"),"รายการเคลียร์")!;
+  const [c]=await db()`select c.id,c.status,d.created_by from finance.expense_clearances c join finance.documents d on d.id=c.document_id
+    where c.id=${id}::uuid and c.company_id=${u.companyId}::uuid`;
+  if(!c)fail(404,"ไม่พบรายการเคลียร์");
+  if(["staff","manager"].includes(u.role)&&c.created_by!==u.actorRef)fail(403,"ไม่มีสิทธิ์ดูเอกสารนี้");
+  const items=await db()`select id,file_category,original_name,mime_type,size_bytes,created_at,uploaded_by
+    from finance.document_files where company_id=${u.companyId}::uuid and clearance_id=${id}::uuid and deleted_at is null order by created_at desc`;
+  return{items};
+}
+
+export async function clearanceFileUrl(url:URL,u:User){
+  need(u,"read");const fileId=uuid(url.searchParams.get("file_id"),"ไฟล์")!;
+  const [f]=await db()`select f.storage_bucket,f.object_path,d.created_by from finance.document_files f
+    join finance.expense_clearances c on c.id=f.clearance_id and c.company_id=f.company_id
+    join finance.documents d on d.id=c.document_id
+    where f.id=${fileId}::uuid and f.company_id=${u.companyId}::uuid and f.deleted_at is null`;
+  if(!f)fail(404,"ไม่พบไฟล์");
+  if(["staff","manager"].includes(u.role)&&f.created_by!==u.actorRef)fail(403,"ไม่มีสิทธิ์ดูไฟล์นี้");
+  const{base,key}=clearanceStorage();const res=await fetch(`${base}/storage/v1/object/sign/${f.storage_bucket}/${clearancePath(String(f.object_path))}`,{
+    method:"POST",headers:{apikey:key,Authorization:`Bearer ${key}`,"content-type":"application/json"},body:JSON.stringify({expiresIn:120})});
+  if(!res.ok)fail(502,"สร้างลิงก์เปิดเอกสารไม่สำเร็จ");
+  const data=await res.json();const signed=String(data.signedURL||data.signedUrl||"");
+  if(!signed)fail(502,"ระบบไม่ส่งลิงก์เอกสารกลับมา");
+  return{url:signed.startsWith("http")?signed:base+signed};
+}
+
+export async function uploadClearanceFile(form:FormData,u:User,rid:string){
+  need(u,"request");const id=uuid(form.get("clearance_id"),"รายการเคลียร์")!;
+  const category=oneOf(form.get("category"),["payment_evidence","receipt_invoice","tax_invoice","wht_document","supporting"] as const,"ประเภทเอกสาร");
+  const file=form.get("file");if(!(file instanceof File))fail(400,"กรุณาเลือกไฟล์เอกสาร");
+  if(file.size<1||file.size>CLEARANCE_MAX_BYTES)fail(400,"ไฟล์ต้องมีขนาดไม่เกิน 20 MB");
+  if(!CLEARANCE_MIME.has(file.type))fail(400,"รองรับเฉพาะ PDF, JPG, PNG และ WEBP");
+  const sql=db();const[c]=await sql`select c.id,c.status,d.created_by from finance.expense_clearances c join finance.documents d on d.id=c.document_id
+    where c.id=${id}::uuid and c.company_id=${u.companyId}::uuid`;
+  if(!c)fail(404,"ไม่พบรายการเคลียร์");canManageClearance(u,c.created_by);
+  if(!["draft","returned","pending_owner_review"].includes(c.status))fail(409,"รายการนี้ถูกส่งตรวจขั้นสุดท้ายแล้ว ไม่สามารถเพิ่มหลักฐานได้");
+  const{base,key}=clearanceStorage();const safe=String(file.name||"document").normalize("NFKC").replace(/[^\\p{L}\\p{N}._-]+/gu,"_").replace(/^\\.+/,"").slice(0,100)||"document";
+  const path=`${u.companyId}/expense-clearance/${id}/${crypto.randomUUID()}-${safe}`;
+  const up=await fetch(`${base}/storage/v1/object/${CLEARANCE_BUCKET}/${clearancePath(path)}`,{method:"POST",
+    headers:{apikey:key,Authorization:`Bearer ${key}`,"content-type":file.type,"x-upsert":"false"},body:new Uint8Array(await file.arrayBuffer())});
+  if(!up.ok)fail(502,"อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่");
+  try{return await sql.begin(async(tx:Tx)=>{
+    const[row]=await tx`insert into finance.document_files(company_id,clearance_id,storage_bucket,object_path,original_name,mime_type,size_bytes,uploaded_by,file_category)
+      values(${u.companyId}::uuid,${id}::uuid,${CLEARANCE_BUCKET},${path},${file.name.slice(0,255)},${file.type},${file.size},${u.actorRef},${category})
+      returning id,clearance_id,file_category,original_name,mime_type,size_bytes,created_at`;
+    await audit(tx,u,"upload_expense_clearance_document","expense_clearance",id,row,rid);return row;
+  });}catch(e){await fetch(`${base}/storage/v1/object/${CLEARANCE_BUCKET}`,{method:"DELETE",headers:{apikey:key,Authorization:`Bearer ${key}`,"content-type":"application/json"},body:JSON.stringify({prefixes:[path]})}).catch(()=>null);throw e;}
+}
