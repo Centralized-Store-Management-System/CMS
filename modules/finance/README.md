@@ -1,6 +1,6 @@
 # Finance & Accounting Module
 
-สถานะ: Foundation only — ยังไม่เชื่อม Owner Portal, ยังไม่เชื่อมฐานข้อมูล และยังไม่เปิดใช้งานจริง
+สถานะ: Foundation + Responsive UI shell + CMS Theme Bridge — ยังไม่เชื่อม Owner Portal/auth, ยังไม่เชื่อมฐานข้อมูล และยังไม่เปิดใช้งานจริง
 
 ## Purpose
 โมดูลบัญชี การเงิน และภาษีภายใต้ CMS โดยแยก UI, assets, API, database schema และ background processing จากระบบเดิม
@@ -21,7 +21,7 @@
 - `services/` — API adapters, lazy loaded
 - `tests/` — isolated unit and integration tests
 
-## Access model
+## Shared CMS experience\n- Finance เป็น independent entry point ภายใน CMS platform; หน้าจอและเมนู Finance แยกภายใน workspace ของโมดูล\n- ใช้ theme contract เดียวกับ CMS ผ่าน `cms-theme-bridge.js` โดยอ่าน `amz.theme` และ `amz.mytheme` จาก same-origin localStorage\n- สีหลัก, accent, background, font, heading font, logo, light/dark mode, scale, radius และ density ถูกส่งต่อไปยัง Finance-only CSS overrides\n- ไม่โหลด `js/theme.js`, `css/app.css` หรือ CMS runtime เข้ามาใน Finance จึงไม่ผูก dependency กับระบบเดิม\n- Theme Bridge ทำงานเฉพาะเมื่อเปิดหน้า Finance; ไม่มี polling, API, Realtime หรือ network request เพิ่มในหน้าระบบเดิม\n\n## Access model
 - Owner
 - Accounting
 
