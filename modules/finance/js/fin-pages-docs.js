@@ -65,7 +65,12 @@
           <label class="fm-field"><span>เลขที่อ้างอิง (บิล/ใบเสร็จของคู่ค้า)</span><input name="reference" maxlength="120" value="${esc(d ? d.reference || '' : '')}"></label>
           <div class="fm-field"><span>ภาษี</span><span style="display:flex;gap:6px;flex-wrap:wrap">
             <select name="vat_rate" title="VAT"><option value="0" ${vatRate === 0 ? 'selected' : ''}>ไม่มี VAT</option><option value="7" ${vatRate === 7 ? 'selected' : ''} ${kind === 'income' && !vatReg ? 'disabled' : ''}>VAT 7%</option></select>
-            <select name="wht_rate" title="หัก ณ ที่จ่าย">${[0, 1, 1.5, 2, 3, 5, 10].map(v => `<option value="${v}" ${v === whtRate ? 'selected' : ''}>${v ? 'หัก ณ ที่จ่าย ' + v + '%' : 'ไม่หัก ณ ที่จ่าย'}</option>`).join('')}</select></span></div>
+            <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <label class="fm-check" style="margin:0"><input type="radio" name="wht_enabled" value="yes" ${whtRate > 0 ? 'checked' : ''}> หัก</label>
+              <label class="fm-check" style="margin:0"><input type="radio" name="wht_enabled" value="no" ${whtRate <= 0 ? 'checked' : ''}> ไม่หัก</label>
+              <select name="wht_rate" title="อัตราหัก ณ ที่จ่าย" ${whtRate > 0 ? '' : 'disabled'}>
+                <option value="">เลือกอัตรา</option>${[1, 1.5, 2, 3, 5, 10].map(v => `<option value="${v}" ${v === whtRate ? 'selected' : ''}>${v}%</option>`).join('')}
+              </select></span></span></div>
         </div>
         <label class="fm-check" style="margin:10px 0 4px"><input type="checkbox" name="vat_inclusive"> ราคาที่กรอกเป็นราคารวม VAT แล้ว</label>
         ${kind === 'income' && !vatReg ? '<small class="fm-muted">บริษัทยังไม่ได้จด VAT — เก็บภาษีขายไม่ได้ (เปลี่ยนได้ที่ ข้อมูลบริษัท)</small>' : ''}
@@ -92,7 +97,7 @@
     };
     lines.forEach(addLine);
     const calc = () => {
-      const vr = Number(form.vat_rate.value), wr = Number(form.wht_rate.value), inc = form.vat_inclusive.checked;
+      const vr = Number(form.vat_rate.value), wr = form.querySelector('[name="wht_enabled"]:checked')?.value === 'yes' ? Number(form.wht_rate.value) : 0, inc = form.vat_inclusive.checked;
       let sub = 0, vat = 0, wht = 0;
       body.querySelectorAll('tr').forEach(tr => {
         const g = r2((Number(tr.querySelector('[name=quantity]').value) || 0) * (Number(tr.querySelector('[name=unit_price]').value) || 0));
@@ -103,6 +108,13 @@
       sub = r2(sub); vat = r2(vat); wht = r2(wht);
       el.querySelector('#fmTot').innerHTML = `<div><span>มูลค่าก่อนภาษี</span><b>${money(sub)}</b></div>${vr ? `<div><span>VAT ${vr}%</span><b>${money(vat)}</b></div>` : ''}${wr ? `<div><span>หัก ณ ที่จ่าย ${wr}%</span><b>−${money(wht)}</b></div>` : ''}<div class="grand"><span>${kind === 'income' ? 'ยอดที่จะได้รับ' : 'ยอดที่ต้องจ่าย'}</span><span>${money(sub + vat - wht)}</span></div>`;
     };
+    form.querySelectorAll('[name="wht_enabled"]').forEach(radio => radio.addEventListener('change', () => {
+      const rate = form.wht_rate;
+      const enabled = form.querySelector('[name="wht_enabled"]:checked')?.value === 'yes';
+      rate.disabled = !enabled;
+      if (!enabled) rate.value = '';
+      calc();
+    }));
     form.oninput = calc; form.onchange = calc; calc();
     el.querySelector('#fmAddLine').onclick = () => { addLine({ description: '', quantity: 1, unit_price: '' }); calc(); };
     body.onclick = e => { if (e.target.closest('.del') && body.children.length > 1) { e.target.closest('tr').remove(); calc(); } };
@@ -118,9 +130,11 @@
     form.onsubmit = async e => {
       e.preventDefault();
       const btn = e.submitter || form.querySelector('[data-mode=submit]'), submit = btn.dataset.mode === 'submit';
+      const withholding = form.querySelector('[name="wht_enabled"]:checked')?.value === 'yes';
+      if (withholding && !(Number(form.wht_rate.value) > 0)) { F.toast('กรุณาเลือกอัตราหัก ณ ที่จ่าย', 'bad'); return; }
       const payload = {
         document_type: form.document_type.value, document_date: form.document_date.value, due_date: form.due_date.value || null, partner_id: form.partner_id.value || null,
-        reference: form.reference.value, notes: form.notes.value, vat_rate: Number(form.vat_rate.value), wht_rate: Number(form.wht_rate.value), vat_inclusive: form.vat_inclusive.checked,
+        reference: form.reference.value, notes: form.notes.value, vat_rate: Number(form.vat_rate.value), wht_rate: form.querySelector('[name="wht_enabled"]:checked')?.value === 'yes' ? Number(form.wht_rate.value) : 0, vat_inclusive: form.vat_inclusive.checked,
         lines: [...body.querySelectorAll('tr')].map(tr => ({ description: tr.querySelector('[name=description]').value, quantity: Number(tr.querySelector('[name=quantity]').value), unit_price: Number(tr.querySelector('[name=unit_price]').value), account_code: tr.querySelector('[name=account_code]').value || null })).filter(l => l.description || l.unit_price),
       };
       const soloOwner = F.session.actor.role === 'owner' && F.session.company.allowSelfApproval;
@@ -182,7 +196,7 @@
         if (F.can('request') && d.document_type !== 'credit_note' && left > 0.004) acts.push(`<button class="fm-btn fm-btn-primary" data-a="pay">${kind === 'income' ? 'รับเงิน' : 'จ่ายเงิน'}</button>`);
         if (F.can('approve')) acts.push('<button class="fm-btn fm-btn-light" data-a="reverse">กลับรายการ</button>');
       }
-      if (Number(d.wht_total) > 0 && r.payments.some(p => p.status === 'paid')) acts.push('<button class="fm-btn fm-btn-light" data-a="wht-print">พิมพ์หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</button>');
+      if (Number(d.wht_total) > 0 && d.status === 'posted') acts.push('<button class="fm-btn fm-btn-light" data-a="wht-print">พิมพ์หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</button>');
       acts.push('<button class="fm-btn fm-btn-light" onclick="window.print()">พิมพ์</button>');
       el.innerHTML = F.head(L.docType[d.document_type] || 'เอกสาร', d.document_number || 'เอกสาร', badge(d.status) + (d.void_reason ? ' · ' + esc(d.void_reason) : ''), acts.join('')) +
         `<div class="fm-grid2"><section class="fm-panel"><dl class="fm-dl">
@@ -226,7 +240,8 @@
       const co = coRes.company || {};
       const partner = partners.find(p => p.id === d.partner_id) || {};
       const paid = detail.payments.filter(p => p.status === 'paid' && p.payment_type === 'disbursement');
-      if (!paid.length) throw new Error('ยังไม่มีรายการจ่ายเงินจริง');
+      const certificatePayments = paid.length ? paid : [{ amount: Number(d.grand_total), payment_date: F.today() }];
+      if (!Number(d.wht_total)) throw new Error('รายการนี้ไม่ได้เลือกหักภาษี ณ ที่จ่าย');
       if (!co.tax_id || !partner.tax_id) throw new Error('กรุณากรอกเลขผู้เสียภาษีของบริษัทและคู่ค้าให้ครบก่อนออกหนังสือรับรอง');
       const addr = x => (x && typeof x === 'object' ? x.text : x) || '—';
       const branch = x => x.branch_type === 'branch' ? ('สาขา ' + (x.branch_number || '')) : 'สำนักงานใหญ่';
@@ -234,7 +249,7 @@
       const base = Number(d.subtotal), total = Number(d.grand_total) || 0, wht = Number(d.wht_total);
       const rate = Number(detail.lines[0] && detail.lines[0].wht_rate || (base ? wht / base * 100 : 0));
       const income = detail.lines.map(x => x.description).filter(Boolean).join(', ') || 'ค่าบริการ';
-      const pages = paid.map((p, i) => {
+      const pages = certificatePayments.map((p, i) => {
         const ratio = total > 0 ? Math.min(1, Number(p.amount) / total) : 0;
         const taxBase = Math.round(base * ratio * 100) / 100, tax = Math.round(wht * ratio * 100) / 100;
         const ref = 'WHT-' + d.document_number + '-' + (i + 1);
