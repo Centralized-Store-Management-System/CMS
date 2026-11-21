@@ -6,14 +6,14 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.1.2', BASE = 'modules/finance/';
+  const V = '1.1.3', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
 
   // ---------- เมนูย่อย ----------
   const MENU = [
-    ['', [['dashboard', 'ภาพรวม'], ['approvals', 'รออนุมัติ', 'approve']]],
+    ['', [['dashboard', 'ภาพรวม'], ['approvals', 'รออนุมัติ', 'approve'], ['verification', 'ตรวจเอกสารหลังจ่าย']]],
     ['รายรับ–รายจ่าย', [['income', 'รายรับ / ลูกหนี้'], ['expense', 'รายจ่าย / เจ้าหนี้'], ['payments', 'รับ–จ่ายเงิน'], ['partners', 'คู่ค้า']]],
     ['ภาษี', [['vat', 'ภาษีซื้อ–ภาษีขาย (VAT)'], ['wht', 'ภาษีหัก ณ ที่จ่าย'], ['filings', 'แบบภาษี (ภ.พ.30 / ภ.ง.ด.)']]],
     ['บัญชี', [['journals', 'สมุดรายวัน'], ['accounts', 'ผังบัญชี'], ['periods', 'รอบบัญชี']]],
