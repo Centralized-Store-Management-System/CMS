@@ -228,10 +228,11 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
   const normalized = lines.map((line, index) => {
     const description = asText(line.description, 500);
     const quantity = Number(line.quantity), unitPrice = Number(line.unit_price);
-    if (!description || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000000 || !Number.isFinite(unitPrice) || unitPrice < 0) {
+    if (!description || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000000 || !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 1000000000000) {
       throw new HttpError(400, "รายละเอียด จำนวน หรือราคาของรายการที่ " + (index + 1) + " ไม่ถูกต้อง");
     }
     const amount = round2(quantity * unitPrice);
+    if (!Number.isFinite(amount) || amount > 9999999999999999) throw new HttpError(400, "มูลค่ารายการสูงเกินขอบเขตที่รองรับ");
     return { description, quantity, unitPrice, amount, vatAmount: round2(amount * vatRate / 100), whtAmount: round2(amount * whtRate / 100) };
   });
   const subtotal = round2(normalized.reduce((sum, line) => sum + line.amount, 0));
