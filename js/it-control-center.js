@@ -18,47 +18,26 @@ async function itccPositionAccess(){
  try{
   const response=await fetch('https://ytxbnqosenolojifeikf.supabase.co/functions/v1/hr-position-api',{headers:{'x-cms-session':S.token||''},cache:'no-store'});
   const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'โหลด Position Master ไม่สำเร็จ');
-  const positions=data.positions||[],maps=data.permissions||[];
-  if(!positions.length)throw new Error('ยังไม่มี Position Master');
-  const options=positions.map(p=>[p.id,p.name_th+' ('+p.position_code+')']);
-  openForm({title:'Position Permission Mapping · IT',fields:[
-   {k:'position_id',label:'Position',type:'select',options,req:1},
-   {k:'application_key',label:'Application Key',req:1,help:'เช่น finance, accounting, hr, staff, manager'},
-   {k:'permission_codes',label:'Permission Codes',type:'textarea',rows:5,help:'หนึ่งสิทธิ์ต่อบรรทัด เช่น finance.final_verify'},
-   {k:'branch_scope',label:'Branch Scope',type:'select',options:[['assigned','เฉพาะสาขาที่กำหนด'],['all','ทุกสาขา']]},
-   {k:'status',label:'สถานะ',type:'select',options:[['draft','Draft'],['active','Active']]}
-  ],data:{position_id:positions[0].id,application_key:'finance',permission_codes:'',branch_scope:'assigned',status:'draft'},onSave:async v=>{
-   const codes=String(v.permission_codes||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
-   const save=await fetch('https://ytxbnqosenolojifeikf.supabase.co/functions/v1/hr-position-api',{method:'POST',headers:{'content-type':'application/json','x-cms-session':S.token||''},body:JSON.stringify({action:'set-permissions',position_id:v.position_id,application_key:v.application_key,permission_codes:codes,branch_scope:v.branch_scope,status:v.status})});
-   const out=await save.json();if(!save.ok||!out.ok)throw new Error(out.error||'บันทึกสิทธิ์ไม่สำเร็จ');
-   toast('บันทึก Position Permission Mapping แล้ว');
-  }});
- }catch(e){toast(e.message||'เปิด Position Permissions ไม่สำเร็จ');}
+  const positions=data.positions||[];if(!positions.length)throw new Error('ยังไม่มี Position Master');
+  const positionText=positions.map(p=>p.position_code+' = '+p.name_th).join('\n');
+  const code=await ITDialog.prompt('ระบุ Position Code จากรายการ',positions[0].position_code,{title:'Position Permission Mapping',detail:positionText});
+  if(!code)return;
+  const position=positions.find(p=>p.position_code.toUpperCase()===code.trim().toUpperCase());
+  if(!position)throw new Error('ไม่พบ Position Code นี้');
+  const app=await ITDialog.prompt('ระบุ Application Key เช่น finance หรือ accounting','finance',{title:'กำหนดระบบ'});
+  if(!app)return;
+  const permissionText=await ITDialog.prompt('ระบุ Permission Codes คั่นด้วย comma','finance.expense.view',{title:'กำหนดสิทธิ์',detail:'ตัวอย่าง finance.final_verify, accounting.journal.view'});
+  if(permissionText===null)return;
+  const activate=await ITDialog.confirm('เปิดใช้ Permission Mapping นี้ทันทีหรือไม่?',{title:'ยืนยันสิทธิ์',detail:'หากยังไม่พร้อม ให้กด Cancel เพื่อบันทึกเป็น Draft'});
+  const save=await fetch('https://ytxbnqosenolojifeikf.supabase.co/functions/v1/hr-position-api',{method:'POST',headers:{'content-type':'application/json','x-cms-session':S.token||''},body:JSON.stringify({action:'set-permissions',position_id:position.id,application_key:app.trim(),permission_codes:permissionText.split(',').map(x=>x.trim()).filter(Boolean),branch_scope:'assigned',status:activate?'active':'draft'})});
+  const out=await save.json();if(!save.ok||!out.ok)throw new Error(out.error||'บันทึกสิทธิ์ไม่สำเร็จ');
+  await ITDialog.alert('บันทึก Position Permission Mapping แล้ว',{title:'สำเร็จ'});
+ }catch(e){await ITDialog.alert(e.message||'เปิด Position Permissions ไม่สำเร็จ',{title:'ผิดพลาด'});}
 }
 const ITCC_PKG={classic:'Theme เดิม',prototype:'Prototype (หลังร้าน)',owner:'Owner Theme'};
 function itccHere(){const a=window.AMZ_SCOPE;if(!a)return'';return `<div class="note">เครื่องนี้: <b>${esc(a.scope||'-')}</b> · ${esc(a.device)} · ${a.surface==='installed_app'?'แอปที่ติดตั้ง':a.surface==='line_liff'?'LINE':'เว็บ'} · ตอนนี้ใช้ ${esc(ITCC_PKG[a.pkg]||a.pkg)} · แต่ละแถวตั้งแยกกัน ไม่กระทบแถวอื่น · ล็อกไว้ = เปลี่ยนไม่ได้จนกว่าจะปลดล็อก</div>`;}
 const itccDeviceLabel=r=>r.device_class==='pc'?'PC':r.device_class==='mobile'?'Mobile':r.device_class==='ipad'?'iPad':r.device_class.replaceAll('_',' / ').toUpperCase();
 function itccGroupLabel(r){return r.app_label+' · '+(r.user_class==='owner'?'Owner':r.user_class==='staff_manager'?'Staff / Manager':r.user_class==='owner_staff'?'Owner / Staff':'LINE User')+' · '+(r.surface==='installed_app'?'Installed App':r.surface==='line_liff'?'LINE / LIFF':'Web')+' · '+itccDeviceLabel(r);}
-
-async function itccPositionAccess(){
- try{
-  const p=await hrPositionRequest();const positions=p.positions||[],maps=p.permissions||[];
-  if(!positions.length)throw new Error('ยังไม่มี Position Master จาก HR');
-  const opts=positions.map(x=>[x.id,x.name_th+' ('+x.position_code+')']);
-  const current=maps[0]||{};
-  openForm({title:'Position Permission Mapping · IT',fields:[
-   {k:'position_id',label:'Position',type:'select',options:opts,req:1},
-   {k:'application_key',label:'Application Key',req:1,help:'เช่น finance, accounting, hr, staff, manager, owner'},
-   {k:'permission_codes',label:'Permission Codes',type:'textarea',rows:5,help:'หนึ่งสิทธิ์ต่อบรรทัด เช่น finance.final_verify'},
-   {k:'branch_scope',label:'Branch Scope',type:'select',options:[['assigned','เฉพาะสาขาที่กำหนด'],['all','ทุกสาขา']]},
-   {k:'status',label:'สถานะ Mapping',type:'select',options:[['draft','Draft — ยังไม่เปิดใช้'],['active','Active — อนุมัติแล้ว']]}
-  ],data:{position_id:current.position_id||positions[0].id,application_key:current.application_key||'finance',permission_codes:(current.permission_codes||[]).join('\n'),branch_scope:current.branch_scope||'assigned',status:'draft'},onSave:async v=>{
-   const codes=String(v.permission_codes||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
-   await hrPositionRequest('POST',{action:'set-permissions',position_id:v.position_id,application_key:v.application_key,permission_codes:codes,branch_scope:v.branch_scope,status:v.status});
-   toast('บันทึก Position Permission Mapping แล้ว');
-  }});
- }catch(e){toast(e.message||'เปิดการกำหนดสิทธิ์ไม่สำเร็จ');}
-}
 
 function ocControlPage(){
  const ownerRows=ITCC.rows.filter(x=>x.app_key==='owner');
