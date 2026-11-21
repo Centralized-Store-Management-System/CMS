@@ -24,12 +24,13 @@ export async function createPayment(body: Record<string, unknown>, u: User, rid:
   let cashId = uuid(body.cash_account_id, "บัญชีเงินสด/ธนาคาร", false);
   if (!docId && !offsetId) fail(400, "เลือกเอกสารที่จะรับ/จ่าย หรือเลือกบัญชีคู่ (กรณีไม่มีเอกสาร)");
   return await db().begin(async (tx: Tx) => {
+    let approvedBy: string | null = null;
     await tx`select pg_advisory_xact_lock(hashtextextended(${u.companyId + ":pay:" + idem}, 0))`;
     const [ex] = await tx`select id, status, amount from finance.payments where company_id = ${u.companyId}::uuid and idempotency_key = ${idem}`;
     if (ex) return { ...ex, duplicate: true };
     let partnerId = uuid(body.partner_id, "คู่ค้า", false);
     if (docId) {
-      const [doc] = await tx`select id, document_type, status, partner_id, created_by from finance.documents where id = ${docId}::uuid and company_id = ${u.companyId}::uuid for update`;
+      const [doc] = await tx`select id, document_type, status, partner_id, created_by, approved_by from finance.documents where id = ${docId}::uuid and company_id = ${u.companyId}::uuid for update`;
       if (!doc) fail(400, "ไม่พบเอกสาร");
       if (u.role === "staff" && doc.created_by !== u.actorRef) fail(403, "Staff สร้างรายการรับ/จ่ายได้เฉพาะเอกสารที่ตนเองจัดทำ");
       if (doc.status !== "posted") fail(409, "รับ/จ่ายได้เฉพาะเอกสารที่อนุมัติและลงบัญชีแล้ว");
@@ -39,14 +40,19 @@ export async function createPayment(body: Record<string, unknown>, u: User, rid:
       const left = await outstanding(tx, docId);
       if (amount - left > 0.004) fail(400, "จำนวนเงินเกินยอดคงค้างของเอกสาร (คงค้าง " + left.toFixed(2) + ")");
       partnerId = doc.partner_id ? String(doc.partner_id) : partnerId;
+      // Owner approval of the expense document authorizes its linked disbursement; avoid a duplicate approval step.
+      if (type === "disbursement" && doc.approved_by) approvedBy = String(doc.approved_by);
     }
     if (offsetId) await accountById(tx, u, offsetId);
     if (cashId) { const a = await accountById(tx, u, cashId, ["asset"]); cashId = String(a.id); }
     else cashId = await sysAccount(tx, u, method === "cash" ? "cash" : "bank");
-    const [p] = await tx`insert into finance.payments (company_id, document_id, partner_id, payment_type, payment_date, amount, method, reference_number, status, created_by, idempotency_key, cash_account_id, offset_account_id, note)
-      values (${u.companyId}::uuid, ${docId}::uuid, ${partnerId}::uuid, ${type}, ${d}::date, ${amount}, ${method}, ${opt(body.reference_number, 120)}, 'pending', ${u.actorRef}, ${idem}, ${cashId}::uuid, ${offsetId}::uuid, ${opt(body.note, 500)})
-      returning id, payment_type, payment_date, amount, method, status, document_id`;
+    const paymentStatus = approvedBy ? "approved" : "pending";
+    const [p] = await tx`insert into finance.payments (company_id, document_id, partner_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, created_by, idempotency_key, cash_account_id, offset_account_id, note)
+      values (${u.companyId}::uuid, ${docId}::uuid, ${partnerId}::uuid, ${type}, ${d}::date, ${amount}, ${method}, ${opt(body.reference_number, 120)}, ${paymentStatus}, ${approvedBy}, ${u.actorRef}, ${idem}, ${cashId}::uuid, ${offsetId}::uuid, ${opt(body.note, 500)})
+      returning id, payment_type, payment_date, amount, method, status, approved_by, document_id`;
     await tx`insert into finance.payment_events (company_id, payment_id, actor_ref, action, note, request_id) values (${u.companyId}::uuid, ${p.id}, ${u.actorRef}, 'created', ${opt(body.note, 500)}, ${rid})`;
+    if (approvedBy) await tx`insert into finance.payment_events (company_id, payment_id, actor_ref, action, note, request_id)
+      values (${u.companyId}::uuid, ${p.id}, ${approvedBy}, 'approved', 'อนุมัติพร้อมเอกสารรายจ่ายที่ Owner ตรวจแล้ว', ${rid})`;
     await audit(tx, u, "create", "payment", p.id, p, rid);
     return p;
   });
