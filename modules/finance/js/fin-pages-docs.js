@@ -109,10 +109,22 @@
         reference: form.reference.value, notes: form.notes.value, vat_rate: Number(form.vat_rate.value), wht_rate: Number(form.wht_rate.value), vat_inclusive: form.vat_inclusive.checked,
         lines: [...body.querySelectorAll('tr')].map(tr => ({ description: tr.querySelector('[name=description]').value, quantity: Number(tr.querySelector('[name=quantity]').value), unit_price: Number(tr.querySelector('[name=unit_price]').value), account_code: tr.querySelector('[name=account_code]').value || null })).filter(l => l.description || l.unit_price),
       };
+      const soloOwner = F.session.actor.role === 'owner' && F.session.company.allowSelfApproval;
       const r = await run(btn, async () => {
-        if (d) { await api.post('document.update', { ...payload, document_id: d.id }); if (submit) await api.post('document.submit', { document_id: d.id }); return { id: d.id }; }
-        return api.post('document.create', { ...payload, submit }, { idem: key });
-      }, submit ? 'บันทึกและส่งอนุมัติแล้ว' : 'บันทึกร่างแล้ว');
+        let saved;
+        if (d) {
+          await api.post('document.update', { ...payload, document_id: d.id });
+          if (submit) {
+            await api.post('document.submit', { document_id: d.id });
+            if (soloOwner) await api.post('document.approve', { document_id: d.id, note: 'Owner one-person workflow' });
+          }
+          saved = { id: d.id };
+        } else {
+          saved = await api.post('document.create', { ...payload, submit }, { idem: key });
+          if (submit && soloOwner) await api.post('document.approve', { document_id: saved.id, note: 'Owner one-person workflow' });
+        }
+        return saved;
+      }, submit ? (soloOwner ? 'บันทึกและลงบัญชีแล้ว' : 'บันทึกและส่งอนุมัติแล้ว') : 'บันทึกร่างแล้ว');
       if (r) { F.refreshBadges(); F.nav('#document/' + r.id); }
     };
   }
@@ -207,7 +219,15 @@
       e.preventDefault();
       const v = Object.fromEntries(new FormData(f));
       const body = { payment_type: type, payment_date: v.payment_date, amount: Number(v.amount), method: v.method, cash_account_id: v.cash_account_id || null, reference_number: v.reference_number, note: v.note, document_id: doc ? doc.id : (v.document_id || null), offset_account_id: doc ? null : (v.document_id ? null : v.offset_account_id || null) };
-      const r = await run(f.querySelector('.fm-btn-primary'), () => api.post('payment.create', body, { idem: key }), 'บันทึกแล้ว · รออนุมัติ');
+      const soloOwner = F.session.actor.role === 'owner' && F.session.company.allowSelfApproval;
+      const r = await run(f.querySelector('.fm-btn-primary'), async () => {
+        const created = await api.post('payment.create', body, { idem: key });
+        if (soloOwner) {
+          await api.post('payment.approve', { payment_id: created.id, note: 'Owner one-person workflow' });
+          return api.post('payment.mark-paid', { payment_id: created.id, note: 'บันทึกการชำระโดย Owner' });
+        }
+        return created;
+      }, soloOwner ? 'บันทึกและลงบัญชีการชำระแล้ว' : 'บันทึกแล้ว · รออนุมัติ');
       if (r) { m.close(); F.refreshBadges(); F.reload(); }
     };
   }
