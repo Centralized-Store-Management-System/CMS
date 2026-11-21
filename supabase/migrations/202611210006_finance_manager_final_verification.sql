@@ -59,13 +59,13 @@ returns trigger
 language plpgsql
 security definer
 set search_path = pg_catalog
-as $
+as $finance$
 begin
   delete from storage.objects
     where bucket_id = old.storage_bucket and name = old.object_path;
   return old;
 end;
-$;
+$finance$;
 revoke all on function finance.delete_document_file_storage_object() from public, anon, authenticated;
 grant execute on function finance.delete_document_file_storage_object() to service_role;
 drop trigger if exists trg_document_files_delete_storage_object on finance.document_files;
