@@ -103,6 +103,57 @@ document.addEventListener('submit', e => {
 });
 
 
+
+/* Compact IT dashboard: collapsed detail groups, per-section health badges, animated alert bell. */
+(function injectItCompactStyles(){
+ if(document.getElementById('it-compact-style'))return;
+ const st=document.createElement('style');st.id='it-compact-style';
+ st.textContent=`
+ .it-fold{border:1px solid var(--line,rgba(120,140,130,.22));border-radius:14px;margin:10px 0;overflow:hidden;background:var(--card,rgba(255,255,255,.035))}
+ .it-fold>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;font-weight:650;min-height:46px}
+ .it-fold>summary::-webkit-details-marker{display:none}
+ .it-fold>summary:after{content:'＋';margin-left:auto;opacity:.7;font-size:18px}
+ .it-fold[open]>summary:after{content:'−'}
+ .it-fold-body{padding:0 12px 12px}
+ .it-health{font-size:11px;line-height:1;padding:5px 8px;border-radius:999px;font-weight:700;white-space:nowrap}
+ .it-health.ok{color:#16794a;background:rgba(35,170,105,.13)}
+ .it-health.bad{color:#b42318;background:rgba(220,50,50,.13)}
+ .it-health.neutral{color:#7b6a24;background:rgba(220,180,45,.15)}
+ .it-alert-bell{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;border-radius:50%;background:rgba(220,55,55,.12);font-size:19px;position:relative}
+ .it-alert-bell.is-active{animation:itBellRing 1.4s ease-in-out infinite;transform-origin:top center}
+ .it-alert-bell.is-active:after{content:'';position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:50%;background:#e53935;box-shadow:0 0 0 3px rgba(229,57,53,.15)}
+ @keyframes itBellRing{0%,100%{transform:rotate(0)}8%,24%,40%{transform:rotate(12deg)}16%,32%,48%{transform:rotate(-12deg)}60%{transform:rotate(0)}}
+ @media(prefers-reduced-motion:reduce){.it-alert-bell.is-active{animation:none}}
+ `;
+ document.head.appendChild(st);
+})();
+function ocItFoldSections(box){
+ if(!box)return;
+ box.querySelectorAll('h4').forEach(h=>{
+  if(h.parentElement&&h.parentElement.classList.contains('it-fold'))return;
+  const nodes=[];let n=h.nextSibling;
+  while(n&&!(n.nodeType===1&&n.tagName==='H4')){const next=n.nextSibling;nodes.push(n);n=next;}
+  const details=document.createElement('details');details.className='it-fold';
+  const summary=document.createElement('summary');summary.append(document.createTextNode(h.textContent||'รายละเอียด'));
+  const body=document.createElement('div');body.className='it-fold-body';
+  nodes.forEach(x=>body.appendChild(x));
+  const txt=body.textContent||'';
+  const bad=/CRITICAL|ERROR|FAILED|ผิดปกติ|ล้มเหลว|critical|warning|open alert/i.test(txt);
+  const good=/ไม่มีรายการ|ไม่พบ|ปกติ|passed|healthy/i.test(txt);
+  const badge=document.createElement('span');badge.className='it-health '+(bad?'bad':good?'ok':'neutral');
+  badge.textContent=bad?'ผิดปกติ':good?'ปกติ':'ตรวจสอบ';
+  summary.appendChild(badge);details.append(summary,body);h.replaceWith(details);
+ });
+}
+function ocItBell(box,active,count){
+ if(!box)return;
+ const head=box.querySelector('.oc-ops-queue-head');if(!head)return;
+ let bell=head.querySelector('.it-alert-bell');
+ if(!bell){bell=document.createElement('button');bell.type='button';bell.className='it-alert-bell';bell.title='ดูการแจ้งเตือน';bell.setAttribute('aria-label','ดูการแจ้งเตือน');bell.textContent='🔔';head.appendChild(bell);}
+ bell.classList.toggle('is-active',!!active);bell.title=active?count+' รายการแจ้งเตือนที่ต้องตรวจสอบ':'ไม่มีการแจ้งเตือนใหม่';
+ bell.onclick=()=>{const target=[...box.querySelectorAll('.it-fold')].find(x=>/Alert|Anomaly|เหตุการณ์/i.test(x.textContent.slice(0,80)));if(target){target.open=true;target.scrollIntoView({behavior:'smooth',block:'center'});}};
+}
+
 function ocOpsParseArray(value) { if (Array.isArray(value)) return value; if (typeof value === 'string') { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch (_) {} } return []; }
 async function ocOpsLoadQueue() {
   const box = document.getElementById('oc-ops-queue');
@@ -222,6 +273,9 @@ async function ocOpsLoadQueue() {
       const detail = document.createElement('small'); detail.textContent = item.detail + ' · พบ ' + item.occurrence_count + ' ครั้ง'; row.appendChild(detail);
       box.appendChild(row);
     });
+    ocItFoldSections(box);
+    const activeAlerts=(p.incidents||[]).filter(x=>['open','acknowledged'].includes(x.status)&&['critical','warning'].includes(String(x.severity).toLowerCase()));
+    ocItBell(box,activeAlerts.length>0,activeAlerts.length);
   } catch (e) {
     box.textContent = 'ไม่สามารถโหลด Incident Center: ' + (e.message || 'connection error');
   }
@@ -273,6 +327,9 @@ async function ocOpsControlLoad(){
   section('Anomaly Events',p.anomalies).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.metric_key+' · '+x.severity+' · '+x.status;r.appendChild(b);const d=document.createElement('small');d.textContent='Observed '+x.observed_value+' / baseline '+x.baseline_value+' · samples '+x.sample_count+' · '+x.confidence;r.appendChild(d);box.appendChild(r);});
   section('Integration Test History',p.tests).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.suite_key+' · '+x.status;r.appendChild(b);const d=document.createElement('small');d.textContent=new Date(x.created_at).toLocaleString('th-TH')+' · '+x.executed_by;r.appendChild(d);box.appendChild(r);});
   section('Forecast Snapshots',p.forecasts).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';r.textContent=x.metric_key+' · '+x.confidence+' · '+x.method;box.appendChild(r);});
+  ocItFoldSections(box);
+  const active=(p.alerts||[]).filter(x=>['open','acknowledged'].includes(x.status)&&['critical','warning'].includes(String(x.severity).toLowerCase()));
+  ocItBell(box,active.length>0,active.length);
  }catch(e){box.textContent=e.message||'โหลด Control Center ไม่สำเร็จ';}
 }
 document.addEventListener('click',async e=>{
