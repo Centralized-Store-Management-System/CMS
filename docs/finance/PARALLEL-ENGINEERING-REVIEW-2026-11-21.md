@@ -1,0 +1,71 @@
+# Finance Module — Parallel Engineering Review
+
+Review date: 2026-11-21
+Review branch: `review/finance-uat-gaps`
+Base branch: `feature/finance-module-foundation`
+Scope: Read-only review of the current Finance SQL drafts, API source, frontend adapters, and live Supabase metadata. No production schema or business records were changed.
+
+## Verified live environment
+
+- Supabase project: `ytxbnqosenolojifeikf` (`cafe-amazon-order-management`)
+- Project health: `ACTIVE_HEALTHY` at time of review.
+- Finance schema: 24 base tables exist.
+- All 24 Finance tables have RLS enabled.
+- No Finance RLS policies are present (0 policies).
+- `anon` and `authenticated` have no USAGE privilege on schema `finance`; `service_role` has USAGE. This is consistent with a server-only access design, but the Edge Function must enforce all tenant/role checks.
+- Live row counts checked: companies=1, user_roles=0, partners=0, documents=0, payments=0, journal_entries=0, audit_events=0.
+- Supabase Edge Function inventory contains no function named `finance-api`; it is not deployed.
+- Repository `supabase/config.toml` sets `[functions.finance-api] verify_jwt = false`. This is only safe if the function performs its own robust CMS-session validation; the current source does attempt this.
+
+## Release blockers
+
+### P0 — CMS identity cannot access a Finance workspace yet
+The API `authenticate()` resolves a CMS actor and then requires exactly one active mapping in `finance.user_roles`. The live table has zero rows. Consequently, all valid CMS users will be denied with “ยังไม่ได้กำหนดสิทธิ์ Finance ให้ผู้ใช้งานนี้”. Do not insert a guessed actor ID. Obtain a verified CMS bootstrap payload / stable actor reference and explicitly assign the intended Owner role.
+
+### P0 — Finance API is not deployed
+The current Edge Function inventory has no `finance-api`. Frontend requests cannot complete against the intended function until it is deployed with verified secrets and tested. Do not deploy the current source unchanged: see the missing workflow actions below.
+
+### P0 — Core accounting workflows return HTTP 501
+Current API source explicitly returns 501 for:
+- `payment.approve`
+- `period.close`
+- `journal.post`
+- `tax.submit`
+
+The UI also labels several areas as Preview Only. Do not represent the module as end-to-end operational until these workflows are implemented and tested.
+
+## Data integrity and security review items
+
+1. **Tenant-consistent foreign keys:** several tables carry `company_id` while foreign keys reference only the child record ID. Add composite unique keys and composite foreign keys (company_id, referenced_id) where practical so a row cannot reference a partner/document/account belonging to another company even if an API bug occurs. Review at least documents→partners, payments→documents, tax_transactions→documents/partners, journal_lines→accounts/partners, payment_allocations→payments/documents, and tax_filing_lines→filings/transactions/partners.
+2. **Journal posting invariant:** ensure posting is a single DB transaction that locks the journal header, validates at least two lines, verifies debit=credit and company consistency, verifies the accounting period is open, allocates a unique journal number, writes immutable posting/audit data, then transitions status to posted. The existing balance CHECK alone does not prove line sums equal header totals.
+3. **Payment workflow:** implement legal state transitions, maker-checker (creator cannot approve own payment), approval event and payment event audit, idempotency, and safe allocation totals. The SQL trigger already limits some transitions, but the API must enforce business rules and company ownership.
+4. **Period close:** lock period; reject close if draft/pending documents or unposted journals exist; prevent posting into closed periods; require Owner; audit both close and reopen.
+5. **Tax filing:** snapshot filing lines from reviewed tax transactions, prevent duplicate filings, reconcile totals, enforce approval before submission, and record submission reference/time. Do not claim e-filing integration unless an actual Revenue Department integration exists.
+6. **Company registration:** the one existing company row is not assumed to be the real legal entity. Confirm its details and UAT designation before using it. Do not overwrite it with guessed company data.
+7. **Audit append-only:** retain server-only access and validate triggers/permissions; ensure all mutations write audit events in the same transaction.
+8. **Storage:** draft 004 defines metadata only. Private bucket creation, signed upload/download, MIME/size validation, malware scanning policy, and cleanup lifecycle remain separate work.
+
+## Frontend integration review
+
+- `finance-auth.js` calls the fixed Supabase Function URL and sends the CMS token in `x-cms-session`.
+- `finance-cms-session.js` reads `amz.tok` from sessionStorage. Confirm the real Finance route always runs in a context where this exact token is present; do not alter CMS login/PIN/session.
+- `finance.js` still renders multiple pages as Preview Only.
+- `finance-master-data.js` and `finance-transactions.js` need full persistence/read-path verification; current transaction screen explicitly says it does not save to DB until API is tested.
+- When JS/CSS is changed, bump the matching `?v=` references in HTML.
+
+## Recommended execution order
+
+1. Verify the CMS bootstrap payload and stable actor identifier without exposing the token; assign a single UAT Owner mapping only after explicit confirmation of identity/company.
+2. Confirm the existing company row is the intended test workspace; otherwise create a clearly labelled UAT company without modifying the existing row.
+3. Fix and test tenant-consistent constraints; retain RLS and server-only grants.
+4. Complete API actions: company update/read, partner/account CRUD, document read/create, payment create/approve/pay/allocate, journal create/post/reverse, period close/reopen, VAT/WHT transaction and filing workflows, audit.
+5. Deploy only `finance-api` after code review and secret verification; never expose DB credentials or service-role credentials in browser code.
+6. Integrate frontend and test each action with isolated UAT records; verify idempotency and role separation.
+7. Run Supabase security/performance advisors and regression checks. Resolve Finance-specific findings before release.
+
+## Explicitly not performed
+
+- No DDL or DML was executed against the live database in this review.
+- No Finance Edge Function was deployed.
+- No existing CMS table, row, authentication flow, or production record was changed.
+- No real cash movement, bank integration, or tax filing was initiated.
