@@ -13,7 +13,7 @@ async function outstanding(tx: Tx, docId: string, excludePayment: string | null 
 }
 
 export async function createPayment(body: Record<string, unknown>, u: User, rid: string, idem: string) {
-  need(u, "write");
+  need(u, "request");
   if (!idem || idem.length < 8) fail(400, "ต้องมี Idempotency Key เพื่อกันบันทึกซ้ำ");
   const type = oneOf(body.payment_type, ["receipt", "disbursement"] as const, "ประเภทการรับ/จ่าย");
   const d = date(body.payment_date, "วันที่รับ/จ่าย");
@@ -106,11 +106,12 @@ export async function cancelPayment(body: Record<string, unknown>, u: User, rid:
 
 // บันทึกว่ารับ/จ่ายเงินจริงแล้ว → ลงบัญชี (Dr/Cr เงินสด/ธนาคาร กับ ลูกหนี้/เจ้าหนี้ หรือบัญชีคู่) และตัดยอดคงค้างของเอกสาร
 export async function markPaid(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "approve");
+  need(u, "request");
   const id = uuid(body.payment_id, "รายการ")!;
   return await db().begin(async (tx: Tx) => {
     const p = await lockPayment(tx, u, id);
     if (p.status !== "approved") fail(409, "ต้องอนุมัติรายการก่อนบันทึกว่ารับ/จ่ายแล้ว");
+    if (p.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "บันทึกการจ่ายได้เฉพาะผู้สร้างรายการ หรือ Manager");
     const amount = num(p.amount), pid = p.partner_id ? String(p.partner_id) : null;
     const pd = p.payment_date instanceof Date ? p.payment_date.toISOString().slice(0, 10) : String(p.payment_date);
     let counter: string, docNo = "";
