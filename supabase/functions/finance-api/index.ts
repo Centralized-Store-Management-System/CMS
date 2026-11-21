@@ -85,6 +85,8 @@ Deno.serve(async (req: Request) => {
     }
     const contentType = (req.headers.get("content-type") || "").toLowerCase();
     if (contentType.includes("multipart/form-data")) {
+      const declaredLength = Number(req.headers.get("content-length") || 0);
+      if (declaredLength > 20 * 1024 * 1024 + 256 * 1024) throw new HttpError(413, "ไฟล์ต้องมีขนาดไม่เกิน 20 MB");
       const form = await req.formData();
       const uploadAction = text(form.get("action"), 40);
       if (uploadAction !== "file.upload") throw new HttpError(404, "ไม่พบ Finance API action");
