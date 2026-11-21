@@ -21,7 +21,9 @@ async function hrLoadPositions() {
   try { const p=await hrPositionRequest(); if(Array.isArray(p.positions)&&p.positions.length) HR_POSITIONS=p.positions; }
   catch(e) { console.warn('HR position master unavailable; using compatibility list',e.message); }
 }
+let HR_POSITION_LOADED=false, HR_POSITION_LOADING=false;
 function pPositions() {
+ if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});return '<p class="loading">กำลังโหลด Position Master…</p>';}
  const rows=HR_POSITIONS;
  return `<div class="h2">Position Master <span class="spacer"></span><button class="btn primary" data-a="newPosition">Create Position</button></div>
  <p class="note">HR เป็นเจ้าของข้อมูลตำแหน่ง ส่วนการเปิดสิทธิ์ใช้งานแต่ละระบบต้องกำหนดและอนุมัติผ่าน IT Control Center ก่อน</p>
@@ -118,6 +120,8 @@ function openEmp(id, draft) {
       if (!pin) delete v.pin;
       delete v.hasPin; delete v.account;
       if (!v.branch) v.branch = oneBranch();
+      const matchedPosition=HR_POSITIONS.find(p=>p.name_th===v.position||p.position_code===v.position);
+      if(matchedPosition){v.positionId=matchedPosition.id;v.positionCode=matchedPosition.position_code;}
       await DB.upsert('employees', v);
       if (!id) setTimeout(() => toast(can('users') && !pin ? 'เพิ่มแล้ว ต่อไปสร้างชื่อผู้ใช้ให้ที่หน้า Users และตั้งกะที่ ตารางงาน > รูปแบบกะ' : 'เพิ่มแล้ว ตั้งกะและวันหยุดของพนักงานคนนี้ที่ ตารางงาน > รูปแบบกะ'), 300);
       if (belowMin(v)) setTimeout(() => toast('อัตราค่าจ้างนี้ต่ำกว่าค่าแรงขั้นต่ำที่ตั้งไว้ ตรวจอีกครั้ง'), 600);
