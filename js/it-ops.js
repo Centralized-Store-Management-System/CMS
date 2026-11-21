@@ -227,19 +227,19 @@ async function ocOpsLoadQueue() {
   }
 }
 async function ocOpsDecision(id, decision) {
-  if (!confirm(decision === 'approve' ? 'ยืนยันอนุมัติแผนสำหรับผู้ดูแล? ระบบจะยังไม่รันคำสั่งใด ๆ' : 'ยืนยันปฏิเสธรายการนี้?')) return;
+  if (!await ITDialog.confirm(decision === 'approve' ? 'ยืนยันอนุมัติแผนสำหรับผู้ดูแล?' : 'ยืนยันปฏิเสธรายการนี้?', {title:'ยืนยันการตัดสินใจ',detail:'ระบบจะยังไม่รันคำสั่งหรือแก้ไข Production โดยอัตโนมัติ'})) return;
   try {
     const r = await fetch(IT_OPS_QUEUE_URL, { method: 'POST', headers: { 'content-type': 'application/json', 'x-cms-session': S.token || '' }, body: JSON.stringify({ id: Number(id), decision }), cache: 'no-store' });
     const p = await r.json(); if (!r.ok || !p.ok) throw new Error(p.error || 'บันทึกไม่สำเร็จ');
     ocOpsLoadQueue();
-  } catch (e) { alert(e.message || 'บันทึกไม่สำเร็จ'); }
+  } catch (e) { await ITDialog.alert(e.message || 'บันทึกไม่สำเร็จ',{title:'ดำเนินการไม่สำเร็จ'}); }
 }
 async function ocOpsSubmitFeedback(type, anomalyId) {
   try {
     const r=await fetch(IT_OPS_QUEUE_URL,{method:'POST',headers:{'content-type':'application/json','x-cms-session':S.token||''},body:JSON.stringify({type:'learning_feedback',feedbackType:type,anomalyEventId:Number(anomalyId)}),cache:'no-store'});
     const p=await r.json(); if(!r.ok||!p.ok) throw new Error(p.error||'บันทึก Feedback ไม่สำเร็จ');
     ocOpsLoadQueue();
-  } catch(err) { alert(err.message||'บันทึก Feedback ไม่สำเร็จ'); }
+  } catch(err) { await ITDialog.alert(err.message||'บันทึก Feedback ไม่สำเร็จ',{title:'บันทึก Feedback ไม่สำเร็จ'}); }
 }
 document.addEventListener('click', e => {
   const refresh = e.target.closest('#oc-ops-refresh');
@@ -280,6 +280,6 @@ document.addEventListener('click',async e=>{
  const alert=e.target.closest('[data-cc-alert]'),approve=e.target.closest('[data-cc-approve]');
  try{
   if(alert){alert.disabled=true;await ocOpsControlRequest('POST',{type:'alert_status',id:Number(alert.dataset.ccAlert),status:alert.dataset.ccStatus});await ocOpsControlLoad();}
-  if(approve){approve.disabled=true;if(!confirm('ยืนยันอนุมัติแผนนี้? การอนุมัติไม่ใช่การสั่ง Execute')){approve.disabled=false;return;}await ocOpsControlRequest('POST',{type:'approve_recovery',id:Number(approve.dataset.ccApprove)});await ocOpsControlLoad();}
+  if(approve){approve.disabled=true;if(!await ITDialog.confirm('ยืนยันอนุมัติแผนนี้?',{title:'อนุมัติแผน Recovery',detail:'การอนุมัติเป็นเพียงการรับรองแผน ไม่ใช่การสั่ง Execute หรือซ่อมระบบจริง'})){approve.disabled=false;return;}await ocOpsControlRequest('POST',{type:'approve_recovery',id:Number(approve.dataset.ccApprove)});await ocOpsControlLoad();}
  }catch(err){toast(err.message);}
 });
