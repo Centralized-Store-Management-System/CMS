@@ -40,7 +40,7 @@ Branch: feature/finance-module-foundation
 - `clock.html`/LINE/LIFF ต้องเบาเป็นพิเศษ
 - Shared CSS/theme ไม่ควรเปลี่ยนเพื่อปรับหน้าตาเฉพาะ module
 
-## 4. Proposed module boundaries
+## 4. Shared UI / Theme contract\n\nผู้ใช้ควรรู้สึกว่าเป็น CMS เดียวกัน แม้ Finance จะเป็น isolated module:\n- Finance ใช้ independent entry point ภายใต้ CMS platform และคง navigation/workspace ของ Finance ภายในหน้าจอเดียว\n- ใช้ Theme Contract เดียวกับ CMS โดย Finance Theme Bridge อ่านค่าที่ CMS Theme Engine บันทึกไว้ใน same-origin localStorage (`amz.theme`, `amz.mytheme`)\n- ซิงก์สีหลัก, accent, background, typography, heading font, logo, light/dark mode, scale, radius และ density\n- Finance มี CSS overrides ของตนเองเท่านั้น ไม่ import `css/app.css`, `css/theme-b.css` หรือ `js/theme.js` ของ CMS และไม่แก้ shared theme files\n- Theme Bridge ถูกโหลดเฉพาะหน้า Finance จึงไม่เพิ่ม script, request, polling หรือ subscription ให้หน้าเดิมเมื่อ Finance ปิดอยู่\n- การเปลี่ยน Theme ใน CMS จะสะท้อนเมื่อ Finance เปิด/refresh ใหม่; ถ้าเปลี่ยนในอีก tab ขณะ Finance เปิดอยู่ จะรับ storage event\n\n## 5. Proposed module boundaries
 
 ```
 CMS Platform
@@ -81,7 +81,7 @@ Suggested file boundaries:
 - `supabase/migrations/finance/` — versioned SQL migration source files
 - `docs/finance/` — specifications, data dictionary, test evidence
 
-## 5. Database isolation
+## 6. Database isolation
 
 Create a dedicated `finance` schema. Do not add Finance columns or triggers to existing `public` or `backoffice` tables.
 
@@ -102,7 +102,7 @@ All financial records should use stable UUIDs, timestamps, creator identity, lif
 
 Single-company user experience is the initial scope. Data model should retain company_id on relevant records so future multi-company support does not require a redesign.
 
-## 6. Security model
+## 7. Security model
 
 Initial roles:
 - Owner: full visibility; approves payments, period closing and tax filing.
