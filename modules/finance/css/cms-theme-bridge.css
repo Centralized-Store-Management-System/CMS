@@ -1,5 +1,5 @@
 /* Shared CMS theme contract: Finance-only overrides; no dependency on CMS application CSS. */
-:root{--fm-font:"IBM Plex Sans Thai","Leelawadee UI","Noto Sans Thai",sans-serif;--fm-display:"Prompt","IBM Plex Sans Thai","Leelawadee UI",sans-serif}
+:root{--bg:var(--fm-bg,#f1f4f1);--ink:#1d2c25;--surface:#fff;--sunk:#eef2ee;--muted:#7a8981;--brand:var(--green);--fm-font:"IBM Plex Sans Thai","Leelawadee UI","Noto Sans Thai",sans-serif;--fm-display:"Prompt","IBM Plex Sans Thai","Leelawadee UI",sans-serif}
 body{font-family:var(--fm-font);background:var(--bg);color:var(--ink)}
 .fm-app{font-family:var(--fm-font);background:var(--bg);color:var(--ink)}
 .fm-brand-mark{background:var(--green)}
@@ -28,3 +28,11 @@ html[data-theme="dark"] .fm-nav-item.active,html[data-theme="dark"] .fm-subnav b
 html[data-theme="dark"] .fm-page-head h1,html[data-theme="dark"] .fm-kpi strong,html[data-theme="dark"] .fm-panel h2{color:var(--ink)}
 html[data-theme="dark"] .fm-table-wrap th,html[data-theme="dark"] .fm-table-wrap td{border-color:var(--line)}
 @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) .fm-sidebar,html:not([data-theme="light"]):not([data-theme="dark"]) .fm-topbar,html:not([data-theme="light"]):not([data-theme="dark"]) .fm-kpi,html:not([data-theme="light"]):not([data-theme="dark"]) .fm-panel{background:var(--surface);border-color:var(--line)}}
+
+html[data-theme="dark"]{--bg:#0e1411;--surface:#151e19;--sunk:#1d2822;--ink:#e3ebe5;--muted:#9aa79f;--line:#2a3830}
+html[data-theme="dark"] body,html[data-theme="dark"] .fm-app{background:var(--bg);color:var(--ink)}
+html[data-theme="dark"] .fm-sidebar,html[data-theme="dark"] .fm-topbar,html[data-theme="dark"] .fm-kpi,html[data-theme="dark"] .fm-panel,html[data-theme="dark"] .fm-company{background:var(--surface);border-color:var(--line)}
+html[data-theme="dark"] .fm-nav-item,html[data-theme="dark"] .fm-subnav button{color:var(--muted)}
+html[data-theme="dark"] .fm-nav-item.active,html[data-theme="dark"] .fm-subnav button.active{background:var(--sunk);color:var(--brand)}
+html[data-theme="dark"] .fm-page-head h1,html[data-theme="dark"] .fm-kpi strong,html[data-theme="dark"] .fm-panel h2{color:var(--ink)}
+html[data-theme="dark"] .fm-table-wrap th,html[data-theme="dark"] .fm-table-wrap td{border-color:var(--line)}
