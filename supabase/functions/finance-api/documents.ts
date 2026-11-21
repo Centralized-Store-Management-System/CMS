@@ -154,7 +154,7 @@ export async function voidDocument(body: Record<string, unknown>, u: User, rid: 
     const [r] = await tx`select id, status, created_by from finance.documents where id = ${id}::uuid and company_id = ${u.companyId}::uuid for update`;
     if (!r) fail(404, "ไม่พบเอกสาร");
     if (!["draft", "pending_review"].includes(r.status)) fail(409, "ยกเลิกได้เฉพาะเอกสารที่ยังไม่ลงบัญชี — เอกสารที่ลงบัญชีแล้วให้ใช้ \"กลับรายการ\"");
-    if (r.created_by !== u.actorRef && !["owner", "approver"].includes(u.role)) fail(403, "ยกเลิกได้เฉพาะผู้สร้างเอกสาร หรือผู้อนุมัติ");
+    if (r.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "ยกเลิกได้เฉพาะผู้สร้างเอกสาร หรือ Manager");
     const [doc] = await tx`update finance.documents set status = 'voided', voided_by = ${u.actorRef}, void_reason = ${reason} where id = ${id}::uuid returning id, document_number, status`;
     await approvalEvent(tx, u, "document", id, "cancelled", reason, rid);
     await audit(tx, u, "void", "document", id, doc, rid);
@@ -266,6 +266,7 @@ export async function listDocuments(url: URL, u: User) {
       coalesce((select sum(pa.amount) from finance.payment_allocations pa where pa.document_id = d.id), 0) as paid_total
     from finance.documents d left join finance.partners p on p.id = d.partner_id
     where d.company_id = ${u.companyId}::uuid and d.document_type = any(${types})
+      and (${u.role !== "staff"} or d.created_by = ${u.actorRef})
       and (${status} = '' or d.status = ${status})
       and (${q} = '' or d.document_number ilike ${"%" + q + "%"} or p.display_name ilike ${"%" + q + "%"} or d.reference ilike ${"%" + q + "%"})
     order by d.document_date desc, d.created_at desc limit ${limit} offset ${offset}`;
@@ -279,7 +280,8 @@ export async function getDocument(url: URL, u: User) {
       (select display_name from finance.user_roles r where r.company_id = d.company_id and r.cms_actor_ref = d.created_by) as created_by_name,
       (select display_name from finance.user_roles r where r.company_id = d.company_id and r.cms_actor_ref = d.approved_by) as approved_by_name
     from finance.documents d left join finance.partners p on p.id = d.partner_id
-    where d.id = ${id}::uuid and d.company_id = ${u.companyId}::uuid`;
+    where d.id = ${id}::uuid and d.company_id = ${u.companyId}::uuid
+      and (${u.role !== "staff"} or d.created_by = ${u.actorRef})`;
   if (!doc) fail(404, "ไม่พบเอกสาร");
   const [lines, events, journal, payments] = await Promise.all([
     sql`select line_no, description, quantity, unit_price, vat_rate, vat_amount, wht_rate, wht_amount, account_code, line_total from finance.document_lines where document_id = ${id}::uuid order by line_no`,
