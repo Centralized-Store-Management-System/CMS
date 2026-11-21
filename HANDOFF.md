@@ -20,6 +20,10 @@
 - **แก้บั๊ก live:** อัปโหลดหลักฐานเคลียร์ไม่ได้ (check `document_files`), Owner อนุมัติ/ผู้ตรวจยืนยันเคลียร์ error (check `approval_events.action`), ล้างข้อมูลทดสอบล้มเมื่อมีรายการเคลียร์, ชื่อไฟล์ภาษาไทยเพี้ยน, deep link `#fin/...` ค้างหน้า Today
 - **ทดสอบ:** API E2E 178/178 · flow_ui 28/28 · ui 38/38 · embed 29/29 · live smoke 401 ไทย
 - **ตั้งค่าก่อนใช้:** Finance › ตั้งค่า › ผู้ใช้งาน → กำหนด manager / staff / verifier (ผู้ตรวจต้องเป็นคนอื่น)
+- **หนังสือรับรองหัก ณ ที่จ่าย 50 ทวิ (V 1.3.0 · API v11 / 1.4.0):** ตาราง `finance.wht_certificates` (migration `finance_wht_certificates`) ผูก `document_id` · เลขที่ `WTI-YYYYMM-0001` (document_sequences type `wht_certificate`)
+  - API `wht-certificates.ts`: `wht-certificate-draft` (ดึงบริษัท/ผู้รับเงิน/ยอดจากคำขอ — เคลียร์บางส่วนคิดตามสัดส่วน), `wht-certificates`, `wht-certificate`, `wht-certificate.save` (สร้าง/แก้ — แก้ไม่ได้หลังปิดงาน), `wht-certificate.void`
+  - หน้าเว็บ `fin-pages-wht.js` (`#fin/wht50/new:<คำขอ>` · `edit:<id>` · `<id>`): ฟอร์มตามแบบ + พิมพ์ A4 แนวนอน 2 ฉบับ (ฉบับที่ 1/2 ขนาด A5) ตามแบบกรมสรรพากร · ปุ่ม "บันทึก + สร้างหนังสือหัก ณ ที่จ่าย" ในฟอร์มขอเบิก · ส่วน "หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)" ในหน้าคำขอ (พิมพ์/ดู/แก้/ยกเลิก) · `FIN.load(key)` โหลดไฟล์หน้าล่วงหน้า
+  - ทดสอบ: API 193/193 · wht_ui 19/19 · embed 34/34 · flow_ui 28/28 · ui 38/38
 - **เปลี่ยนหน้า Finance ลื่น (V 1.2.2):** `fin-core.go` วาดแต่ละหน้าลงกล่องใหม่ `.fm-host` — หน้าเดิมแสดงจาง (`#fmContent.fm-busy`) จนหน้าใหม่พร้อม (เกิน 0.7 วิ ค่อยแสดงสถานะโหลด) · แก้บั๊กตัวดักคลิกของหน้า (เบิก–เคลียร์/ตรวจเอกสาร/ผู้ใช้/ผังบัญชี) ซ้อนบน `#fmContent` จนกดครั้งเดียวยิง API หลายรอบ
 - **กดเมนูย่อย Finance ไม่ refresh ทั้งหน้าแล้ว** (`finance-embed.js` V 1.2.1): ย้ายหน้า `#fin/a → #fin/b` ข้าม `App.render` ของหลังร้าน เปลี่ยนเฉพาะเนื้อหา Finance (`FIN.go`) · กลุ่มเมนูที่กางไว้ไม่หุบ · ไม่แก้ `app.js`
 

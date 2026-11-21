@@ -116,6 +116,8 @@ export async function getFlowItem(url: URL, u: User) {
     where e.company_id = ${u.companyId}::uuid
       and ((e.entity_type = 'document' and e.entity_id = ${id}::uuid) or (${clr ? clr.id : null}::uuid is not null and e.entity_type = 'expense_clearance' and e.entity_id = ${clr ? clr.id : null}::uuid))
     order by e.created_at`;
+  const wht = await sql`select id, cert_number, issue_date, form_type, total_amount, total_tax, status, void_reason, created_at
+    from finance.wht_certificates where company_id = ${u.companyId}::uuid and document_id = ${id}::uuid order by created_at`;
   const names = await sql`select cms_actor_ref, display_name from finance.user_roles where company_id = ${u.companyId}::uuid`;
   const nameOf: Record<string, string> = {}; for (const n of names) nameOf[n.cms_actor_ref] = n.display_name || n.cms_actor_ref;
 
@@ -138,6 +140,8 @@ export async function getFlowItem(url: URL, u: User) {
     verifier_return: st === "verify" && can(u, "verify") && sod,
     self_blocked: (st === "request_review" && can(u, "approve") && !notMakerOf(doc.created_by)) || (st === "clear_review" && can(u, "approve") && !notMakerOf(clr?.submitted_by))
       ? "คุณเป็นผู้สร้าง/ผู้ส่งรายการนี้ ต้องให้ผู้อนุมัติคนอื่นอนุมัติ (หรือเปิด \"อนุมัติรายการของตัวเองได้\" ในตั้งค่า)" : null,
+    wht_create: st !== "cancelled" && manage,
+    wht_edit: !["cancelled", "closed"].includes(st) && manage,
     sod_blocked: st === "verify" && can(u, "verify") && !sod ? "ผู้สร้าง ผู้ส่งเคลียร์ หรือ Owner ผู้อนุมัติ เป็นผู้ตรวจสุดท้ายของรายการเดียวกันไม่ได้" : null,
   };
   let pay_accounts: Row[] = [];
@@ -151,7 +155,7 @@ export async function getFlowItem(url: URL, u: User) {
       owner_approved_by_name: clr.owner_approved_by ? nameOf[clr.owner_approved_by] || clr.owner_approved_by : null,
       verified_by_name: clr.verified_by ? nameOf[clr.verified_by] || clr.verified_by : null,
       returned_by_name: clr.returned_by ? nameOf[clr.returned_by] || clr.returned_by : null } : null,
-    files, events, actions, pay_accounts, own,
+    files, events, actions, pay_accounts, own, wht,
   };
 }
 

@@ -26,7 +26,7 @@
     payment_evidence: 'หลักฐานการจ่าย (สลิป)', refund_evidence: 'หลักฐานคืนเงิน', wht_document: 'หนังสือรับรองหัก ณ ที่จ่าย',
   };
   const REQ_FILES = ['quotation', 'supporting', 'receipt_invoice', 'tax_invoice'];
-  const CLR_FILES = ['payment_evidence', 'receipt_invoice', 'tax_invoice', 'refund_evidence', 'supporting'];
+  const CLR_FILES = ['payment_evidence', 'receipt_invoice', 'tax_invoice', 'wht_document', 'refund_evidence', 'supporting'];
   const EVENT = {
     'document:submitted': 'ส่งขออนุมัติ', 'document:approved': 'Owner อนุมัติคำขอ', 'document:returned': 'Owner ส่งคำขอกลับ', 'document:cancelled': 'ยกเลิกคำขอ',
     'document:reversed': 'กลับรายการบัญชี', 'expense_clearance:submitted': 'ส่งเคลียร์', 'expense_clearance:owner_approved': 'Owner อนุมัติเคลียร์',
@@ -125,7 +125,7 @@
         </div>
         <p class="ff-preview" id="ffPrev"></p>
         ${id ? '' : `<div class="fm-field fm-field-full"><span>แนบเอกสาร (ไม่บังคับ)</span><div class="ff-up"><select name="cat">${REQ_FILES.map(c => `<option value="${c}">${esc(FILE[c])}</option>`).join('')}</select><input type="file" name="files" multiple accept="${ACCEPT}"></div></div>`}
-        <div class="fm-form-actions"><button type="button" class="fm-btn fm-btn-light" data-save="draft">บันทึกร่าง</button><button type="button" class="fm-btn fm-btn-primary" data-save="submit">ส่งขออนุมัติ</button></div>
+        <div class="fm-form-actions"><button type="button" class="fm-btn fm-btn-light" data-save="wht" title="บันทึกคำขอเป็นร่าง แล้วกรอกหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ต่อ">บันทึก + สร้างหนังสือหัก ณ ที่จ่าย</button><button type="button" class="fm-btn fm-btn-light" data-save="draft">บันทึกร่าง</button><button type="button" class="fm-btn fm-btn-primary" data-save="submit">ส่งขออนุมัติ</button></div>
         <small class="fm-muted">หลายรายการ / เลือกผู้ขายในระบบ → <a href="#expense/new">ใช้ฟอร์มรายจ่ายแบบละเอียด</a></small>
       </form>`;
     const form = F.$('#ffReq', el);
@@ -139,7 +139,7 @@
     form.addEventListener('click', async e => {
       const b = e.target.closest('[data-save]'); if (!b) return;
       if (!form.reportValidity()) return;
-      const v = vals(), submit = b.dataset.save === 'submit';
+      const v = vals(), submit = b.dataset.save === 'submit', wht = b.dataset.save === 'wht';
       const body = { document_type: 'expense', document_date: v.fd.get('document_date'), reference: v.fd.get('reference'), notes: v.fd.get('notes'),
         vat_rate: v.vat ? 7 : 0, vat_inclusive: v.vat, wht_rate: v.wht,
         lines: [{ description: v.fd.get('description'), quantity: 1, unit_price: v.amount, account_code: v.fd.get('account_code') || null }] };
@@ -151,8 +151,8 @@
         for (const f of files) await F.upload('expense-request.file.upload', { document_id: docId, category: v.fd.get('cat') }, f);
         if (submit) await api.post('document.submit', { document_id: docId });
         return docId;
-      }, submit ? 'ส่งขออนุมัติแล้ว' : 'บันทึกร่างแล้ว');
-      if (r) { F.refreshBadges(); F.nav('#expflow/' + r); }
+      }, submit ? 'ส่งขออนุมัติแล้ว' : wht ? 'บันทึกคำขอแล้ว — กรอกหนังสือรับรองหัก ณ ที่จ่ายต่อ' : 'บันทึกร่างแล้ว');
+      if (r) { F.refreshBadges(); F.nav(wht ? '#wht50/new:' + r : '#expflow/' + r); }
     });
   }
 
@@ -160,6 +160,7 @@
   async function detail(el, id) {
     const r = await api.get('expense-flow-item', { id });
     const { item: it, document: d, clearance: c, files, events, actions: a } = r;
+    const wht = r.wht || [], whtOn = wht.filter(w => w.status === 'active');
     const reqFiles = files.filter(f => f.stage === 'request'), clrFiles = files.filter(f => f.stage === 'clearance');
     const evidence = clrFiles.filter(f => f.file_category === 'payment_evidence').length;
     const canDelReq = a.edit_request, canDelClr = a.clear && c && ['draft', 'returned'].includes(c.status);
@@ -180,7 +181,7 @@
         <div class="ff-btns">${a.approve_clearance ? '<button class="fm-btn fm-btn-primary" data-do="approve-clearance">อนุมัติเคลียร์</button>' : ''}<button class="fm-btn fm-btn-light" data-do="return-clearance">ส่งกลับให้แก้</button></div></section>`;
     else if (a.verify) act = `<section class="fm-panel ff-act"><h2>ตรวจขั้นสุดท้าย</h2><p>ยืนยันแล้วระบบจะปิดงาน ลงบัญชี และอัปเดตรายงาน/แดชบอร์ดให้ทันที</p>${sumBox(c)}
         <ul class="ff-check"><li class="${reqFiles.length ? 'ok' : 'no'}">เอกสารตอนขอเบิก ${reqFiles.length} ไฟล์</li><li class="${evidence ? 'ok' : 'no'}">หลักฐานการจ่ายเงิน ${evidence} ไฟล์</li>
-        <li class="${clrFiles.some(f => ['receipt_invoice', 'tax_invoice'].includes(f.file_category)) ? 'ok' : 'no'}">ใบเสร็จ / ใบกำกับภาษี</li>${Number(c.refund_amount) > 0 ? `<li class="${clrFiles.some(f => f.file_category === 'refund_evidence') ? 'ok' : 'no'}">หลักฐานคืนเงิน ${baht(c.refund_amount)}</li>` : ''}</ul>
+        <li class="${clrFiles.some(f => ['receipt_invoice', 'tax_invoice'].includes(f.file_category)) ? 'ok' : 'no'}">ใบเสร็จ / ใบกำกับภาษี</li>${Number(d.wht_total) > 0 || whtOn.length ? `<li class="${whtOn.length ? 'ok' : 'no'}">หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ${whtOn.length} ฉบับ</li>` : ''}${Number(c.refund_amount) > 0 ? `<li class="${clrFiles.some(f => f.file_category === 'refund_evidence') ? 'ok' : 'no'}">หลักฐานคืนเงิน ${baht(c.refund_amount)}</li>` : ''}</ul>
         <label class="fm-check"><input type="checkbox" id="ffConfirm"> ตรวจเอกสารและหลักฐานทั้งหมดแล้ว ครบถ้วนและถูกต้อง</label>
         <div class="ff-btns" style="margin-top:12px"><button class="fm-btn fm-btn-primary" data-do="verify">ยืนยัน ปิดงาน</button><button class="fm-btn fm-btn-light" data-do="verifier-return">ส่งกลับให้แก้</button></div></section>`;
     else if (it.stage === 'closed') act = `<div class="fm-notice"><span>✓</span><div><b>ปิดงานแล้ว${c && c.journal_number ? ' · ลงบัญชี ' + esc(c.journal_number) : ''}</b><small>${c ? 'ค่าใช้จ่ายจริง ' + baht(c.actual_expense_amount) + (Number(c.refund_amount) > 0 ? ' · คืนเงิน ' + baht(c.refund_amount) : '') + ' · ' : ''}รายงานและแดชบอร์ดอัปเดตแล้ว
@@ -207,9 +208,23 @@
             ${c.owner_approved_by_name ? `<dt>Owner อนุมัติเคลียร์</dt><dd>${esc(c.owner_approved_by_name)}</dd>` : ''}${c.verified_by_name ? `<dt>ผู้ตรวจสุดท้าย</dt><dd>${esc(c.verified_by_name)} · ${esc(thDateTime(c.verified_at))}</dd>` : ''}</dl>
             <h3 class="ff-h3">หลักฐานการจ่าย / ใบเสร็จ</h3>${fileList(clrFiles, canDelClr)}` : '<p class="fm-muted" style="margin:0">ยังไม่ได้บันทึกการจ่ายเงิน</p>'}</section>
       </div>
+      ${whtPanel(d, wht, a)}
       <section class="fm-panel"><div class="fm-panel-head"><h2>ประวัติ</h2></div>${events.length ? `<ol class="ff-time">${events.map(e => `<li class="${/return/.test(e.action) ? 'bad' : ''}"><div><b>${esc(EVENT[e.entity_type + ':' + e.action] || e.action)}</b>
         <small>${esc(e.actor_name)} · ${esc(thDateTime(e.created_at))}${e.note ? ' · ' + esc(e.note) : ''}</small></div></li>`).join('')}</ol>` : '<p class="fm-muted" style="margin:0">ยังไม่มีประวัติ</p>'}</section>`;
     wire(el, r);
+  }
+
+  // หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ที่ผูกกับคำขอนี้
+  function whtPanel(d, wht, a) {
+    if (!wht.length && !a.wht_create) return '';
+    const need = Number(d.wht_total) > 0 && !wht.some(w => w.status === 'active');
+    return `<section class="fm-panel" id="ffWht"><div class="fm-panel-head"><div><h2>หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</h2><p>${need ? 'คำขอนี้มีหัก ณ ที่จ่าย ' + baht(d.wht_total) + ' — สร้างหนังสือแล้วพิมพ์ให้ผู้รับเงิน' : 'บันทึกแล้วแนบกับคำขอนี้อัตโนมัติ · พิมพ์ 2 ฉบับ (ผู้รับเงิน / เก็บเป็นหลักฐาน)'}</p></div>
+      ${a.wht_create ? `<button class="fm-btn ${need ? 'fm-btn-primary' : 'fm-btn-light'}" data-go="#wht50/new:${esc(d.id)}">＋ สร้างหนังสือหัก ณ ที่จ่าย</button>` : ''}</div>
+      ${wht.length ? `<div class="ff-files">${wht.map(w => `<div class="ff-file${w.status === 'active' ? '' : ' ff-void'}"><div><b>${esc(w.cert_number)} · ${esc(({ pnd3: 'ภ.ง.ด.3', pnd53: 'ภ.ง.ด.53', pnd1a: 'ภ.ง.ด.1ก', pnd1a_special: 'ภ.ง.ด.1ก พิเศษ', pnd2: 'ภ.ง.ด.2', pnd2a: 'ภ.ง.ด.2ก', pnd3a: 'ภ.ง.ด.3ก' })[w.form_type] || w.form_type)}</b>
+          <small>${esc(thDate(w.issue_date))} · จ่าย ${baht(w.total_amount)} · หักภาษี ${baht(w.total_tax)}${w.status === 'active' ? '' : ' · ยกเลิกแล้ว' + (w.void_reason ? ': ' + esc(w.void_reason) : '')}</small></div>
+          ${w.status === 'active' ? `<button type="button" class="fm-btn fm-btn-sm fm-btn-primary" data-wht-print="${esc(w.id)}">พิมพ์</button><button type="button" class="fm-btn fm-btn-sm fm-btn-light" data-go="#wht50/${esc(w.id)}">ดู</button>
+          ${a.wht_edit ? `<button type="button" class="fm-btn fm-btn-sm fm-btn-light" data-go="#wht50/edit:${esc(w.id)}">แก้ไข</button>` : ''}${a.wht_create ? `<button type="button" class="fm-btn fm-btn-sm fm-btn-ghost" data-wht-void="${esc(w.id)}">ยกเลิก</button>` : ''}` : ''}</div>`).join('')}</div>`
+        : '<p class="fm-muted" style="margin:0">ยังไม่มีหนังสือรับรอง</p>'}</section>`;
   }
 
   function sumBox(c) {
@@ -231,6 +246,7 @@
         <label class="fm-field"><span>เลขอ้างอิง (สลิป/ใบเสร็จ)</span><input name="reference_number" maxlength="120" value="${esc(c && c.reference_number || '')}"></label>
         <label class="fm-field fm-field-full"><span>หมายเหตุ</span><input name="notes" maxlength="1000" value="${esc(c && c.notes || '')}"></label>
       </form>
+      ${Number(d.wht_total) > 0 ? `<div class="fm-notice"><span>ⓘ</span><div><b>มีหัก ณ ที่จ่าย ${baht(d.wht_total)}</b><small>สร้าง/พิมพ์หนังสือรับรอง 50 ทวิ ได้ที่ส่วน "หนังสือรับรองหัก ณ ที่จ่าย" ด้านล่าง แล้วแนบสแกนฉบับที่เซ็นแล้วเป็น "หนังสือรับรองหัก ณ ที่จ่าย"</small></div></div>` : ''}
       <h3 class="ff-h3">แนบหลักฐาน ${evidence ? `<span class="fm-badge ok">สลิป ${evidence} ไฟล์</span>` : '<span class="fm-badge warn">ต้องแนบสลิปอย่างน้อย 1 ไฟล์</span>'}</h3>
       ${uploader('clr', CLR_FILES, 'PDF / รูปภาพ ไม่เกิน 20 MB · แนบได้หลายไฟล์')}
       <div class="ff-btns" style="margin-top:12px"><button class="fm-btn fm-btn-primary" data-do="submit-clearance">ส่งเคลียร์ให้ Owner</button><button class="fm-btn fm-btn-light" data-do="save-clearance">บันทึกร่าง</button></div></section>`;
@@ -269,6 +285,9 @@
     }));
     el.addEventListener('click', async e => {
       const op = e.target.closest('[data-open]'); if (op) return openFile(op, op.dataset.open);
+      const wp = e.target.closest('[data-wht-print]'); if (wp) { const w = window.open('', '_blank'); try { await F.load('wht50'); F.printWht(wp.dataset.whtPrint, w); } catch (err) { if (w) w.close(); F.toast(err.message, 'bad'); } return; }
+      const wv = e.target.closest('[data-wht-void]');
+      if (wv) { const why = await F.ask('ยกเลิกหนังสือรับรองหัก ณ ที่จ่าย', 'เลขที่เดิมจะไม่ถูกนำกลับมาใช้ (ออกฉบับใหม่ได้)', { input: true, required: true, label: 'เหตุผล', danger: true, ok: 'ยกเลิกหนังสือ' }); if (why && await run(wv, () => api.post('wht-certificate.void', { id: wv.dataset.whtVoid, reason: why }), 'ยกเลิกแล้ว')) F.reload(); return; }
       const del = e.target.closest('[data-del]');
       if (del) { if (await F.ask('ลบไฟล์', 'ลบไฟล์นี้ออกจากรายการ?', { ok: 'ลบ', danger: true }) && await run(del, () => api.post('expense-file.delete', { file_id: del.dataset.del }), 'ลบไฟล์แล้ว')) F.reload(); return; }
       const b = e.target.closest('[data-do]'); if (!b) return;

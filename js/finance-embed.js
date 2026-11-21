@@ -6,7 +6,7 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.2.2', BASE = 'modules/finance/';
+  const V = '1.3.0', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
