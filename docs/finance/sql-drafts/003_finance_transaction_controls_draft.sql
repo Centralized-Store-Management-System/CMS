@@ -71,6 +71,67 @@ create trigger trg_journal_entries_guard_posted
 before update or delete on finance.journal_entries
 for each row execute function finance.guard_posted_record();
 
+drop trigger if exists trg_payments_guard_posted on finance.payments;
+create trigger trg_payments_guard_posted
+before update or delete on finance.payments
+for each row execute function finance.guard_posted_record();
+
+drop trigger if exists trg_tax_filings_guard_submitted on finance.tax_filings;
+create trigger trg_tax_filings_guard_submitted
+before update or delete on finance.tax_filings
+for each row execute function finance.guard_posted_record();
+
+drop trigger if exists trg_accounting_periods_guard_closed on finance.accounting_periods;
+create trigger trg_accounting_periods_guard_closed
+before update or delete on finance.accounting_periods
+for each row execute function finance.guard_posted_record();
+
+-- Child lines cannot be changed after their parent has been posted.
+create or replace function finance.guard_posted_child_line()
+returns trigger language plpgsql set search_path = pg_catalog, finance
+as $
+declare parent_status text; parent_id uuid;
+begin
+  parent_id := case when tg_op = 'DELETE' then old.document_id else new.document_id end;
+  select status into parent_status from finance.documents where id = parent_id;
+  if parent_status in ('posted','voided','reversed') then
+    raise exception 'Posted document lines are locked; create a reversal or adjustment instead'
+      using errcode = '55000';
+  end if;
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end $;
+
+drop trigger if exists trg_document_lines_guard_parent on finance.document_lines;
+create trigger trg_document_lines_guard_parent
+before update or delete on finance.document_lines
+for each row execute function finance.guard_posted_child_line();
+
+create or replace function finance.guard_posted_journal_line()
+returns trigger language plpgsql set search_path = pg_catalog, finance
+as $
+declare parent_status text; parent_id uuid;
+begin
+  parent_id := case when tg_op = 'DELETE' then old.journal_entry_id else new.journal_entry_id end;
+  select status into parent_status from finance.journal_entries where id = parent_id;
+  if parent_status in ('posted','reversed') then
+    raise exception 'Posted journal lines are locked; create a reversal or adjustment instead'
+      using errcode = '55000';
+  end if;
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end $;
+
+drop trigger if exists trg_journal_lines_guard_parent on finance.journal_lines;
+create trigger trg_journal_lines_guard_parent
+before update or delete on finance.journal_lines
+for each row execute function finance.guard_posted_journal_line();
+
+drop trigger if exists trg_approval_events_immutable on finance.approval_events;
+create trigger trg_approval_events_immutable
+before update or delete on finance.approval_events
+for each row execute function finance.reject_audit_mutation();
+
 -- Audit history is append-only even for service_role application code.
 create or replace function finance.reject_audit_mutation()
 returns trigger language plpgsql set search_path = pg_catalog, finance
