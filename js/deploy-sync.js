@@ -118,7 +118,7 @@
       if (D._controllerReloaded) return;
       D._controllerReloaded = true;
       if (!busyUI()) location.reload();
-      else { D.latest = D.latest || 'service-worker-update'; showNotice(D.latest); }
+      else { D.latest = D.latest || 'service-worker-update'; showNotice(D.latest); scheduleSafeApply(); }
     });
   }
   window.CMSDeploy = { check: () => check(true), apply: () => applyUpdate(true), status: () => ({ current: D.version, latest: D.latest, pendingWrites: D.pendingWrites }) };
