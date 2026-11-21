@@ -17,7 +17,7 @@
   const dev = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } };
   const setDev = d => { try { d ? localStorage.setItem(KEY, JSON.stringify(d)) : localStorage.removeItem(KEY); } catch (e) { /* */ } };
   const h = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  let mem = '', code = '', mode = '', working = false, fails = 0, hiddenAt = 0, unlocked = false;
+  let mem = '', code = '', mode = '', working = false, fails = 0, hiddenAt = 0, unlocked = false, forceFreshLogin = false;
 
   async function derive(pin, salt) {
     const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
@@ -115,6 +115,17 @@
       hide(); enterMe({ token: r.token, my: r.my }); C.via = 'app'; saveNow();
       return;
     }
+    if (forceFreshLogin) {
+      // Explicit App Logout: do not restore cached Today data; create a new server session after PIN.
+      const r = await API.call('devUnlock', { id: d.id, secret: d.secret, code: c, boot: 1 });
+      const b = r.boot; delete r.boot;
+      if (!b || !r.token) throw new Error('เข้าสู่ระบบใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง');
+      S.token = r.token; S.me = r; SS.set('amz.tok', r.token);
+      await bootstrap(b);
+      if (!location.hash || location.hash === '#') location.hash = visibleMods()[0] ? visibleMods()[0].key : 'menu';
+      App.render(); hide(); forceFreshLogin = false; saveNow();
+      return;
+    }
     const lb = memGet(BKEY, 24 * 3600e3);
     if (lb) {   // หลังร้าน: แสดงข้อมูลที่จำไว้ทันที → รับสิทธิ์ → ถามเฉพาะตารางที่เปลี่ยน
       hide(); await bootstrap({ ...lb, _cached: true });
@@ -134,6 +145,19 @@
     if (b) { await bootstrap(b); if (!location.hash || location.hash === '#') location.hash = visibleMods()[0] ? visibleMods()[0].key : 'menu'; App.render(); hide(); }
     else { const pb = boot(); hide(); await pb; }   // ข้อมูลที่จำไว้ขึ้นก่อน ไม่ต้องรออัปเดต
     saveNow();
+  }
+  async function appLogout() {
+    const t = S.token;
+    // Revoke the current server session, but retain this device's PIN enrollment.
+    if (t) { try { await API.call('logout', { t }); } catch (e) { console.warn('App logout revoke failed', e); } }
+    S.token = ''; S.me = null; SS.set('amz.tok', '');
+    mem = ''; forceFreshLogin = true; unlocked = false;
+    if (typeof forgetBoot === 'function') forgetBoot();
+    try { sessionStorage.removeItem('amz.boot'); } catch (e) { /* */ }
+    try { localStorage.removeItem(BKEY); localStorage.removeItem(MKEY); } catch (e) { /* */ }
+    if (typeof TABLES !== 'undefined') TABLES.forEach(n => { S.t[n] = []; });
+    location.hash = '';
+    show('lock', 'ออกจากระบบแล้ว · ใส่ PIN เพื่อเข้าสู่ระบบอีกครั้ง');
   }
   async function renew() {   // หมดอายุระหว่างใช้งาน: ต่ออายุเงียบๆ ด้วยรหัสที่ใส่ไว้แล้ว
     if (working || !mem || !dev()) return show('lock');
@@ -166,6 +190,14 @@
   if (!clockPage && origLogin) {
     renderLogin = function (msg) { if (dev() && working) return; origLogin(msg); if (dev() && !document.getElementById('applock')) { if (mem) renew(); else show('lock'); } };   // ระหว่างปลดล็อก ไม่สลับไปหน้าเข้าระบบ
     if (typeof sessionLost === 'function') { const origLost = sessionLost; sessionLost = function (msg) { if (dev() && working) return; return origLost(msg); }; }
+    // Explicit Sign out in an enrolled Staff/Manager app returns to device PIN, not Username + PIN.
+    if (typeof logout === 'function') {
+      const origLogout = logout;
+      logout = function () {
+        if (dev() && S.me && ROLES[S.me.role]) return appLogout();
+        return origLogout();
+      };
+    }
   }
   if (clockPage && origBack) {
     backToWho = function (note) { origBack(note); if (dev() && C.via !== 'line') show('lock'); };
