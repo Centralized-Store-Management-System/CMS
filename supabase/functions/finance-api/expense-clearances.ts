@@ -31,7 +31,12 @@ export async function listClearances(url: URL, u: User) {
 export async function submitClearance(body: Record<string,unknown>,u:User,rid:string) {
   need(u,"request");
   const documentId=uuid(body.document_id,"เอกสารเบิก")!;
-  const amount=money(body.actual_amount,"ยอดจ่ายจริง",{allowZero:false});
+  const amount=money(body.actual_paid_amount ?? body.actual_amount,"ยอดจ่ายจริง",{allowZero:false});
+  const expenseAmount=money(body.actual_expense_amount ?? body.actual_paid_amount ?? body.actual_amount,"ค่าใช้จ่ายจริง",{allowZero:false});
+  const refundAmount=money(body.refund_amount ?? 0,"ยอดคืนเงิน",{allowZero:true});
+  if(Math.abs(round2(amount-expenseAmount-refundAmount))>0.004)
+    fail(400,"ยอดจ่ายจริงต้องเท่ากับค่าใช้จ่ายจริงรวมยอดคืนเงิน");
+  const paymentAccountId=body.payment_account_id?uuid(body.payment_account_id,"บัญชีที่จ่าย"):null;
   const paidOn=date(body.payment_date,"วันที่จ่ายเงินจริง");
   const method=oneOf(body.payment_method,METHODS,"ช่องทางจ่าย");
   return await db().begin(async(tx:Tx)=>{
@@ -49,19 +54,20 @@ export async function submitClearance(body: Record<string,unknown>,u:User,rid:st
         if(!scope) fail(403,"Manager สามารถเคลียร์ได้เฉพาะเอกสารในสาขาที่รับผิดชอบ");
       } else fail(403,"เคลียร์ได้เฉพาะผู้สร้างคำขอ หรือผู้มีสิทธิ์ในสาขา");
     }
-    if(amount>Number(doc.grand_total)+0.004) fail(400,"ยอดจ่ายจริงเกินวงเงินที่ Owner อนุมัติ");
+    if(expenseAmount>Number(doc.grand_total)+0.004) fail(400,"ค่าใช้จ่ายจริงเกินวงเงินที่ Owner อนุมัติ");
     const [existing]=await tx`select * from finance.expense_clearances where document_id=${documentId}::uuid for update`;
     let row;
     if(existing) {
       if(!["draft","returned"].includes(existing.status)) fail(409,"เอกสารเคลียร์ถูกส่งตรวจแล้ว ไม่สามารถแก้ไขได้");
-      [row]=await tx`update finance.expense_clearances set actual_amount=${amount},payment_date=${paidOn}::date,
-        payment_method=${method},reference_number=${opt(body.reference_number,120)},notes=${opt(body.notes,1000)},
+      [row]=await tx`update finance.expense_clearances set actual_amount=${amount},actual_paid_amount=${amount},
+        actual_expense_amount=${expenseAmount},refund_amount=${refundAmount},payment_account_id=${paymentAccountId}::uuid,
+        payment_date=${paidOn}::date,payment_method=${method},reference_number=${opt(body.reference_number,120)},notes=${opt(body.notes,1000)},
         status='pending_owner_review',submitted_by=${u.actorRef},submitted_at=now(),updated_at=now(),return_note=null
         where id=${existing.id}::uuid returning *`;
     } else {
       [row]=await tx`insert into finance.expense_clearances
-        (company_id,document_id,actual_amount,payment_date,payment_method,reference_number,notes,status,submitted_by,submitted_at)
-        values(${u.companyId}::uuid,${documentId}::uuid,${amount},${paidOn}::date,${method},${opt(body.reference_number,120)},
+        (company_id,document_id,actual_amount,actual_paid_amount,actual_expense_amount,refund_amount,payment_account_id,payment_date,payment_method,reference_number,notes,status,submitted_by,submitted_at)
+        values(${u.companyId}::uuid,${documentId}::uuid,${amount},${amount},${expenseAmount},${refundAmount},${paymentAccountId}::uuid,${paidOn}::date,${method},${opt(body.reference_number,120)},
         ${opt(body.notes,1000)},'pending_owner_review',${u.actorRef},now()) returning *`;
     }
     await approvalEvent(tx,u,"expense_clearance",row.id,"submitted",null,rid);
