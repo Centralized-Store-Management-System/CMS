@@ -65,7 +65,8 @@ function render(kind,root){
    const vatValue=form.elements.vat_rate.value;
    const payload={document_type:kind==='revenue'?'invoice':'expense',document_date:d.document_date,due_date:d.due_date||null,partner_id:d.partner_id||null,notes:d.memo||'',vat_rate:vatValue==='7'?7:0,wht_rate:Number(d.wht_rate||0),lines:items};
    const result=await window.FinanceAuth.request('document.create',{method:'POST',body:payload,idempotencyKey:crypto.randomUUID()});
-   $('fmTxnResult').textContent='บันทึกเอกสารสำเร็จ • '+(result.document_number||result.id)+' • ยอดสุทธิ '+money(result.grand_total);
+   const submitted=await window.FinanceAuth.request('document.submit',{method:'POST',body:{document_id:result.id,note:'ส่งตรวจสอบจาก Finance Workspace'}});
+   $('fmTxnResult').textContent='บันทึกและส่งตรวจสอบแล้ว • '+(submitted.document_number||result.document_number||result.id)+' • ยอดสุทธิ '+money(result.grand_total)+' • รอ Finance Owner อนุมัติ';
    form.reset();lines.querySelectorAll('tr:not(:first-child)').forEach(row=>row.remove());calculate();
   }catch(err){$('fmTxnResult').textContent=err.message||'บันทึกเอกสารไม่สำเร็จ';$('fmTxnResult').classList.add('error')}
   finally{submit.disabled=false}
