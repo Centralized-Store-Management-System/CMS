@@ -28,7 +28,7 @@ const READ: Record<string, Reader> = {
   documents: D.listDocuments, document: D.getDocument,
   payments: P.listPayments, "open-documents": P.openDocuments,
   "verification-queue": V.verificationQueue, "payment-files": V.listPaymentFiles, "file-url": V.fileUrl,
-  "expense-clearances": C.listClearances,
+  "expense-clearances": C.listClearances, "expense-clearance-files": C.listClearanceFiles, "expense-clearance-file-url": C.clearanceFileUrl,
   journals: J.listJournals, journal: J.getJournal, periods: J.listPeriods,
   "tax-report": T.taxReport, filings: T.listFilings,
   summary: R.summary, "trial-balance": R.trialBalance, "profit-loss": R.profitLoss, "balance-sheet": R.balanceSheet, ledger: R.ledger, aging: R.aging,
@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
         capabilities: capabilities(user),
       } }, 200, origin);
       const limitedReads: Record<string, string[]> = {
-        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances"],
+        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url"],
         staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances"],
         verifier: ["verification-queue", "payment-files", "file-url", "expense-clearances"],
       };
