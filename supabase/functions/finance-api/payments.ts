@@ -13,7 +13,7 @@ async function outstanding(tx: Tx, docId: string, excludePayment: string | null 
 }
 
 export async function createPayment(body: Record<string, unknown>, u: User, rid: string, idem: string) {
-  need(u, "write");
+  need(u, "request");
   if (!idem || idem.length < 8) fail(400, "ต้องมี Idempotency Key เพื่อกันบันทึกซ้ำ");
   const type = oneOf(body.payment_type, ["receipt", "disbursement"] as const, "ประเภทการรับ/จ่าย");
   const d = date(body.payment_date, "วันที่รับ/จ่าย");
@@ -24,13 +24,15 @@ export async function createPayment(body: Record<string, unknown>, u: User, rid:
   let cashId = uuid(body.cash_account_id, "บัญชีเงินสด/ธนาคาร", false);
   if (!docId && !offsetId) fail(400, "เลือกเอกสารที่จะรับ/จ่าย หรือเลือกบัญชีคู่ (กรณีไม่มีเอกสาร)");
   return await db().begin(async (tx: Tx) => {
+    let approvedBy: string | null = null;
     await tx`select pg_advisory_xact_lock(hashtextextended(${u.companyId + ":pay:" + idem}, 0))`;
     const [ex] = await tx`select id, status, amount from finance.payments where company_id = ${u.companyId}::uuid and idempotency_key = ${idem}`;
     if (ex) return { ...ex, duplicate: true };
     let partnerId = uuid(body.partner_id, "คู่ค้า", false);
     if (docId) {
-      const [doc] = await tx`select id, document_type, status, partner_id from finance.documents where id = ${docId}::uuid and company_id = ${u.companyId}::uuid for update`;
+      const [doc] = await tx`select id, document_type, status, partner_id, created_by, approved_by from finance.documents where id = ${docId}::uuid and company_id = ${u.companyId}::uuid for update`;
       if (!doc) fail(400, "ไม่พบเอกสาร");
+      if (u.role === "staff" && doc.created_by !== u.actorRef) fail(403, "Staff สร้างรายการรับ/จ่ายได้เฉพาะเอกสารที่ตนเองจัดทำ");
       if (doc.status !== "posted") fail(409, "รับ/จ่ายได้เฉพาะเอกสารที่อนุมัติและลงบัญชีแล้ว");
       if (doc.document_type === "credit_note") fail(400, "ใบลดหนี้ไม่ต้องรับ/จ่ายเงินผ่านเมนูนี้");
       const want = REVENUE_DOCS.includes(doc.document_type) ? "receipt" : "disbursement";
@@ -38,14 +40,19 @@ export async function createPayment(body: Record<string, unknown>, u: User, rid:
       const left = await outstanding(tx, docId);
       if (amount - left > 0.004) fail(400, "จำนวนเงินเกินยอดคงค้างของเอกสาร (คงค้าง " + left.toFixed(2) + ")");
       partnerId = doc.partner_id ? String(doc.partner_id) : partnerId;
+      // Owner approval of the expense document authorizes its linked disbursement; avoid a duplicate approval step.
+      if (type === "disbursement" && doc.approved_by) approvedBy = String(doc.approved_by);
     }
     if (offsetId) await accountById(tx, u, offsetId);
     if (cashId) { const a = await accountById(tx, u, cashId, ["asset"]); cashId = String(a.id); }
     else cashId = await sysAccount(tx, u, method === "cash" ? "cash" : "bank");
-    const [p] = await tx`insert into finance.payments (company_id, document_id, partner_id, payment_type, payment_date, amount, method, reference_number, status, created_by, idempotency_key, cash_account_id, offset_account_id, note)
-      values (${u.companyId}::uuid, ${docId}::uuid, ${partnerId}::uuid, ${type}, ${d}::date, ${amount}, ${method}, ${opt(body.reference_number, 120)}, 'pending', ${u.actorRef}, ${idem}, ${cashId}::uuid, ${offsetId}::uuid, ${opt(body.note, 500)})
-      returning id, payment_type, payment_date, amount, method, status, document_id`;
+    const paymentStatus = approvedBy ? "approved" : "pending";
+    const [p] = await tx`insert into finance.payments (company_id, document_id, partner_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, created_by, idempotency_key, cash_account_id, offset_account_id, note)
+      values (${u.companyId}::uuid, ${docId}::uuid, ${partnerId}::uuid, ${type}, ${d}::date, ${amount}, ${method}, ${opt(body.reference_number, 120)}, ${paymentStatus}, ${approvedBy}, ${u.actorRef}, ${idem}, ${cashId}::uuid, ${offsetId}::uuid, ${opt(body.note, 500)})
+      returning id, payment_type, payment_date, amount, method, status, approved_by, document_id`;
     await tx`insert into finance.payment_events (company_id, payment_id, actor_ref, action, note, request_id) values (${u.companyId}::uuid, ${p.id}, ${u.actorRef}, 'created', ${opt(body.note, 500)}, ${rid})`;
+    if (approvedBy) await tx`insert into finance.payment_events (company_id, payment_id, actor_ref, action, note, request_id)
+      values (${u.companyId}::uuid, ${p.id}, ${approvedBy}, 'approved', 'อนุมัติพร้อมเอกสารรายจ่ายที่ Owner ตรวจแล้ว', ${rid})`;
     await audit(tx, u, "create", "payment", p.id, p, rid);
     return p;
   });
@@ -89,14 +96,14 @@ export async function rejectPayment(body: Record<string, unknown>, u: User, rid:
 }
 
 export async function cancelPayment(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "write");
+  need(u, "request");
   const id = uuid(body.payment_id, "รายการ")!;
   const note = text(body.note, 500);
   if (!note) fail(400, "กรุณาระบุเหตุผลที่ยกเลิก");
   return await db().begin(async (tx: Tx) => {
     const p = await lockPayment(tx, u, id);
     if (!["pending", "approved"].includes(p.status)) fail(409, "ยกเลิกได้เฉพาะรายการที่ยังไม่ได้รับ/จ่ายจริง");
-    if (p.created_by !== u.actorRef && !["owner", "approver"].includes(u.role)) fail(403, "ยกเลิกได้เฉพาะผู้สร้างรายการ หรือผู้อนุมัติ");
+    if (p.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "ยกเลิกได้เฉพาะผู้สร้างรายการ หรือ Manager");
     const [out] = await tx`update finance.payments set status = 'cancelled' where id = ${id}::uuid returning id, status`;
     await tx`insert into finance.payment_events (company_id, payment_id, actor_ref, action, note, request_id) values (${u.companyId}::uuid, ${id}::uuid, ${u.actorRef}, 'cancelled', ${note}, ${rid})`;
     await audit(tx, u, "cancel", "payment", id, out, rid);
@@ -106,11 +113,12 @@ export async function cancelPayment(body: Record<string, unknown>, u: User, rid:
 
 // บันทึกว่ารับ/จ่ายเงินจริงแล้ว → ลงบัญชี (Dr/Cr เงินสด/ธนาคาร กับ ลูกหนี้/เจ้าหนี้ หรือบัญชีคู่) และตัดยอดคงค้างของเอกสาร
 export async function markPaid(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "approve");
+  need(u, "request");
   const id = uuid(body.payment_id, "รายการ")!;
   return await db().begin(async (tx: Tx) => {
     const p = await lockPayment(tx, u, id);
     if (p.status !== "approved") fail(409, "ต้องอนุมัติรายการก่อนบันทึกว่ารับ/จ่ายแล้ว");
+    if (p.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "บันทึกการจ่ายได้เฉพาะผู้สร้างรายการ หรือ Manager");
     const amount = num(p.amount), pid = p.partner_id ? String(p.partner_id) : null;
     const pd = p.payment_date instanceof Date ? p.payment_date.toISOString().slice(0, 10) : String(p.payment_date);
     let counter: string, docNo = "";
@@ -155,7 +163,8 @@ export async function listPayments(url: URL, u: User) {
       left join finance.partners pt2 on pt2.id = d.partner_id
       left join finance.chart_of_accounts ca on ca.id = p.cash_account_id
       left join finance.chart_of_accounts oa on oa.id = p.offset_account_id
-    where p.company_id = ${u.companyId}::uuid and (${status} = '' or p.status = ${status}) and (${type} = '' or p.payment_type = ${type})
+    where p.company_id = ${u.companyId}::uuid and (${u.role !== "staff"} or p.created_by = ${u.actorRef})
+      and (${status} = '' or p.status = ${status}) and (${type} = '' or p.payment_type = ${type})
     order by p.payment_date desc, p.created_at desc limit ${limit} offset ${offset}`;
   return { items: rows, limit, offset };
 }
@@ -168,6 +177,7 @@ export async function openDocuments(url: URL, u: User) {
       d.grand_total - coalesce((select sum(x.amount) from finance.payments x where x.document_id = d.id and x.status in ('pending','approved','paid')), 0) as outstanding
     from finance.documents d left join finance.partners p on p.id = d.partner_id
     where d.company_id = ${u.companyId}::uuid and d.status = 'posted' and d.document_type = any(${types})
+      and (${u.role !== "staff"} or d.created_by = ${u.actorRef})
       and d.grand_total - coalesce((select sum(x.amount) from finance.payments x where x.document_id = d.id and x.status in ('pending','approved','paid')), 0) > 0.004
     order by d.document_date limit 200`;
   return { items: rows };

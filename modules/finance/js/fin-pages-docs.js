@@ -13,7 +13,7 @@
         if (arg === 'new') return docForm(el, kind, null);
         const st = (F.cache['docStatus:' + kind] || {}).v || '';
         el.innerHTML = F.head(kind === 'income' ? 'INCOME' : 'EXPENSES', this.title, kind === 'income' ? 'ใบกำกับภาษี ใบแจ้งหนี้ ใบเสร็จ ใบลด/เพิ่มหนี้' : 'ค่าใช้จ่าย บิลผู้ขาย ใบสำคัญจ่าย',
-          F.can('write') ? `<button class="fm-btn fm-btn-primary" data-go="#${kind}/new">＋ ${kind === 'income' ? 'บันทึกรายรับ' : 'บันทึกรายจ่าย'}</button>` : '') +
+          F.can('request') ? `<button class="fm-btn fm-btn-primary" data-go="#${kind}/new">＋ ${kind === 'income' ? 'บันทึกรายรับ' : 'บันทึกรายจ่าย'}</button>` : '') +
           `<div class="fm-tabs" id="fmSt">${[['', 'ทั้งหมด'], ['draft', 'ร่าง'], ['pending_review', 'รออนุมัติ'], ['posted', 'ลงบัญชีแล้ว'], ['voided', 'ยกเลิก'], ['reversed', 'กลับรายการ']].map(([v, t]) => `<button data-st="${v}" class="${v === st ? 'on' : ''}">${t}</button>`).join('')}</div>
            <div class="fm-toolbar"><input type="search" id="fmQ" placeholder="ค้นหาเลขที่ / คู่ค้า / อ้างอิง" style="flex:1;min-width:200px"><button class="fm-btn fm-btn-light" id="fmCsv">↓ CSV</button></div><div id="fmList">${F.loading()}</div>`;
         let rows = [];
@@ -29,7 +29,7 @@
             { h: 'ยอดรวม', num: 1, f: x => money(x.grand_total) },
             { h: kind === 'income' ? 'รับแล้ว' : 'จ่ายแล้ว', num: 1, f: x => x.status === 'posted' && x.document_type !== 'credit_note' ? money(x.paid_total) + (Number(x.paid_total) >= Number(x.grand_total) - 0.004 ? '<span class="sub">ครบ</span>' : `<span class="sub">ค้าง ${money(x.grand_total - x.paid_total)}</span>`) : '–' },
             { h: 'สถานะ', f: x => badge(x.status) },
-          ], rows, { empty: 'ยังไม่มีเอกสาร', emptyHint: F.can('write') ? 'กด "บันทึก' + (kind === 'income' ? 'รายรับ' : 'รายจ่าย') + '" เพื่อเริ่ม' : '', rowAttr: x => `data-open="${x.id}"` }).replace('class="fm-table"', 'class="fm-table cards"');
+          ], rows, { empty: 'ยังไม่มีเอกสาร', emptyHint: F.can('request') ? 'กด "บันทึก' + (kind === 'income' ? 'รายรับ' : 'รายจ่าย') + '" เพื่อเริ่ม' : '', rowAttr: x => `data-open="${x.id}"` }).replace('class="fm-table"', 'class="fm-table cards"');
         };
         el.querySelector('#fmSt').onclick = e => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('#fmSt button').forEach(x => x.classList.toggle('on', x === b)); load(); };
         let t; el.querySelector('#fmQ').oninput = () => { clearTimeout(t); t = setTimeout(load, 350); };
@@ -44,7 +44,7 @@
 
   // ---------- ฟอร์มเอกสาร (สร้าง / แก้ร่าง) ----------
   async function docForm(el, kind, existing) {
-    if (!F.can('write')) { el.innerHTML = F.errorBox('สิทธิ์ของคุณบันทึกรายการไม่ได้'); return; }
+    if (!F.can('request')) { el.innerHTML = F.errorBox('สิทธิ์ของคุณบันทึกรายการไม่ได้'); return; }
     const [accounts, partners] = await Promise.all([F.accounts(), F.partners()]);
     const vatReg = F.session.company.vatRegistered;
     const singleOwnerMode = F.session.actor.role === 'owner' && F.session.company.allowSelfApproval;
@@ -173,13 +173,13 @@
       const committed = r.payments.filter(p => ['pending', 'approved', 'paid'].includes(p.status)).reduce((a, p) => a + Number(p.amount), 0);
       const left = r2(Number(d.grand_total) - committed);
       const acts = [];
-      if (d.status === 'draft' && F.can('write')) acts.push(`<button class="fm-btn fm-btn-light" data-go="#document/edit:${d.id}">แก้ไข</button>`, '<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>', '<button class="fm-btn fm-btn-primary" data-a="submit">ส่งอนุมัติ</button>');
+      if (d.status === 'draft' && F.can('request')) acts.push(`<button class="fm-btn fm-btn-light" data-go="#document/edit:${d.id}">แก้ไข</button>`, '<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>', '<button class="fm-btn fm-btn-primary" data-a="submit">ส่งอนุมัติ</button>');
       if (d.status === 'pending_review') {
-        if (F.can('write')) acts.push('<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>');
+        if (F.can('request')) acts.push('<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>');
         if (F.can('approve')) acts.push('<button class="fm-btn fm-btn-light" data-a="return">ตีกลับ</button>', mineBlocked ? '<span class="fm-badge warn" title="Maker–Checker">เอกสารของคุณ — ให้ผู้อื่นอนุมัติ</span>' : '<button class="fm-btn fm-btn-primary" data-a="approve">อนุมัติ + ลงบัญชี</button>');
       }
       if (d.status === 'posted') {
-        if (F.can('write') && d.document_type !== 'credit_note' && left > 0.004) acts.push(`<button class="fm-btn fm-btn-primary" data-a="pay">${kind === 'income' ? 'รับเงิน' : 'จ่ายเงิน'}</button>`);
+        if (F.can('request') && d.document_type !== 'credit_note' && left > 0.004) acts.push(`<button class="fm-btn fm-btn-primary" data-a="pay">${kind === 'income' ? 'รับเงิน' : 'จ่ายเงิน'}</button>`);
         if (F.can('approve')) acts.push('<button class="fm-btn fm-btn-light" data-a="reverse">กลับรายการ</button>');
       }
       if (Number(d.wht_total) > 0 && r.payments.some(p => p.status === 'paid')) acts.push('<button class="fm-btn fm-btn-light" data-a="wht-print">พิมพ์หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</button>');
@@ -315,7 +315,7 @@
     title: 'รับ–จ่ายเงิน',
     async render(el) {
       el.innerHTML = F.head('PAYMENTS', 'รับ–จ่ายเงิน', 'ทุกรายการต้องผ่านการอนุมัติก่อนบันทึกว่ารับ/จ่ายจริง',
-        F.can('write') ? '<button class="fm-btn fm-btn-light" data-new="receipt">＋ รับเงิน</button><button class="fm-btn fm-btn-primary" data-new="disbursement">＋ จ่ายเงิน</button>' : '') +
+        F.can('request') ? '<button class="fm-btn fm-btn-light" data-new="receipt">＋ รับเงิน</button><button class="fm-btn fm-btn-primary" data-new="disbursement">＋ จ่ายเงิน</button>' : '') +
         `<div class="fm-tabs" id="fmPSt">${[['', 'ทั้งหมด'], ['pending', 'รออนุมัติ'], ['approved', 'รอรับ/จ่ายจริง'], ['paid', 'รับ/จ่ายแล้ว'], ['rejected', 'ปฏิเสธ'], ['cancelled', 'ยกเลิก']].map(([v, t], i) => `<button data-st="${v}" class="${i ? '' : 'on'}">${t}</button>`).join('')}</div><div id="fmPList">${F.loading()}</div>`;
       el.querySelector('.fm-page-head').onclick = e => { const b = e.target.closest('[data-new]'); if (b) payForm(b.dataset.new, null); };
       const load = async () => {
@@ -329,8 +329,9 @@
           { h: '', cls: 'acts', f: x => {
             const o = [];
             if (x.status === 'pending' && F.can('approve')) o.push(x.created_by === me && !self ? '<small class="fm-muted">รายการของคุณ</small>' : `<button class="fm-btn fm-btn-sm fm-btn-primary" data-a="approve" data-id="${x.id}">อนุมัติ</button> <button class="fm-btn fm-btn-sm" data-a="reject" data-id="${x.id}">ปฏิเสธ</button>`);
-            if (x.status === 'approved' && F.can('approve')) o.push(`<button class="fm-btn fm-btn-sm fm-btn-primary" data-a="paid" data-id="${x.id}">บันทึกว่า${x.payment_type === 'receipt' ? 'รับ' : 'จ่าย'}แล้ว</button>`);
-            if (['pending', 'approved'].includes(x.status) && F.can('write') && (x.created_by === me || F.can('approve'))) o.push(`<button class="fm-btn fm-btn-sm" data-a="cancel" data-id="${x.id}">ยกเลิก</button>`);
+            const canRecordPaid = F.can('request') && (x.created_by === me || ['owner', 'manager', 'approver'].includes(F.session.actor.role));
+            if (x.status === 'approved' && canRecordPaid) o.push(`<button class="fm-btn fm-btn-sm fm-btn-primary" data-a="paid" data-id="${x.id}">บันทึกว่า${x.payment_type === 'receipt' ? 'รับ' : 'จ่าย'}แล้ว</button>`);
+            if (['pending', 'approved'].includes(x.status) && F.can('request') && (x.created_by === me || ['owner', 'manager', 'approver'].includes(F.session.actor.role))) o.push(`<button class="fm-btn fm-btn-sm" data-a="cancel" data-id="${x.id}">ยกเลิก</button>`);
             return o.join(' ');
           } },
         ], r.items, { empty: 'ยังไม่มีรายการ' }).replace('class="fm-table"', 'class="fm-table cards"');

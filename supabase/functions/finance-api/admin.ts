@@ -140,7 +140,7 @@ export async function setUser(body: Record<string, unknown>, u: User, rid: strin
   need(u, "admin");
   const ref = text(body.actor_ref, 90);
   if (!/^u:[\w.-]{1,80}$/.test(ref)) fail(400, "รหัสผู้ใช้ไม่ถูกต้อง (เลือกจากรายชื่อผู้ใช้ CMS)");
-  const role = oneOf(body.role, ["approver", "accountant", "viewer"] as const, "สิทธิ์");
+  const role = oneOf(body.role, ["manager", "staff", "verifier", "approver", "accountant", "viewer"] as const, "สิทธิ์");
   const name = text(body.display_name, 120) || ref;
   const active = body.is_active !== false;
   return await db().begin(async (tx: Tx) => {
@@ -155,6 +155,7 @@ export async function setUser(body: Record<string, unknown>, u: User, rid: strin
 }
 
 export async function approvalsQueue(_url: URL, u: User) {
+  need(u, "approve");
   const sql = db();
   const [docs, pays, toPay, journals, filings] = await Promise.all([
     sql`select d.id, d.document_type, d.document_number, d.document_date, d.grand_total, d.created_by, p.display_name as partner_name from finance.documents d left join finance.partners p on p.id = d.partner_id

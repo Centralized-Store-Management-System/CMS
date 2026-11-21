@@ -36,6 +36,25 @@
     return json.data;
   }
   const api = { get: (a, q, o) => req('GET', a, q, o), post: (a, b, o) => req('POST', a, b, o) };
+  async function upload(action, fields, file) {
+    const t = token();
+    if (!t) throw new ApiError(401, 'ไม่พบ CMS Session');
+    const form = new FormData();
+    form.append('action', action);
+    Object.entries(fields || {}).forEach(([k, v]) => form.append(k, String(v)));
+    form.append('file', file);
+    let res, json;
+    try {
+      res = await fetch(API_URL, { method: 'POST', headers: { 'x-cms-session': t, accept: 'application/json' }, body: form, cache: 'no-store' });
+      json = await res.json().catch(() => ({}));
+    } catch (_) { throw new ApiError(0, 'อัปโหลดไฟล์ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'); }
+    if (!res.ok || !json.ok) {
+      const err = new ApiError(res.status, json.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
+      if (res.status === 401) FIN.onAuthLost(err.message);
+      throw err;
+    }
+    return json.data;
+  }
 
   // ---------- รูปแบบ ----------
   const nf = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -57,7 +76,7 @@
       preparing: ['กำลังจัดทำ', 'n'], review: ['รอตรวจ', 'warn'], submitted: ['ยื่นแล้ว', 'info'], amended: ['ยื่นเพิ่มเติม', 'info'],
       reviewed: ['รอยื่น', 'n'], filed: ['ยื่นแล้ว', 'ok'], adjusted: ['ปรับปรุง', 'mute'], unreviewed: ['ยังไม่ตรวจ', 'n'],
     },
-    role: { owner: 'เจ้าของ (Owner)', approver: 'ผู้อนุมัติ', accountant: 'ผู้บันทึกบัญชี', viewer: 'ดูอย่างเดียว' },
+    role: { owner: 'เจ้าของ (Owner)', approver: 'ผู้อนุมัติ', manager: 'Manager', staff: 'Staff', verifier: 'Final Verifier', accountant: 'ผู้บันทึกบัญชี', viewer: 'ดูอย่างเดียว' },
     method: { cash: 'เงินสด', bank_transfer: 'โอนเงิน', credit_card: 'บัตรเครดิต', cheque: 'เช็ค', other: 'อื่นๆ' },
     payType: { receipt: 'รับเงิน', disbursement: 'จ่ายเงิน', refund: 'คืนเงิน' },
     acType: { asset: 'สินทรัพย์', liability: 'หนี้สิน', equity: 'ส่วนของเจ้าของ', revenue: 'รายได้', expense: 'ค่าใช้จ่าย' },
@@ -125,11 +144,12 @@
   const PAGES = {};
   const MODULES = {
     'js/fin-pages-main.js?v=1.0.0': ['dashboard', 'approvals'],
-    'js/fin-pages-docs.js?v=1.1.2': ['income', 'expense', 'document', 'payments'],
+    'js/fin-pages-docs.js?v=1.1.3': ['income', 'expense', 'document', 'payments'],
     'js/fin-pages-acct.js?v=1.0.0': ['journals', 'journal', 'accounts', 'periods'],
     'js/fin-pages-tax.js?v=1.0.0': ['vat', 'wht', 'filings'],
     'js/fin-pages-reports.js?v=1.0.0': ['trial-balance', 'profit-loss', 'balance-sheet', 'ledger', 'aging'],
-    'js/fin-pages-admin.js?v=1.0.0': ['company', 'partners', 'users', 'audit', 'settings'],
+    'js/fin-pages-admin.js?v=1.0.1': ['company', 'partners', 'users', 'audit', 'settings'],
+    'js/fin-pages-verification.js?v=1.0.0': ['verification'],
   };
   const loaded = {};
   function loadFor(key) {
@@ -141,9 +161,21 @@
   let current = '';
   async function go(hash, opt0 = {}) {
     const [key0, arg] = String(hash || '').replace(/^#/, '').split('/');
-    const key = key0 || 'dashboard';
+    let key = key0 || 'dashboard';
     const content = $('#fmContent');
     if (!content) return;
+    const role = FIN.session && FIN.session.actor && FIN.session.actor.role;
+    const rolePages = {
+      manager: ['dashboard', 'income', 'expense', 'document', 'payments', 'verification'],
+      staff: ['income', 'expense', 'document', 'payments', 'verification'],
+      verifier: ['verification'],
+    };
+    if (role === 'staff' && key === 'dashboard') { key = 'expense'; if (EMB) W.location.hash = '#fin/expense'; else W.location.hash = '#expense'; return go('#' + key, opt0); }
+    if (role === 'verifier' && key === 'dashboard') { key = 'verification'; if (EMB) W.location.hash = '#fin/verification'; else W.location.hash = '#verification'; return go('#' + key, opt0); }
+    if (rolePages[role] && !rolePages[role].includes(key)) {
+      content.innerHTML = head('FINANCE', 'ไม่มีสิทธิ์เข้าถึง') + errorBox('บทบาทของคุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+      return;
+    }
     current = key + (arg ? '/' + arg : '');
     try { await loadFor(key); } catch (e) { content.innerHTML = errorBox(e.message); return; }
     const p = PAGES[key] || PAGES.dashboard;
@@ -168,7 +200,7 @@
   const layer = () => { if (!EMB) return document.body; let l = $('#finLayer'); if (!l) { l = document.createElement('div'); l.id = 'finLayer'; l.className = 'fin-embed fin-layer'; document.body.appendChild(l); } return l; };
 
   const FIN = W.FIN = {
-    api, idem, esc, $, money, baht, d10, thDate, thDateTime, today, thisMonth, monthName, L, badge,
+    api, upload, idem, esc, $, money, baht, d10, thDate, thDateTime, today, thisMonth, monthName, L, badge,
     toast, modal, ask, run, table, csv, head, loading, errorBox, nav, go,
     session: null,
     page(key, def) { PAGES[key] = def; },

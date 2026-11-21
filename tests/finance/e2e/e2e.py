@@ -1,6 +1,6 @@
 import json, urllib.request, uuid, subprocess, concurrent.futures as cf
 API = 'http://localhost:8000/'
-OWN, ACC, APR, VIEW, NOB = 'tok_owner_123', 'tok_acc_12345', 'tok_appr_1234', 'tok_view_1234', 'tok_nobody_12'
+OWN, ACC, APR, VIEW, NOB, MGR, STF, VER = 'tok_owner_123', 'tok_acc_12345', 'tok_appr_1234', 'tok_view_1234', 'tok_nobody_12', 'tok_mgr_12345', 'tok_staff_1234', 'tok_verifier_12'
 R = []
 def ok(name, cond, extra=''):
     R.append(bool(cond)); print(('✓ ' if cond else '✗ ') + name, ('' if cond else extra))
@@ -19,6 +19,22 @@ def call(tok, action=None, body=None, idem=None, **q):
 import urllib.parse
 def post(tok, action, idem=None, **body): return call(tok, action, body, idem)
 def get(tok, action, **q): return call(tok, action, None, None, **q)
+def upload_file(tok, payment_id, category, filename='proof.pdf', mime='application/pdf', data=b'%PDF-1.4 finance test proof'):
+    boundary = '----finance-' + uuid.uuid4().hex
+    parts = []
+    for name, value in [('action', 'file.upload'), ('payment_id', payment_id), ('category', category)]:
+        parts.append(b'--' + boundary.encode() + b'\r\n')
+        parts.append(f'Content-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
+    parts.append(b'--' + boundary.encode() + b'\r\n')
+    parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode())
+    parts.append(f'Content-Type: {mime}\r\n\r\n'.encode())
+    parts.append(data + b'\r\n--' + boundary.encode() + b'--\r\n')
+    req = urllib.request.Request(API, data=b''.join(parts), method='POST')
+    req.add_header('content-type', f'multipart/form-data; boundary={boundary}')
+    if tok: req.add_header('x-cms-session', tok)
+    try:
+        with urllib.request.urlopen(req) as r: return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as err: return err.code, json.loads(err.read() or b'{}')
 def psql(q): return subprocess.run(['psql', '-h', '127.0.0.1', '-p', '5544', '-U', 'postgres', '-d', 'fin', '-tA', '-c', q], capture_output=True, text=True).stdout.strip()
 def journal_lines(doc_id):
     return psql(f"select string_agg(code||':'||dr||'/'||cr, ' ' order by code) from (select a.account_code code, sum(jl.debit) dr, sum(jl.credit) cr from finance.journal_lines jl join finance.journal_entries je on je.id=jl.journal_entry_id join finance.chart_of_accounts a on a.id=jl.account_id where je.source_document_id='{doc_id}' and je.source_type='document' group by 1) x")
@@ -30,12 +46,20 @@ s, r = get(None, 'session'); ok('ไม่มี token → 401', s == 401)
 s, r = get('tok_expired_xx', 'session'); ok('Session หมดอายุ → 401 + ข้อความให้เข้าสู่ระบบใหม่', s == 401 and 'เข้าสู่ระบบ' in r['error'], r)
 s, r = get(OWN, 'session'); ok('Owner ของ CMS → Finance Owner อัตโนมัติ', s == 200 and r['data']['actor']['role'] == 'owner' and r['data']['actor']['ref'] == 'owner', r)
 s, r = get(NOB, 'session'); ok('ผู้ใช้ที่ยังไม่ได้รับสิทธิ์ → 403', s == 403 and 'สิทธิ์' in r['error'], r)
-s, r = get(OWN, 'cms-users'); ok('Owner ดึงรายชื่อผู้ใช้ CMS (ไม่รวม owner)', s == 200 and {x['actor_ref'] for x in r['data']['items']} == {'u:U1', 'u:U2', 'u:U3', 'u:U4'}, r)
+s, r = get(OWN, 'cms-users'); ok('Owner ดึงรายชื่อผู้ใช้ CMS (ไม่รวม owner)', s == 200 and {x['actor_ref'] for x in r['data']['items']} == {'u:U1', 'u:U2', 'u:U3', 'u:U4', 'u:U5', 'u:U6', 'u:U7'}, r)
 for ref, role, name in [('u:U1', 'accountant', 'Accountant A'), ('u:U2', 'approver', 'Approver B'), ('u:U3', 'viewer', 'Viewer C')]:
     s, r = post(OWN, 'user.set', actor_ref=ref, role=role, display_name=name); ok(f'ให้สิทธิ์ {role}', s == 200, r)
 s, r = post(OWN, 'user.set', actor_ref='u:U4', role='owner'); ok('ให้สิทธิ์ owner กับผู้ใช้อื่นไม่ได้', s == 400, r)
+for ref, role, name in [('u:U5', 'manager', 'Manager M'), ('u:U6', 'staff', 'Staff S'), ('u:U7', 'verifier', 'Partner Verifier')]:
+    s, r = post(OWN, 'user.set', actor_ref=ref, role=role, display_name=name); ok(f'กำหนด Finance role {role}', s == 200 and r['data']['role_code'] == role, r)
+s, r = get(MGR, 'session'); ok('Manager สร้างคำขอได้แต่อนุมัติไม่ได้', s == 200 and r['data']['capabilities']['request'] and not r['data']['capabilities']['approve'] and not r['data']['capabilities']['verify'], r)
+s, r = get(STF, 'session'); ok('Staff สร้างคำขอได้แต่อนุมัติไม่ได้', s == 200 and r['data']['capabilities']['request'] and not r['data']['capabilities']['approve'], r)
+s, r = get(VER, 'session'); ok('Final Verifier ตรวจเอกสารได้ แต่อนุมัติ/บันทึกไม่ได้', s == 200 and r['data']['capabilities']['verify'] and not r['data']['capabilities']['approve'] and not r['data']['capabilities']['request'] and not r['data']['capabilities']['write'], r)
+s, r = get(MGR, 'approvals'); ok('Manager เปิดคิวอนุมัติไม่ได้', s == 403, r)
+s, r = get(STF, 'summary'); ok('Staff ดูภาพรวมทางการเงินทั้งบริษัทไม่ได้', s == 403, r)
+s, r = get(VER, 'summary'); ok('Final Verifier ดูรายงานทางการเงินไม่ได้', s == 403, r)
 s, r = post(ACC, 'user.set', actor_ref='u:U4', role='viewer'); ok('ผู้บันทึกบัญชีจัดการผู้ใช้ไม่ได้', s == 403, r)
-s, r = get(ACC, 'session'); ok('ผู้บันทึกบัญชีเข้าได้ role=accountant', s == 200 and r['data']['actor']['role'] == 'accountant' and r['data']['capabilities'] == {'read': True, 'write': True, 'approve': False, 'admin': False}, r)
+s, r = get(ACC, 'session'); ok('ผู้บันทึกบัญชีเข้าได้ role=accountant', s == 200 and r['data']['actor']['role'] == 'accountant' and r['data']['capabilities'] == {'read': True, 'request': True, 'write': True, 'approve': False, 'verify': False, 'admin': False}, r)
 s, r = post(VIEW, 'partner.save', partner_type='vendor', display_name='X'); ok('ผู้ดูอย่างเดียวบันทึกไม่ได้', s == 403, r)
 s, r = post(ACC, 'setup.defaults'); ok('ผู้บันทึกบัญชีตั้งค่าเริ่มต้นไม่ได้', s == 403, r)
 
@@ -123,12 +147,12 @@ s, r = post(APR, 'payment.approve', payment_id=pay); ok('อนุมัติ�
 s, r = post(APR, 'payment.mark-paid', payment_id=pay); ok('บันทึกรับเงินจริง → ลงบัญชี', s == 200 and r['data']['status'] == 'paid' and r['data']['journal_number'], r)
 ok('สมุดรายวันรับเงิน: Dr ธนาคาร 5,000 / Cr ลูกหนี้ 5,000', psql(f"select string_agg(a.account_code||':'||jl.debit||'/'||jl.credit,' ' order by a.account_code) from finance.journal_lines jl join finance.journal_entries je on je.id=jl.journal_entry_id join finance.chart_of_accounts a on a.id=jl.account_id where je.source_payment_id='{pay}'") == '1010:5000.00/0.00 1100:0.00/5000.00')
 s, r = get(ACC, 'open-documents', kind='income'); o = {x['id']: float(x['outstanding']) for x in r['data']['items']}; ok('ยอดคงค้างใบกำกับ = 5,700', o.get(inv['id']) == 5700, o)
-s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', document_id=bill['id']); bp = r['data']['id']
+s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', offset_account_id=acc['5200']); bp = r['data']['id']
 s, r = post(APR, 'payment.reject', payment_id=bp, note='รอใบเสร็จ'); ok('ปฏิเสธการจ่าย', s == 200 and r['data']['status'] == 'rejected', r)
 s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', document_id=bill['id']); bp2 = r['data']['id']
-s, r = post(ACC, 'payment.cancel', payment_id=bp2, note='ผิด'); ok('ยกเลิกรายการที่รออนุมัติ', s == 200 and r['data']['status'] == 'cancelled', r)
+s, r = post(ACC, 'payment.cancel', payment_id=bp2, note='ผิด'); ok('ยกเลิกรายการที่อนุมัติแล้วแต่ยังไม่จ่าย', s == 200 and r['data']['status'] == 'cancelled', r)
 s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', document_id=bill['id']); bp3 = r['data']['id']
-post(APR, 'payment.approve', payment_id=bp3); s, r = post(APR, 'payment.mark-paid', payment_id=bp3); ok('จ่ายบิลครบ', s == 200, r)
+s, r = post(APR, 'payment.mark-paid', payment_id=bp3); ok('จ่ายบิลที่ Owner/Approver อนุมัติในเอกสารแล้วได้โดยไม่อนุมัติซ้ำ', s == 200, r)
 s, r = post(ACC, 'payment.create', idem=k(), payment_type='receipt', payment_date=D + '14', amount=50000, method='bank_transfer', offset_account_id=acc['3000'], note='เจ้าของนำเงินเข้า'); cap = r['data']['id']
 post(APR, 'payment.approve', payment_id=cap); s, r = post(APR, 'payment.mark-paid', payment_id=cap); ok('รับเงินไม่มีเอกสาร (บัญชีคู่ = ทุน)', s == 200, r)
 s, r = post(APR, 'document.reverse', document_id=bill['id'], reason='x'); ok('กลับรายการเอกสารที่จ่ายแล้วไม่ได้', s == 409, r)
@@ -193,6 +217,37 @@ s, r = post(ACC, 'document.create', idem=k(), document_type='expense', document_
 s, r = get(OWN, 'document', id=psql(f"insert into finance.documents(company_id,document_type,document_date) values ('{other}','expense','2026-11-01') returning id").splitlines()[0]); ok('อ่านเอกสารของบริษัทอื่นไม่ได้', s == 404, r)
 psql(f"delete from finance.documents where company_id='{other}'"); psql(f"delete from finance.partners where company_id='{other}'"); psql(f"delete from finance.companies where id='{other}'")
 
+print('— Manager / Staff / Final Verifier —')
+s, r = post(STF, 'document.create', idem=k(), document_type='expense', document_date=D + '23', partner_id=vend, submit=True,
+            lines=[{'description': 'อุปกรณ์สำนักงาน', 'quantity': 1, 'unit_price': 500, 'account_code': '5200'}])
+staff_doc = r['data']; ok('Staff สร้างคำขอรายจ่ายและส่ง Owner ได้', s == 201 and staff_doc['status'] == 'pending_review', r)
+s, r = post(MGR, 'document.approve', document_id=staff_doc['id']); ok('Manager อนุมัติเอกสารไม่ได้', s == 403, r)
+s, r = post(STF, 'document.approve', document_id=staff_doc['id']); ok('Staff อนุมัติเอกสารไม่ได้', s == 403, r)
+s, r = post(OWN, 'document.approve', document_id=staff_doc['id']); ok('Owner อนุมัติคำขอ Staff', s == 200 and staff_doc['id'] == r['data']['id'], r)
+s, r = post(STF, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '23', amount=500, method='bank_transfer', document_id=staff_doc['id'])
+staff_pay = r['data']['id']; ok('Staff สร้างคำขอจ่ายเงินที่ได้รับอนุมัติตามเอกสารที่ Owner อนุมัติแล้ว', s == 201 and r['data']['status'] == 'approved' and r['data']['approved_by'] == 'u:U0', r)
+s, r = post(MGR, 'payment.approve', payment_id=staff_pay); ok('Manager อนุมัติการจ่ายไม่ได้', s == 403, r)
+s, r = post(STF, 'payment.approve', payment_id=staff_pay); ok('Staff อนุมัติการจ่ายไม่ได้', s == 403, r)
+s, r = post(OWN, 'payment.approve', payment_id=staff_pay); ok('ไม่ต้องขอ Owner อนุมัติการจ่ายซ้ำเมื่ออนุมัติเอกสารรายจ่ายแล้ว', s == 409, r)
+s, r = post(STF, 'payment.mark-paid', payment_id=staff_pay); ok('Staff บันทึกว่าจ่ายเงินจริงได้ทันทีหลัง Owner อนุมัติเอกสาร', s == 200 and r['data']['status'] == 'paid', r)
+s, r = get(STF, 'document', id=bill['id']); ok('Staff เปิดเอกสารของผู้ใช้อื่นไม่ได้', s == 404, r)
+s, r = get(STF, 'payments'); ok('Staff เห็นเฉพาะรายการรับ/จ่ายของตนเอง', s == 200 and all(x['created_by'] == 'u:U6' for x in r['data']['items']), r)
+s, r = get(MGR, 'summary'); ok('Manager ดูภาพรวมตามสิทธิ์ได้', s == 200 and 'kpi' in r['data'], r)
+company_id = psql('select id from finance.companies order by created_at limit 1')
+s, r = upload_file(STF, staff_pay, 'payment_evidence'); staff_file = r['data']
+ok('Staff แนบหลักฐานการจ่ายจริงผ่าน private Storage', s == 201 and staff_file['payment_id'] == staff_pay and staff_file['file_category'] == 'payment_evidence', r)
+s, r = get(VER, 'verification-queue'); q = [x for x in r['data']['items'] if x['id'] == staff_pay]
+ok('Final Verifier เห็นหลักฐานของรายการจ่ายที่ชำระแล้ว', s == 200 and len(q) == 1 and q[0]['file_count'] == 1 and q[0]['evidence_count'] == 1, q)
+s, r = get(VER, 'file-url', file_id=staff_file['id']); ok('Final Verifier เปิดเอกสารผ่าน signed URL ชั่วคราว', s == 200 and r['data']['url'].startswith('http://127.0.0.1:8760/signed/'), r)
+s, r = post(MGR, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Manager ยืนยันเอกสารขั้นสุดท้ายไม่ได้', s == 403, r)
+s, r = post(STF, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Staff ยืนยันเอกสารขั้นสุดท้ายไม่ได้', s == 403, r)
+s, r = post(VER, 'payment.approve', payment_id=staff_pay); ok('Final Verifier อนุมัติการจ่ายไม่ได้', s == 403, r)
+s, r = post(VER, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Final Verifier ติ๊กยืนยันเอกสารครบถ้วน', s == 200 and r['data']['status'] == 'verified' and r['data']['verified_by'] == 'u:U7', r)
+s, r = get(VER, 'verification-queue'); q = [x for x in r['data']['items'] if x['id'] == staff_pay]
+ok('ระบบบันทึกผู้ตรวจและสถานะ Verified & Completed', s == 200 and len(q) == 1 and q[0]['verification_status'] == 'verified' and q[0]['verified_by'] == 'u:U7', q)
+s, r = upload_file(STF, staff_pay, 'receipt_invoice'); ok('เพิ่มไฟล์หลัง Final Verification แล้วไม่ได้', s == 409, r)
+s, r = get(VER, 'payments'); ok('Final Verifier ไม่สามารถเปิดหน้ารายการรับ/จ่ายทั่วไปได้', s == 403, r)
+
 print('— ล้างข้อมูลทดสอบ / เริ่มใช้งานจริง —')
 s, r = post(OWN, 'company.purge-test-data', confirm='ผิด'); ok('ล้างข้อมูลต้องพิมพ์ยืนยัน', s == 400, r)
 s, r = post(APR, 'company.purge-test-data', confirm='ล้างข้อมูลทดสอบ'); ok('ผู้อนุมัติล้างข้อมูลไม่ได้', s == 403, r)
@@ -200,6 +255,8 @@ s, r = post(OWN, 'company.purge-test-data', confirm='ล้างข้อมู
 ok('หลังล้าง: เอกสาร 0, ผังบัญชี 29, คู่ค้า 3, รอบบัญชีเปิดทั้งหมด, ประวัติ = เฉพาะการล้าง',
    psql("select count(*) from finance.documents")+'|'+psql("select count(*) from finance.chart_of_accounts")+'|'+psql("select count(*) from finance.partners")+'|'+psql("select count(*) from finance.accounting_periods where status<>'open'")+'|'+psql("select string_agg(action,',') from finance.audit_events") == '0|29|3|0|purge_test_data',
    psql("select string_agg(action,',') from finance.audit_events"))
+ok('หลังล้าง: ลบประวัติ final verification และ metadata ไฟล์แนบแล้ว',
+   psql("select count(*) from finance.payment_verifications") == '0' and psql("select count(*) from finance.document_files") == '0')
 s, r = post(OWN, 'company.go-live', confirm='เริ่มใช้งานจริง'); ok('ชื่อบริษัทยังเป็นชื่อทดสอบ → เริ่มใช้งานจริงไม่ได้', s == 409, r)
 post(OWN, 'company.update', legal_name='บริษัท คาเฟ่ ทดลอง จำกัด'.replace('ทดลอง', 'ตัวอย่าง'), tax_id='0105566000001', vat_registered=True)
 s, r = post(OWN, 'company.go-live', confirm='เริ่มใช้งานจริง'); ok('เริ่มใช้งานจริง', s == 200 and r['data']['environment'] == 'production', r)
