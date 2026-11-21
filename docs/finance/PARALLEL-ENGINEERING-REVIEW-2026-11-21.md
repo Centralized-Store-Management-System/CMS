@@ -69,3 +69,37 @@ The UI also labels several areas as Preview Only. Do not represent the module as
 - No Finance Edge Function was deployed.
 - No existing CMS table, row, authentication flow, or production record was changed.
 - No real cash movement, bank integration, or tax filing was initiated.
+
+
+## Follow-up completed on 2026-11-21
+
+### Applied to the live Finance schema
+
+Migration `finance_tenant_integrity_v2` was applied successfully to project `ytxbnqosenolojifeikf`. It is additive and scoped to schema `finance` only. It added composite unique indexes and 14 composite foreign-key constraints so related rows must belong to the same company:
+
+- documents → partners
+- payments → documents
+- tax_transactions → documents and partners
+- journal_entries → source documents
+- payment_allocations → payments and documents
+- payment_events → payments
+- tax_filing_lines → tax filings, tax transactions, and partners
+- document_files → documents and tax filings
+- categories → default chart-of-account entries
+
+Before applying, eight cross-company orphan/mismatch checks returned zero. The migration was then verified by querying PostgreSQL system catalogs; all 14 expected constraints were present. No business records were inserted, updated, or deleted by this migration.
+
+Migration source is tracked at:
+`supabase/migrations/202611210001_finance_tenant_integrity.sql`
+
+### Advisor result
+
+Supabase Health Advisor returned no findings. Security Advisor reported `rls_enabled_no_policy` informational findings across the project, including Finance tables. Finance tables are intentionally server-only at this stage: schema USAGE and table privileges are revoked from `anon` and `authenticated`, and the API must enforce actor, role, and company scoping. This is not a reason to grant browser access or add permissive RLS policies. Reassess once the final API connection role is confirmed.
+
+### Remaining blockers
+
+- Finance Edge Function is still absent from the deployed function inventory.
+- Finance user role mapping is still empty; CMS actor identity must be verified before creating an Owner mapping.
+- API actions still include HTTP 501 placeholders for approval, period close, journal posting, and tax submission.
+- Journal line company/account consistency needs a follow-up database invariant; `journal_lines` currently has no `company_id` column.
+- Full end-to-end workflow testing has not yet been performed.
