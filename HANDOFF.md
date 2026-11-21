@@ -10,6 +10,17 @@
 - Edge Function `backoffice` = **v10**, import `server/*.js` ผ่าน jsDelivr ปักที่ SHA `600f9eda0ac0d5ae7a8a15b115c2512dc32e7d55`
   (แก้ `server/` แล้วต้อง deploy ใหม่ให้ชี้ SHA ใหม่)
 
+## Finance — เบิก–เคลียร์ค่าใช้จ่าย ครบตามแผนภาพ (21 พ.ย. 2569 · Claude) — ใช้งานจริงแล้ว
+- **Live:** Edge Function `finance-api` **v10 = โค้ดใน repo** (VERSION 1.3.0) · migration `finance_expense_flow_complete` apply แล้ว (สำเนา `supabase/migrations/20261121235000_finance_expense_flow_complete.sql`) — รวม PR #18/#19 ของ GPT
+- **ขั้นตอน (เอกสารเดียวตลอดทาง):** Manager/Staff สร้างคำขอ + แนบใบเสนอราคา → ส่ง → Owner อนุมัติ/ตีกลับ (อนุมัติ = `approved` ยังไม่ลงบัญชี) → บันทึกจ่ายเงิน + แนบหลักฐาน + เคลียร์ (ค่าใช้จ่ายจริง/เงินคืน, บันทึกร่างได้) → ส่งเคลียร์ → Owner อนุมัติ/ส่งกลับ → ผู้ตรวจสุดท้าย ยืนยัน/ส่งกลับ → **ปิดงาน = ลงบัญชี + ภาษีซื้อ/หัก ณ ที่จ่าย** (เอกสาร `posted`) → รายงาน/แดชบอร์ดอัปเดตเอง
+  - ผู้ตรวจส่งกลับแล้วยอดไม่เปลี่ยน → กลับไปผู้ตรวจเลย · ยอดเปลี่ยน → Owner ตรวจใหม่ · เคลียร์บางส่วน: VAT/WHT ตามสัดส่วน
+  - SoD: ผู้สร้าง ผู้ส่งเคลียร์ Owner ผู้อนุมัติเคลียร์ เป็นผู้ตรวจสุดท้ายไม่ได้ · Manager เห็นเฉพาะสาขาตัวเอง (`public.staff.branch_id`)
+- **API ใหม่:** `expense-flow`, `expense-flow-item`, `expense-clearance.verifier-return`, `expense-file.delete`, upload `expense-request.file.upload` (`expense-flow.ts`, `expense-clearances.ts`)
+- **หน้าเว็บ:** เมนู "เบิก–เคลียร์ค่าใช้จ่าย" (`#fin/expflow`, `modules/finance/js/fin-pages-flow.js`, `css/fin-flow.css`) แท็บ ต้องทำ/กำลังดำเนินการ/ปิดแล้ว/ทั้งหมด · หน้ารายละเอียดมี stepper 6 ขั้น + ปุ่มตามบทบาท · `finance-embed.js` V 1.2.0
+- **แก้บั๊ก live:** อัปโหลดหลักฐานเคลียร์ไม่ได้ (check `document_files`), Owner อนุมัติ/ผู้ตรวจยืนยันเคลียร์ error (check `approval_events.action`), ล้างข้อมูลทดสอบล้มเมื่อมีรายการเคลียร์, ชื่อไฟล์ภาษาไทยเพี้ยน, deep link `#fin/...` ค้างหน้า Today
+- **ทดสอบ:** API E2E 178/178 · flow_ui 28/28 · ui 38/38 · embed 29/29 · live smoke 401 ไทย
+- **ตั้งค่าก่อนใช้:** Finance › ตั้งค่า › ผู้ใช้งาน → กำหนด manager / staff / verifier (ผู้ตรวจต้องเป็นคนอื่น)
+
 ## Finance & Accounting (21 พ.ย. 2569 — Claude, branch `feature/finance-module-foundation`, PR #6) — merge เข้า main แล้ว 21 พ.ย. 2569 16:3x (`63669a0`) หน้า Finance ขึ้นจริงแล้ว
 - **API จริง:** Edge Function `finance-api` (v5, `verify_jwt=false`) โค้ด `supabase/functions/finance-api/*.ts` · schema `finance` · migration `finance_operational_v1` (สำเนา `supabase/migrations/202611210004_*.sql`)
   - ยืนยันตัวตนด้วย CMS session เดิม: เรียก `backoffice?action=me&t=<token>` (แคช 30 วิ) → ไม่สร้าง login ใหม่ · CMS Owner = Finance owner อัตโนมัติ
