@@ -28,6 +28,13 @@
 - A stable actor reference must be confirmed from `me.id`, `me.username`, or `me.code` before enabling audit writes. Do not invent or silently map an identity.
 - The current preview has no session integration and remains unlinked from Owner until a Finance API adapter, session expiry handling, and authorization tests are complete.
 
+## Master data UI foundation
+- Company profile: legal identity, tax ID validation, branch type/code, address, accounting-year start month and VAT registration status.
+- Partner register: customer/vendor/both/employee/government classification and basic contact/tax fields.
+- Chart of accounts: code/name/type capture with accountant review gate.
+- Forms validate locally but do not persist data until Finance schema and authenticated API are deployed and tested.
+- Master-data JavaScript loads only when one of these screens is opened.
+
 ## Access model
 - Owner
 - Accounting
