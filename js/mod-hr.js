@@ -1,5 +1,6 @@
 /* ระบบ HR บุคคล (Owner และ HR): ข้อมูลพนักงานทุกอย่าง รูปถ่าย สิทธิ์ใช้งาน PIN สาขาประจำ สาขาที่ดูแล และผู้สมัคร
  * กะและวันหยุดของแต่ละคน ตั้งที่เมนู ตารางงาน > รูปแบบกะ */
+let HR_DEPARTMENTS = [];
 let HR_POSITIONS = [
   { id:'legacy-manager', position_code:'MANAGER', name_th:'ผู้จัดการร้าน', status:'active' },
   { id:'legacy-assistant', position_code:'ASST_MANAGER', name_th:'ผู้ช่วยผู้จัดการ', status:'active' },
@@ -18,36 +19,67 @@ async function hrPositionRequest(method='GET', body=null) {
   return p;
 }
 async function hrLoadPositions() {
-  try { const p=await hrPositionRequest(); if(Array.isArray(p.positions)&&p.positions.length) HR_POSITIONS=p.positions; }
-  catch(e) { console.warn('HR position master unavailable; using compatibility list',e.message); }
+  HR_POSITION_ERROR='';
+  try {
+    const p=await hrPositionRequest();
+    if(!Array.isArray(p.positions)) throw new Error('Position API ส่งข้อมูลไม่ถูกต้อง');
+    HR_POSITIONS=p.positions;
+    HR_DEPARTMENTS=Array.isArray(p.departments)?p.departments:[];
+    HR_POSITION_SYNC=Array.isArray(p.sync)?p.sync:[];
+    return p;
+  } catch(e) {
+    HR_POSITION_ERROR=e.message||'โหลด Position Master ไม่สำเร็จ';
+    console.warn('HR position master unavailable; compatibility data remains read-only for new assignments',HR_POSITION_ERROR);
+    throw e;
+  }
 }
-let HR_POSITION_LOADED=false, HR_POSITION_LOADING=false;
+let HR_POSITION_LOADED=false, HR_POSITION_LOADING=false, HR_POSITION_ERROR='', HR_POSITION_SYNC=[];
 function pPositions() {
- if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});return '<p class="loading">กำลังโหลด Position Master…</p>';}
+ if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().catch(()=>{}).finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});return '<p class="loading">กำลังโหลด Position Master…</p>';}
  const rows=HR_POSITIONS;
- return `<div class="h2">Position Master <span class="spacer"></span><button class="btn primary" data-a="newPosition">Create Position</button></div>
- <p class="note">HR เป็นเจ้าของข้อมูลตำแหน่ง ส่วนการเปิดสิทธิ์ใช้งานแต่ละระบบต้องกำหนดและอนุมัติผ่าน IT Control Center ก่อน</p>
- <div class="group">${rows.map(p=>`<button class="row" data-a="position:${esc(p.id)}"><span class="main"><span class="t">${esc(p.name_th)}</span><span class="s">${esc(p.position_code)} · ${esc(p.department||'ไม่ระบุแผนก')}</span></span><span class="chip ${p.status==='active'?'ok':'warn'}">${p.status==='active'?'Active':'Inactive'}</span></button>`).join('')||empty('ยังไม่มีตำแหน่ง')}</div>`;
+ return `<div class="h2">Position Master <span class="spacer"></span><button class="btn" data-a="newDepartment" ${HR_POSITION_ERROR?'disabled':''}>+ Department</button><button class="btn primary" data-a="newPosition" ${HR_POSITION_ERROR?'disabled':''}>Create Position</button></div>
+ ${HR_POSITION_ERROR?`<p class="status bad">เชื่อมต่อ Position Master ไม่สำเร็จ: ${esc(HR_POSITION_ERROR)} · ข้อมูลสำรองแสดงเพื่อดูเท่านั้น <button class="btn sm" data-a="reloadPositions">ลองใหม่</button></p>`:''}
+ <p class="note">HR เป็นเจ้าของข้อมูลตำแหน่งและส่งเหตุการณ์ไปยัง IT ผ่าน Sync Queue · การสร้างตำแหน่งไม่ให้สิทธิ์ใช้งานโดยอัตโนมัติ IT ต้องกำหนด Role, Permission และ Data Scope ก่อน</p>
+ ${HR_POSITION_SYNC.length?`<p class="chips">${HR_POSITION_SYNC.map(x=>`<span class="chip ${x.status==='processed'?'ok':x.status==='failed'||x.status==='dead_letter'?'bad':'warn'}">${esc(x.status)}: ${Number(x.count)||0}</span>`).join('')}</p>`:''}
+ <div class="group">${rows.map(p=>`<button class="row" data-a="position:${esc(p.id)}"><span class="main"><span class="t">${esc(p.name_th)}</span><span class="s">${esc(p.position_code)} · ${esc(p.department||'ไม่ระบุแผนก')} · v${Number(p.version||1)}</span></span><span class="chip ${p.status==='active'?'ok':'warn'}">${p.status==='active'?'Active':'Inactive'}</span></button>`).join('')||empty('ยังไม่มีตำแหน่ง')}</div>`;
 }
 function openPosition(id) {
+ if(HR_POSITION_ERROR) throw new Error('Position Master ยังเชื่อมต่อไม่ได้ จึงปิดการแก้ไข/สร้างชั่วคราวเพื่อป้องกันข้อมูลไม่ตรงกัน');
  const p=id?HR_POSITIONS.find(x=>x.id===id):{status:'active'};
  if(id&&!p)return;
  openForm({title:id?'แก้ไขตำแหน่ง':'Create Position',fields:[
   {k:'position_code',label:'Position Code',req:1,help:'ภาษาอังกฤษ ตัวเลข _ หรือ -'},
   {k:'name_th',label:'ชื่อตำแหน่ง (ไทย)',req:1},
   {k:'name_en',label:'Position Name (English)'},
-  {k:'department',label:'Department'},
+  {k:'department_id',label:'Department',type:'select',options:[['','ไม่ระบุแผนก'],...HR_DEPARTMENTS.map(d=>[d.id,d.name])]},
+  {k:'department',label:'Department Name (legacy label)',help:'ระบบจะเติมให้อัตโนมัติจาก Department Master'},
   {k:'level',label:'Position Level'},
   {k:'description',label:'รายละเอียดหน้าที่',type:'textarea'},
   {k:'status',label:'สถานะ',type:'select',options:[['active','Active'],['inactive','Inactive']]}
  ],data:p,onSave:async v=>{
+  const dept=HR_DEPARTMENTS.find(d=>d.id===v.department_id);
+  if(dept)v.department=dept.name;else if(!v.department_id)v.department='';
   const x=await hrPositionRequest('POST',{action:'save-position',...v,id:id||undefined});
   const i=HR_POSITIONS.findIndex(z=>z.id===x.position.id);
   if(i<0)HR_POSITIONS.push(x.position);else HR_POSITIONS[i]=x.position;
   HR_POSITIONS.sort((a,b)=>a.name_th.localeCompare(b.name_th,'th'));
-  toast('บันทึก Position Master แล้ว · IT ต้องกำหนดสิทธิ์ก่อนใช้งาน');
+  toast(x.position.sync_status==='pending'?'บันทึกแล้ว · เข้าคิวส่งข้อมูลให้ IT แล้ว · ยังไม่มีการให้สิทธิ์อัตโนมัติ':'บันทึก Position Master แล้ว · IT ต้องกำหนดสิทธิ์ก่อนใช้งาน');
  },onDelete:null});
 }
+
+function openDepartment() {
+ if(HR_POSITION_ERROR) throw new Error('Position API ยังไม่พร้อม');
+ openForm({title:'Create Department',fields:[
+  {k:'department_code',label:'Department Code',req:1,help:'อังกฤษ ตัวเลข _ หรือ -'},
+  {k:'name',label:'Department Name',req:1}
+ ],data:{},onSave:async v=>{
+  const r=await hrPositionRequest('POST',{action:'save-department',...v});
+  if(r.department&&!HR_DEPARTMENTS.some(d=>d.id===r.department.id))HR_DEPARTMENTS.push(r.department);
+  HR_DEPARTMENTS.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  toast('บันทึก Department Master แล้ว');
+ }});
+}
+
 const PAYTYPES = [['monthly', 'รายเดือน'], ['daily', 'รายวัน'], ['hourly', 'รายชั่วโมง (พาร์ทไทม์)']];
 const EMP_STAT = ['ทดลองงาน', 'ประจำ', 'ลาออก'];
 const APP_STAT = ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์', 'ไม่ผ่าน', 'รับเข้าทำงานแล้ว'];
@@ -71,7 +103,7 @@ const F_EMP = e => [
   { k: 'nickname', label: 'ชื่อเล่น', half: 1 }, { k: 'nameEn', label: 'ชื่อ-นามสกุล (อังกฤษ)', half: 1, help: 'ใช้ตรวจตอนลงทะเบียน LINE เช่น Somchai Jaidee' }, { k: 'scanId', label: 'รหัสในเครื่องสแกนนิ้ว', half: 1, help: 'ว่าง = ใช้รหัสพนักงาน (เครื่องที่ใช้เลข 1, 001 จับคู่กับ A001 ให้เอง)' }, { k: 'phone', label: 'เบอร์โทร', half: 1, type: 'tel' }, { k: 'email', label: 'อีเมล', half: 1, type: 'email', help: 'คนไม่มี LINE: ใช้รับรหัสตั้ง PIN เข้าเว็บ (ลืม PIN ก็ใช้ได้)' },
   { k: 'idCard', label: 'เลขบัตรประชาชน', half: 1, inputmode: 'numeric' }, { k: 'birthDate', label: 'วันเกิด', half: 1, type: 'date' },
   { k: 'address', label: 'ที่อยู่', type: 'textarea' },
-  { k: 'position', label: 'ตำแหน่ง', half: 1, type: 'select', options: HR_POSITIONS.filter(p=>p.status==='active').map(p=>p.name_th) }, { k: 'startDate', label: 'วันเริ่มงาน', half: 1, type: 'date' },
+  { k: 'position', label: 'ตำแหน่ง', half: 1, type: 'select', options: HR_POSITIONS.filter(p=>p.status==='active'||p.name_th===e.position).map(p=>p.name_th) }, { k: 'startDate', label: 'วันเริ่มงาน', half: 1, type: 'date' },
   { k: 'payType', label: 'รูปแบบค่าจ้าง', half: 1, type: 'select', options: PAYTYPES }, { k: 'rate', label: 'อัตราค่าจ้าง (บาท)', half: 1, type: 'number', req: 1 },
   { k: 'endDate', label: 'วันสุดท้าย (ถ้าลาออก)', half: 1, type: 'date' },
   { k: 'probationEnd', label: 'ครบทดลองงาน', half: 1, type: 'date', help: 'เว้นว่าง = วันเริ่มงาน + 119 วัน (แจ้งเตือนเฉพาะสถานะทดลองงาน)' }, { k: 'contractEnd', label: 'สัญญาจ้างสิ้นสุด (ถ้ามี)', half: 1, type: 'date' },
@@ -94,7 +126,7 @@ function empRow(e) {
     return `<button class="row" data-a="emp:${e.id}">${avatar(e)}<span class="main"><span class="t">${esc(fullName(e))}</span><span class="s">${esc(e.code || '')} ${esc(e.position || '')}, ${payLabel(e)}${pt ? `, กะ จ–อา: ${esc(pt)}` : ''}</span><span class="chips">${c.join('')}</span></span></button>`;
 }
 function pEmp() {
-  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});}
+  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().catch(()=>{}).finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});}
   const list = S.t.employees.filter(e => myEmp(e) && inBr(e.branch)).sort((a, b) => (a.status === 'ลาออก') - (b.status === 'ลาออก') || String(a.code || '').localeCompare(String(b.code || '')));
   const groups = !S.branch && multiBranch() ? myBranches().map(b => [b, list.filter(e => e.branch === b.code)]).filter(g => g[1].length) : [[null, list]];
   const bd0 = today(), bd1 = addDays(bd0, 1), key = d => String(d || '').slice(5, 10);
@@ -111,9 +143,10 @@ function pEmp() {
 function openEmp(id, draft) {
   const e = id ? empById(id) : (draft || { status: 'ทดลองงาน', role: 'staff', branch: oneBranch(), branchAccess: '', payType: 'monthly', startDate: today(), ssoEnrolled: true, code: nextCode(), position: 'บาริสต้า' });
   openForm({
-    title: id ? fullName(e) : 'เพิ่มพนักงาน', fields: F_EMP(e), data: { ...e, pin: '' },
+    title: id ? fullName(e) : 'เพิ่มพนักงาน', fields: F_EMP(e), data: { ...e, position: (HR_POSITIONS.find(p=>p.id===e.positionId)||{}).name_th || e.position || '', pin: '' },
     extraHTML: `${id && can('schedule_edit', 'schedule_view') ? `<p class="note">กะและวันหยุดประจำสัปดาห์: ${esc(patText(id) || 'ยังไม่ได้ตั้ง')} <a href="#sched/pattern">ตั้งที่ ตารางงาน > รูปแบบกะ</a></p>` : ''}<p class="note">เลขบัตรประชาชน บัญชีธนาคาร และรูปถ่ายเป็นข้อมูลส่วนบุคคล เก็บในไฟล์ HR แยกจากระบบอื่น เห็นได้เฉพาะ Owner และผู้มีสิทธิ์ HR ของสาขานั้น</p>${id && typeof empHistHTML === 'function' ? empHistHTML(id) : ''}`,
     onSave: async v => {
+      if(!HR_POSITION_LOADED||HR_POSITION_ERROR) throw new Error('กำลังโหลดหรือเชื่อมต่อ Position Master ไม่สำเร็จ กรุณารอให้โหลดข้อมูลตำแหน่งก่อนบันทึกพนักงาน');
       const pin = String(v.pin || '').trim();
       if (pin && !/^\d{4,6}$/.test(pin)) throw new Error('PIN ต้องเป็นตัวเลข 4–6 หลัก');
       if (S.t.employees.some(x => x.id !== v.id && String(x.code).toLowerCase() === String(v.code).toLowerCase())) throw new Error('รหัสพนักงานซ้ำ');
@@ -121,8 +154,11 @@ function openEmp(id, draft) {
       if (!pin) delete v.pin;
       delete v.hasPin; delete v.account;
       if (!v.branch) v.branch = oneBranch();
-      const matchedPosition=HR_POSITIONS.find(p=>p.name_th===v.position||p.position_code===v.position);
-      if(matchedPosition){v.positionId=matchedPosition.id;v.positionCode=matchedPosition.position_code;}
+      const matchedPosition=HR_POSITIONS.find(p=>p.name_th===v.position||p.position_code===v.position||p.id===v.positionId);
+      if(!matchedPosition||matchedPosition.status!=='active') throw new Error('กรุณาเลือกตำแหน่งที่ Active จาก Position Master');
+      if(/^[0-9a-f-]{36}$/i.test(String(matchedPosition.id||''))) v.positionId=matchedPosition.id; else delete v.positionId;
+      v.positionCode=matchedPosition.position_code;
+      v.position=matchedPosition.name_th;
       await DB.upsert('employees', v);
       if (!id) setTimeout(() => toast(can('users') && !pin ? 'เพิ่มแล้ว ต่อไปสร้างชื่อผู้ใช้ให้ที่หน้า Users และตั้งกะที่ ตารางงาน > รูปแบบกะ' : 'เพิ่มแล้ว ตั้งกะและวันหยุดของพนักงานคนนี้ที่ ตารางงาน > รูปแบบกะ'), 300);
       if (belowMin(v)) setTimeout(() => toast('อัตราค่าจ้างนี้ต่ำกว่าค่าแรงขั้นต่ำที่ตั้งไว้ ตรวจอีกครั้ง'), 600);
@@ -143,7 +179,7 @@ const F_APP = () => [
   { k: 'availability', label: 'วันและเวลาที่ทำงานได้' }, { k: 'note', label: 'ผลสัมภาษณ์/บันทึก', type: 'textarea' }
 ];
 function pApp() {
-  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});}
+  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().catch(()=>{}).finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});}
   const list = S.t.applicants.filter(a => !S.branch || a.branch === S.branch || !a.branch).sort((a, b) => APP_STAT.indexOf(a.status) - APP_STAT.indexOf(b.status) || String(b.appliedDate || '').localeCompare(String(a.appliedDate || '')));
   const cnt = APP_STAT.map(s => [s, list.filter(a => a.status === s).length]).filter(x => x[1]);
   return `<div class="h2">ผู้สมัคร ${list.length} คน<span class="spacer"></span><button class="btn primary" data-a="newApp">เพิ่มผู้สมัคร</button></div>
@@ -176,5 +212,5 @@ defMod({
     { key: 'docs', label: 'Documents', view: () => window.HRDocuments ? window.HRDocuments.view() : '<p class="note">กำลังโหลดเมนู Documents…</p>' }
   ],
   summary: () => { const n = activeEmps().length, a = S.t.applicants.filter(x => ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์'].includes(x.status)).length; return `พนักงาน ${n} คน${a ? `, ผู้สมัครรอดำเนินการ ${a}` : ''}`; },
-  acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id), newPosition: () => openPosition(), position: id => openPosition(id) }
+  acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id), newPosition: () => openPosition(), newDepartment: () => openDepartment(), position: id => openPosition(id), reloadPositions: async () => { HR_POSITION_LOADING=true; try { await hrLoadPositions(); HR_POSITION_LOADED=true; } catch(e) {} finally { HR_POSITION_LOADING=false; if(typeof App!=='undefined') App.render(); } } }
 });

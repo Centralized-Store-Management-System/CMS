@@ -18,8 +18,10 @@ Deno.serve(async(req)=>{
   const who=await actor(req.headers.get("x-cms-session")||"");
   if(req.method==="GET"){
    const positions=await sql`select * from public.hr_positions order by status desc,name_th`;
+   const departments=await sql`select id,department_code,name,status,organization_id,parent_id from public.org_departments where status='active' order by name`;
    const permissions=await sql`select p.position_id,p.application_key,p.permission_codes,p.branch_scope,p.status,p.version from public.it_position_permissions p`;
-   return reply({ok:true,positions,permissions},200,origin);
+   const sync=await sql`select status,count(*)::int as count from public.iam_sync_outbox where aggregate_type='hr_position' group by status`;
+   return reply({ok:true,positions,departments,permissions,sync},200,origin);
   }
   const b=await req.json().catch(()=>({}));
   if(b.action==="save-position"){
@@ -30,11 +32,29 @@ Deno.serve(async(req)=>{
    const saved=await sql.begin(async tx=>{
     const old=id?(await tx`select * from public.hr_positions where id=${id}::uuid for update`)[0]:null;
     if(id&&!old)throw new HttpError(404,"ไม่พบตำแหน่ง");
-    const [row]=id?await tx`update public.hr_positions set position_code=${code},name_th=${name},name_en=${String(b.name_en||"")},department=${String(b.department||"")},level=${String(b.level||"")},description=${String(b.description||"")},status=${b.status==="inactive"?"inactive":"active"},updated_by=${who.name},updated_at=now() where id=${id}::uuid returning *`:await tx`insert into public.hr_positions(position_code,name_th,name_en,department,level,description,created_by,updated_by) values(${code},${name},${String(b.name_en||"")},${String(b.department||"")},${String(b.level||"")},${String(b.description||"")},${who.name},${who.name}) returning *`;
-    await tx`insert into public.hr_position_audit(position_id,action,before_state,after_state,actor) values(${row.id},${id?"update":"create"},${old?sql.json(old):null},${sql.json(row)},${who.name})`;
-    return row;
+    const departmentId=b.department_id&&/^[0-9a-f-]{36}$/i.test(String(b.department_id))?String(b.department_id):null;
+    const [row]=id?await tx`update public.hr_positions set position_code=${code},name_th=${name},name_en=${String(b.name_en||"")},department=${String(b.department||"")},department_id=${departmentId}::uuid,level=${String(b.level||"")},description=${String(b.description||"")},status=${b.status==="inactive"?"inactive":"active"},version=version+1,updated_by=${who.name},updated_at=now() where id=${id}::uuid returning *`:await tx`insert into public.hr_positions(position_code,name_th,name_en,department,department_id,level,description,created_by,updated_by) values(${code},${name},${String(b.name_en||"")},${String(b.department||"")},${departmentId}::uuid,${String(b.level||"")},${String(b.description||"")},${who.name},${who.name}) returning *`;
+    const action=id?"update":"create";
+    await tx`insert into public.hr_position_audit(position_id,action,before_state,after_state,actor) values(${row.id},${action},${old?sql.json(old):null},${sql.json(row)},${who.name})`;
+    const eventKey=crypto.randomUUID();
+    const payload={event_id:eventKey,event_type:id?"hr.position.updated":"hr.position.created",schema_version:1,occurred_at:new Date().toISOString(),actor:who.name,position:row};
+    await tx`insert into public.iam_sync_outbox(event_key,aggregate_type,aggregate_id,aggregate_version,event_type,schema_version,payload) values(${eventKey},'hr_position',${row.id},${row.version},${payload.event_type},1,${sql.json(payload)})`;
+    await tx`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,before_state,after_state) values(${who.name},${'hr.position.'+action},'hr_position',${row.id},${old?sql.json(old):null},${sql.json(row)})`;
+    return { ...row, sync_status:'pending' };
    });
    return reply({ok:true,position:saved},200,origin);
+  }
+  if(b.action==="save-department"){
+   if(who.role!=="owner"&&who.role!=="admin")throw new HttpError(403,"เฉพาะ Owner / IT Admin จัดการแผนกได้");
+   const code=String(b.department_code||"").trim().toUpperCase(),name=String(b.name||"").trim();
+   if(!/^[A-Z0-9_-]{2,30}$/.test(code)||!name)throw new HttpError(400,"กรุณาระบุรหัสและชื่อแผนกให้ถูกต้อง");
+   const row=await sql.begin(async tx=>{
+    const existing=(await tx`select * from public.org_departments where organization_id is null and department_code=${code} for update`)[0];
+    if(existing)return (await tx`update public.org_departments set name=${name},status='active',updated_at=now() where id=${existing.id} returning *`)[0];
+    return (await tx`insert into public.org_departments(department_code,name,status) values(${code},${name},'active') returning *`)[0];
+   });
+   await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state) values(${who.name},'org.department.saved','department',${row.id},${sql.json(row)})`;
+   return reply({ok:true,department:row},200,origin);
   }
   if(b.action==="set-permissions"){
    if(who.role!=="owner"&&who.role!=="admin")throw new HttpError(403,"เฉพาะ Owner / IT Admin กำหนดสิทธิ์ได้");
@@ -47,5 +67,5 @@ Deno.serve(async(req)=>{
    return reply({ok:true,permission:row},200,origin);
   }
   throw new HttpError(400,"ไม่รู้จัก action");
- }catch(e){const s=e instanceof HttpError?e.status:500;if(s===500)console.error("hr-position-api",e);return reply({ok:false,error:e instanceof Error?e.message:"เกิดข้อผิดพลาด"},s,origin);}
+ }catch(e){const pgCode=(e as {code?:string})?.code;const s=e instanceof HttpError?e.status:pgCode==="23505"?409:500;if(s===500)console.error("hr-position-api",e);const message=s===409?"รหัสนี้มีอยู่แล้ว กรุณาใช้รหัสอื่น":e instanceof Error?e.message:"เกิดข้อผิดพลาด";return reply({ok:false,error:message},s,origin);}
 });
