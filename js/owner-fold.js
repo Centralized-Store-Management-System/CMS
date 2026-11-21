@@ -42,6 +42,7 @@
     '.ocf-chev{flex:none;width:24px;height:24px;display:grid;place-items:center;color:var(--muted,#5b6a60);transition:transform .18s}',
     '.ocf.open>.ocf-head .ocf-chev{transform:rotate(180deg)}',
     '.ocf>.ocf-body[hidden]{display:none!important}',
+    '.ocf-solo>.ocf-body>.oc-ops-queue{margin-top:0}.ocf-solo .oc-ops-queue-head h3{display:none}.ocf-solo .oc-ops-queue-head{justify-content:flex-end}',
     '.ocf-tools{display:flex;justify-content:flex-end;gap:8px;margin:10px 0 4px}',
     /* เมนู: กระดิ่ง + จำนวน */
     '.ocf-nb{display:inline-flex;align-items:center;gap:3px;margin-left:auto;font-size:11px;font-weight:700;color:#c0392b;background:#fde8e6;border-radius:999px;padding:2px 7px 2px 5px;line-height:1.3;flex:none}',
@@ -83,6 +84,18 @@
     const body = f.querySelector(':scope>.ocf-body'), box = f.querySelector(':scope>.ocf-head>.ocf-badges'), bell = f.querySelector(':scope>.ocf-head .ocf-bell');
     if (!body || !box) return;
     const c = count(body);
+    const qs = body.querySelector('.oc-ops-queue-summary');   // Incident & Approval Center: "เหตุการณ์เปิด N · รออนุมัติ M"
+    if (qs) {
+      const m = String(qs.textContent).match(/เปิด\s*(\d+).*?อนุมัติ\s*(\d+)/), o = m ? +m[1] : 0, q = m ? +m[2] : 0;
+      const h = (o ? `<span class="ocf-b warn">เหตุการณ์เปิด ${o}</span>` : '') + (q ? `<span class="ocf-b warn">รออนุมัติ ${q}</span>` : '') + (!o && !q ? '<span class="ocf-b ok">ไม่มีรายการค้าง</span>' : '');
+      if (box.innerHTML !== h) box.innerHTML = h;
+      const sub = f.querySelector(':scope>.ocf-head .ocf-sub'), st = o + q ? 'warn' : 'ok';
+      const names = [...body.querySelectorAll('.oc-ops-queue-card [data-ops-decision]')].map(x => x.closest('.oc-ops-queue-card').querySelector('b')).filter((x, i, a) => x && a.indexOf(x) === i).map(x => '<span class="warn"><b>● ' + esc(String(x.textContent).trim().slice(0, 60)) + '</b></span>');
+      const txt = names.length ? names.slice(0, 2).join(' &nbsp;') + (names.length > 2 ? ` และอีก ${names.length - 2} รายการ` : '') : (o ? 'มีเหตุการณ์เปิดอยู่ · ไม่มีแผนรออนุมัติ' : 'ไม่มีรายการรออนุมัติ · โหมด Observe-only'); if (sub && sub.innerHTML !== txt) sub.innerHTML = txt; if (sub) sub.hidden = false;
+      const ico = f.querySelector(':scope>.ocf-head .ocf-ico'); if (ico) { ico.className = 'ocf-ico ' + st; ico.textContent = st === 'ok' ? '✓' : '!'; }
+      bell.classList.toggle('on', o + q > 0); bell.classList.remove('bad'); bell.hidden = !(o + q);
+      return;
+    }
     const h = [];
     if (c.bad) h.push(`<span class="ocf-b bad">ผิดปกติ ${c.bad}</span>`);
     if (c.warn) h.push(`<span class="ocf-b warn">ควรดู ${c.warn}</span>`);
@@ -138,7 +151,8 @@
   // กลุ่มที่ย่อ/ขยายพร้อมกัน (เจ้าของขอ 21 พ.ย.): IT Control Center การ์ด Theme Rollout + Owner Theme Preview
   const GROUPS = [['theme', /^(Theme Rollout|Owner Theme Preview)/]];
   const groupOf = el => { const t = String(el.textContent || '').trim(); const g = GROUPS.find(x => x[1].test(t)); return g ? g[0] : ''; };
-  const SKIP = { dash: 1 };   // หน้าที่ไม่ย่อ: แดชบอร์ด (กราฟ + แตะวันดูรายละเอียด) แสดงแบบเดิม
+  const SKIP = { dash: 1 };
+  const SOLO = [['oc-ops-queue', 'Incident & Approval Center']];   // หน้าที่ไม่ย่อ: แดชบอร์ด (กราฟ + แตะวันดูรายละเอียด) แสดงแบบเดิม
   function process(main) {
     if (SKIP[view()]) return;
     // ก) หัวข้อ h3 ระดับบนสุดของหน้า → หัวข้อ + เนื้อหาถัดไปจนถึงหัวข้อถัดไป
@@ -147,6 +161,15 @@
       while (n && !STOP(n) && !n.matches('p.note:last-child')) { nodes.push(n); n = n.nextElementSibling; }
       if (!nodes.length) return;
       build(h, nodes, h, 'a');
+    });
+    // ค) แยกออกมาเป็นการ์ดของตัวเอง (เจ้าของขอ 21 พ.ย.): Incident & Approval Center อยู่ในการ์ด AI Copilot เดิม
+    //    ย้ายกล่องไปไว้ใต้การ์ด Copilot (id เดิม it-ops.js ยังหาเจอ/วาดใหม่ได้ตามปกติ)
+    SOLO.forEach(([id, label]) => {
+      const box = main.querySelector('#' + id), panel = main.querySelector('#oc-ops-panel');
+      if (!box || !panel || box.closest('.ocf-solo')) return;
+      const t = document.createElement('h3'); t.className = 'h3'; t.textContent = label;
+      const mark = document.createElement('span'); panel.after(mark);
+      const f = build(t, [box], mark, 'a'); f.classList.add('ocf-solo'); mark.remove();
     });
     // ข) การ์ดที่มีหัวข้อในตัว (AI Monitoring, IT Control Center, Copilot) → หัวการ์ด + เนื้อหาที่เหลือ
     main.querySelectorAll('section.group.pad, section.oc-ops-panel, .itcc-grid > section').forEach(sec => {
