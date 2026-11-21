@@ -6,7 +6,7 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.2.1', BASE = 'modules/finance/';
+  const V = '1.2.2', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
@@ -202,6 +202,7 @@
     '.fin-mnav-h{margin:10px 8px 2px;font-size:11.5px;color:var(--muted)}',
     '.fin-mnav a{display:flex;align-items:center;padding:10px 10px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:14.5px}',
     '.fin-mnav a[aria-current="page"]{background:color-mix(in srgb,var(--m-acct) 12%,var(--surface));color:var(--m-acct);font-weight:600}',
+    '#fmContent.fm-busy>.fm-host:not([hidden]){opacity:.55;pointer-events:none;transition:opacity .12s}',
     '@media (min-width:960px){.fin-mnav{display:none}}',
   ].join('\n');
   document.head.appendChild(css);
