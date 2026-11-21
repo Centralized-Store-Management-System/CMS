@@ -23,6 +23,7 @@ async function hrLoadPositions() {
     const p=await hrPositionRequest();
     if(!Array.isArray(p.positions)) throw new Error('Position API ส่งข้อมูลไม่ถูกต้อง');
     HR_POSITIONS=p.positions;
+    HR_POSITION_SYNC=Array.isArray(p.sync)?p.sync:[];
     return p;
   } catch(e) {
     HR_POSITION_ERROR=e.message||'โหลด Position Master ไม่สำเร็จ';
@@ -30,13 +31,14 @@ async function hrLoadPositions() {
     throw e;
   }
 }
-let HR_POSITION_LOADED=false, HR_POSITION_LOADING=false, HR_POSITION_ERROR='';
+let HR_POSITION_LOADED=false, HR_POSITION_LOADING=false, HR_POSITION_ERROR='', HR_POSITION_SYNC=[];
 function pPositions() {
  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});return '<p class="loading">กำลังโหลด Position Master…</p>';}
  const rows=HR_POSITIONS;
  return `<div class="h2">Position Master <span class="spacer"></span><button class="btn primary" data-a="newPosition" ${HR_POSITION_ERROR?'disabled':''}>Create Position</button></div>
  ${HR_POSITION_ERROR?`<p class="status bad">เชื่อมต่อ Position Master ไม่สำเร็จ: ${esc(HR_POSITION_ERROR)} · ข้อมูลสำรองแสดงเพื่อดูเท่านั้น <button class="btn sm" data-a="reloadPositions">ลองใหม่</button></p>`:''}
  <p class="note">HR เป็นเจ้าของข้อมูลตำแหน่งและส่งเหตุการณ์ไปยัง IT ผ่าน Sync Queue · การสร้างตำแหน่งไม่ให้สิทธิ์ใช้งานโดยอัตโนมัติ IT ต้องกำหนด Role, Permission และ Data Scope ก่อน</p>
+ ${HR_POSITION_SYNC.length?`<p class="chips">${HR_POSITION_SYNC.map(x=>`<span class="chip ${x.status==='processed'?'ok':x.status==='failed'||x.status==='dead_letter'?'bad':'warn'}">${esc(x.status)}: ${Number(x.count)||0}</span>`).join('')}</p>`:''}
  <div class="group">${rows.map(p=>`<button class="row" data-a="position:${esc(p.id)}"><span class="main"><span class="t">${esc(p.name_th)}</span><span class="s">${esc(p.position_code)} · ${esc(p.department||'ไม่ระบุแผนก')} · v${Number(p.version||1)}</span></span><span class="chip ${p.status==='active'?'ok':'warn'}">${p.status==='active'?'Active':'Inactive'}</span></button>`).join('')||empty('ยังไม่มีตำแหน่ง')}</div>`;
 }
 function openPosition(id) {
@@ -122,9 +124,10 @@ function pEmp() {
 function openEmp(id, draft) {
   const e = id ? empById(id) : (draft || { status: 'ทดลองงาน', role: 'staff', branch: oneBranch(), branchAccess: '', payType: 'monthly', startDate: today(), ssoEnrolled: true, code: nextCode(), position: 'บาริสต้า' });
   openForm({
-    title: id ? fullName(e) : 'เพิ่มพนักงาน', fields: F_EMP(e), data: { ...e, position: e.position || (HR_POSITIONS.find(p=>p.id===e.positionId)||{}).name_th || '', pin: '' },
+    title: id ? fullName(e) : 'เพิ่มพนักงาน', fields: F_EMP(e), data: { ...e, position: (HR_POSITIONS.find(p=>p.id===e.positionId)||{}).name_th || e.position || '', pin: '' },
     extraHTML: `${id && can('schedule_edit', 'schedule_view') ? `<p class="note">กะและวันหยุดประจำสัปดาห์: ${esc(patText(id) || 'ยังไม่ได้ตั้ง')} <a href="#sched/pattern">ตั้งที่ ตารางงาน > รูปแบบกะ</a></p>` : ''}<p class="note">เลขบัตรประชาชน บัญชีธนาคาร และรูปถ่ายเป็นข้อมูลส่วนบุคคล เก็บในไฟล์ HR แยกจากระบบอื่น เห็นได้เฉพาะ Owner และผู้มีสิทธิ์ HR ของสาขานั้น</p>${id && typeof empHistHTML === 'function' ? empHistHTML(id) : ''}`,
     onSave: async v => {
+      if(HR_POSITION_ERROR&&(!id||v.position!==e.position)) throw new Error('Position Master ไม่พร้อมใช้งาน จึงไม่สามารถสร้างพนักงานหรือเปลี่ยนตำแหน่งได้ในขณะนี้');
       const pin = String(v.pin || '').trim();
       if (pin && !/^\d{4,6}$/.test(pin)) throw new Error('PIN ต้องเป็นตัวเลข 4–6 หลัก');
       if (S.t.employees.some(x => x.id !== v.id && String(x.code).toLowerCase() === String(v.code).toLowerCase())) throw new Error('รหัสพนักงานซ้ำ');
