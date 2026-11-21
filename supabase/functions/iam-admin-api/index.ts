@@ -77,7 +77,11 @@ Deno.serve(async(req)=>{
    if(!/^[0-9a-f-]{36}$/i.test(positionId)||!/^[0-9a-f-]{36}$/i.test(roleId))throw new HttpError(400,"Position / Role ID ไม่ถูกต้อง");
    if(b.status==="active")throw new HttpError(409,"ยังเปิดใช้ Binding ไม่ได้: ต้องเชื่อมและทดสอบ Server-side Authorization ของระบบปลายทางก่อน");
    const scope=b.scope&&typeof b.scope==="object"?b.scope:{branch:"assigned"};
-   const [row]=await sql`insert into public.iam_position_role_bindings(position_id,role_id,scope_template,status,created_by,updated_by) values(${positionId}::uuid,${roleId}::uuid,${sql.json(scope)},'draft',${who.name},${who.name}) on conflict(position_id,role_id,valid_from) do update set scope_template=excluded.scope_template,status='draft',updated_by=excluded.updated_by,updated_at=now() returning *`;
+   const row=await sql.begin(async tx=>{
+    const existing=(await tx`select * from public.iam_position_role_bindings where position_id=${positionId}::uuid and role_id=${roleId}::uuid and valid_from is null for update`)[0];
+    if(existing)return (await tx`update public.iam_position_role_bindings set scope_template=${sql.json(scope)},status='draft',updated_by=${who.name},updated_at=now() where id=${existing.id} returning *`)[0];
+    return (await tx`insert into public.iam_position_role_bindings(position_id,role_id,scope_template,status,created_by,updated_by) values(${positionId}::uuid,${roleId}::uuid,${sql.json(scope)},'draft',${who.name},${who.name}) returning *`)[0];
+   });
    await audit(who.name,"iam.position_role_binding.draft","position_role_binding",row.id,row);return reply({ok:true,row},200,origin);
   }
   if(b.action==="retry-outbox"){
