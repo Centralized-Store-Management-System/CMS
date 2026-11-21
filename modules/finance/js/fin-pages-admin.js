@@ -72,9 +72,9 @@
       const users = (await api.get('users')).items;
       el.innerHTML = F.head('ACCESS CONTROL', 'ผู้ใช้งาน Finance', 'กำหนดสิทธิ์ในระบบ Finance ให้ผู้ใช้ CMS (ไม่เปลี่ยนสิทธิ์ในระบบหลังร้าน) · Owner ของ CMS เป็นเจ้าของ Finance อัตโนมัติ', '<button class="fm-btn fm-btn-primary" id="fmAddU">＋ ให้สิทธิ์ผู้ใช้</button>') +
         `<section class="fm-panel"><div class="fm-form-grid three" style="font-size:12.5px">
-          <div><b>ผู้อนุมัติ</b><br><span class="fm-muted">อนุมัติเอกสาร การรับ/จ่ายเงิน สมุดรายวัน แบบภาษี + บันทึกได้ทุกอย่าง (อนุมัติรายการที่ตัวเองบันทึกไม่ได้)</span></div>
-          <div><b>ผู้บันทึกบัญชี</b><br><span class="fm-muted">บันทึกรายรับ รายจ่าย รับ/จ่ายเงิน สมุดรายวัน คู่ค้า จัดทำแบบภาษี — อนุมัติไม่ได้</span></div>
-          <div><b>ดูอย่างเดียว</b><br><span class="fm-muted">ดูข้อมูลและรายงาน ไม่บันทึก ไม่อนุมัติ</span></div></div></section>` +
+          <div><b>Manager / Staff</b><br><span class="fm-muted">สร้างคำขอรายรับ–รายจ่าย ส่งให้ Owner อนุมัติ บันทึกการจ่ายเงินจริงหลังอนุมัติ และแนบหลักฐานได้ แต่อนุมัติเองไม่ได้</span></div>
+          <div><b>Final Verifier</b><br><span class="fm-muted">ตรวจดูหลักฐานที่แนบและยืนยันความครบถ้วนหลังจ่าย ไม่มีสิทธิ์อนุมัติหรือแก้ไขยอดเงิน</span></div>
+          <div><b>Approver / Accountant / Viewer</b><br><span class="fm-muted">คงสิทธิ์ตามบทบาทเดิม: ผู้อนุมัติ, ผู้บันทึกบัญชี หรือดูอย่างเดียว</span></div></div></section>` +
         table([{ h: 'ผู้ใช้', f: u => `<b>${esc(u.display_name || u.cms_actor_ref)}</b><span class="sub">${esc(u.cms_actor_ref)}</span>` }, { h: 'สิทธิ์', f: u => esc(L.role[u.role_code]) }, { h: 'สถานะ', f: u => u.is_active ? '<span class="fm-badge ok">ใช้งาน</span>' : '<span class="fm-badge mute">ปิด</span>' }, { h: 'ปรับล่าสุด', f: u => F.thDateTime(u.updated_at) },
           { h: '', cls: 'acts', f: u => u.role_code === 'owner' ? '' : `<button class="fm-btn fm-btn-sm" data-u="${esc(u.cms_actor_ref)}">แก้ไข</button>` }], users, { empty: 'ยังไม่มีผู้ใช้' });
       const edit = async (cur) => {
@@ -83,7 +83,7 @@
         const taken = new Set(users.map(u => u.cms_actor_ref));
         const m = F.modal(cur ? 'แก้ไขสิทธิ์' : 'ให้สิทธิ์ผู้ใช้ CMS', `<form id="fmU" class="fm-form-grid">
           ${cur ? `<div class="fm-field fm-field-full"><span>ผู้ใช้</span><b>${esc(cur.display_name)}</b></div>` : `<label class="fm-field fm-field-full"><span>ผู้ใช้ CMS *</span><select name="actor_ref" required><option value="">— เลือก —</option>${cms.filter(c => !taken.has(c.actor_ref)).map(c => `<option value="${esc(c.actor_ref)}" data-name="${esc(c.name)}">${esc(c.name)}${c.username ? ' (' + esc(c.username) + ')' : ''}${c.branch ? ' · ' + esc(c.branch) : ''}</option>`).join('')}</select><small class="fm-muted">รายชื่อจากระบบหลังร้าน (บัญชีที่ใช้งานอยู่)</small></label>`}
-          <label class="fm-field"><span>สิทธิ์ใน Finance</span><select name="role">${['approver', 'accountant', 'viewer'].map(r => `<option value="${r}" ${cur && cur.role_code === r ? 'selected' : ''}>${L.role[r]}</option>`).join('')}</select></label>
+          <label class="fm-field"><span>สิทธิ์ใน Finance</span><select name="role">${['manager', 'staff', 'verifier', 'approver', 'accountant', 'viewer'].map(r => `<option value="${r}" ${cur && cur.role_code === r ? 'selected' : ''}>${L.role[r]}</option>`).join('')}</select></label>
           <label class="fm-check" style="align-self:end"><input type="checkbox" name="is_active" ${!cur || cur.is_active ? 'checked' : ''}> ใช้งาน</label>
           <div class="fm-form-actions fm-field-full"><button type="button" class="fm-btn fm-btn-light" data-close>ยกเลิก</button><button class="fm-btn fm-btn-primary">บันทึก</button></div></form>`);
         const f = m.el.querySelector('#fmU');
