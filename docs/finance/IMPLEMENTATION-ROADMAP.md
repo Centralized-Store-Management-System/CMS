@@ -15,7 +15,7 @@
 - [x] Keep route unlinked from production Owner Portal until auth tests pass.
 
 - [x] Add Finance-only CMS Theme Bridge (brand colors, typography, logo, light/dark, scale, radius, density) without importing CMS runtime or shared CSS.\n\n## Phase 2 — Identity and access
-- [x] Read existing auth contract: custom CMS token validated via `backoffice?action=bootstrap`; claims include `me.role`, `me.perms`, `me.scope` (from existing HR Documents function).\n- [ ] Implement narrow Finance authorization adapter and verify stable actor reference before writes.
+- [x] Read existing auth contract: custom CMS token validated via `backoffice?action=bootstrap`; claims include `me.role`, `me.perms`, `me.scope` (from existing HR Documents function).\n- [x] Implement isolated Finance authorization Edge Function source and lazy frontend adapter (not deployed).\n- [ ] Verify stable actor reference against real, non-production CMS session before enabling writes.
 - [ ] Server-side Owner/Accounting authorization.
 - [ ] RLS tests and audit trail.
 - [ ] No changes to current login, PIN or session flow.
