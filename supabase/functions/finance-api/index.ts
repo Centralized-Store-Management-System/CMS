@@ -169,20 +169,20 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
   if (action === "payments") {
     const status = asText(url.searchParams.get("status"), 20);
     const rows = status
-      ? await db!.`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid and status = ${status} order by payment_date desc, created_at desc limit ${limit} offset ${offset}`
-      : await db!.`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid order by payment_date desc, created_at desc limit ${limit} offset ${offset}`;
+      ? await db!`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid and status = ${status} order by payment_date desc, created_at desc limit ${limit} offset ${offset}`
+      : await db!`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid order by payment_date desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "tax-transactions") {
-    const rows = await db!.`select id, document_id, tax_type, tax_period, tax_base, tax_rate, tax_amount, counterparty_id, tax_form_code, status, created_at from finance.tax_transactions where company_id = ${user.companyId}::uuid order by tax_period desc, created_at desc limit ${limit} offset ${offset}`;
+    const rows = await db!`select id, document_id, tax_type, tax_period, tax_base, tax_rate, tax_amount, counterparty_id, tax_form_code, status, created_at from finance.tax_transactions where company_id = ${user.companyId}::uuid order by tax_period desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "journals") {
-    const rows = await db!.`select id, journal_number, journal_date, description, status, total_debit, total_credit, created_by, approved_by, posted_at, created_at from finance.journal_entries where company_id = ${user.companyId}::uuid order by journal_date desc, created_at desc limit ${limit} offset ${offset}`;
+    const rows = await db!`select id, journal_number, journal_date, description, status, total_debit, total_credit, created_by, approved_by, posted_at, created_at from finance.journal_entries where company_id = ${user.companyId}::uuid order by journal_date desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "periods") {
-    const rows = await db!.`select id, period_code, starts_on, ends_on, status, closed_at from finance.accounting_periods where company_id = ${user.companyId}::uuid order by starts_on desc limit ${limit} offset ${offset}`;
+    const rows = await db!`select id, period_code, starts_on, ends_on, status, closed_at from finance.accounting_periods where company_id = ${user.companyId}::uuid order by starts_on desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
 throw new HttpError(404, "ไม่พบ Finance API action");
