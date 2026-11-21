@@ -141,7 +141,7 @@ function pExp() {
   <h3 class="h3">รายการ</h3><div class="group">${list.map(x => `<button class="row" data-a="exp:${x.id}"><span class="main"><span class="t">${esc(x.category)}${x.vendor ? ', ' + esc(x.vendor) : ''} ${x.branch ? (S.branch ? '' : branchChip(x.branch)) : '<span class="chip br">ส่วนกลาง</span>'}</span><span class="s">${thDate(x.date)}${x.payMethod ? ', ' + esc(x.payMethod) : ''}${x.note ? ', ' + esc(x.note) : ''}</span></span><span class="v">${fmt(x.amount)}</span></button>`).join('') || empty('ยังไม่มีรายจ่ายเดือนนี้')}</div>`;
 }
 async function syncExpenseToFinance(row) {
-  const token = (() => { try { return sessionStorage.getItem('amz.tok') || sessionStorage.getItem('amz.it.tok') || ''; } catch (_) { return ''; } })();
+  const token = String(S.token || '');
   if (!token) throw new Error('ไม่พบรหัสเข้าใช้งาน จึงยังส่งรายการเข้า Finance ไม่ได้');
   const url = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const payload = {
