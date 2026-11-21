@@ -80,16 +80,16 @@ async function authenticate(token: string) {
     order by ur.created_at asc limit 2
   `;
   if (!mapping && cmsOwner) {
-    const [state] = await db!\`select
+    const [state] = await db!`select
       (select count(*)::int from finance.user_roles where is_active = true) as active_role_count,
       (select count(*)::int from finance.companies where status = 'active' and environment = 'uat') as active_uat_company_count,
-      (select id from finance.companies where status = 'active' and environment = 'uat' order by created_at asc limit 1) as uat_company_id\`;
+      (select id from finance.companies where status = 'active' and environment = 'uat' order by created_at asc limit 1) as uat_company_id`;
     if (Number(state?.active_role_count || 0) === 0 && Number(state?.active_uat_company_count || 0) === 1 && state?.uat_company_id) {
-      const [created] = await db!\`insert into finance.user_roles (company_id,cms_actor_ref,role_code,is_active)
+      const [created] = await db!`insert into finance.user_roles (company_id,cms_actor_ref,role_code,is_active)
         values (${String(state.uat_company_id)}::uuid,${actorRef},'owner',true)
         on conflict (company_id,cms_actor_ref) do update set role_code='owner',is_active=true,updated_at=now()
-        returning company_id,role_code\`;
-      const [company] = await db!\`select legal_name,currency_code from finance.companies where id=${String(created.company_id)}::uuid\`;
+        returning company_id,role_code`;
+      const [company] = await db!`select legal_name,currency_code from finance.companies where id=${String(created.company_id)}::uuid`;
       mapping = { company_id: created.company_id, role_code: created.role_code, legal_name: company.legal_name, currency_code: company.currency_code };
     }
   }
