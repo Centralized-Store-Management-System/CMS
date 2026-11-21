@@ -6,7 +6,7 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.2.0', BASE = 'modules/finance/';
+  const V = '1.2.1', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
@@ -132,7 +132,10 @@
     if (!open) { if (box) box.remove(); return; }
     if (!box) { box = document.createElement('div'); box.id = 'finSubnav'; box.className = 'fin-subnav'; a.after(box); }
     if (!onFin) ST.page = '';
+    // คงกลุ่มเมนูที่ผู้ใช้กางไว้ (วาดเมนูย่อยใหม่แล้วกลุ่มไม่หุบเอง)
+    const kept = [...box.querySelectorAll('details[open] > summary')].map(s => s.textContent);
     box.innerHTML = subLinks('fin-subnav');
+    box.querySelectorAll('details > summary').forEach(s => { if (kept.includes(s.textContent)) s.parentElement.open = true; });
   }
   const r0 = renderNav;
   let fixing = false;
@@ -144,8 +147,25 @@
     }
     return r;
   };
+  // ย้ายหน้าภายใน Finance (#fin/a → #fin/b): ไม่วาดหน้าหลังร้านใหม่ทั้งหน้า (แถบเมนู/หัวหน้า/พื้นที่แสดงผล)
+  // เปลี่ยนเฉพาะเนื้อหา Finance — เหมือนเมนูอื่นที่กดแล้วหน้าไม่กระพริบ · การวาดใหม่เพราะข้อมูลเปลี่ยน (hash เดิม) ยังทำตามปกติ
+  const isFin = h => h.split('/')[0] === '#fin';
+  let lastHash = location.hash;
   const ar = App.render;
-  App.render = function () { grant(); if ((location.hash.split('/')[0]) !== '#fin') ST.open = null; return ar.apply(this, arguments); };
+  App.render = function () {
+    grant();
+    const h = location.hash, prev = lastHash; lastHash = h;
+    if (!isFin(h)) ST.open = null;
+    const F = FINX();
+    if (h !== prev && isFin(h) && isFin(prev) && S.route && S.route.mod === 'fin' && root.isConnected && F && F.session && typeof F.go === 'function') {
+      ST.page = pageOf(); shown = localHash();
+      decorate();
+      const m = document.querySelector('.fin-mnav'); if (m) m.open = false;   // มือถือ: เลือกแล้วหุบเมนู
+      F.go(shown);
+      return;
+    }
+    return ar.apply(this, arguments);
+  };
   document.addEventListener('click', e => {
     const a = e.target.closest('#nav a.fin-main');
     if (!a) return;
