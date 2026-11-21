@@ -254,7 +254,11 @@
       const paid = detail.payments.filter(p => p.status === 'paid' && p.payment_type === 'disbursement');
       const certificatePayments = paid.length ? paid : [{ amount: Number(d.grand_total), payment_date: F.today() }];
       if (!Number(d.wht_total)) throw new Error('รายการนี้ไม่ได้เลือกหักภาษี ณ ที่จ่าย');
-      if (!co.tax_id || !partner.tax_id) throw new Error('กรุณากรอกเลขผู้เสียภาษีของบริษัทและคู่ค้าให้ครบก่อนออกหนังสือรับรอง');
+      if (!co.tax_id) throw new Error('กรุณากรอกเลขประจำตัวผู้เสียภาษีของบริษัทในข้อมูลบริษัทก่อนออกหนังสือรับรอง');
+      // เลขประจำตัวผู้เสียภาษีของผู้รับเงินเป็นข้อมูลเพิ่มเติม ไม่บังคับในขั้นตอนออกเอกสาร
+      const partnerName = partner.legal_name || partner.display_name || d.partner_name || 'ไม่ระบุชื่อผู้รับเงิน';
+      const partnerTaxId = partner.tax_id || '—';
+      const partnerAddress = partner.address || '—';
       const addr = x => (x && typeof x === 'object' ? x.text : x) || '—';
       const branch = x => x.branch_type === 'branch' ? ('สาขา ' + (x.branch_number || '')) : 'สำนักงานใหญ่';
       const escv = F.esc;
@@ -272,8 +276,8 @@
           <div class="row"><span>ชื่อ: ${escv(co.legal_name || '')}</span><span>เลขประจำตัวผู้เสียภาษี: ${escv(co.tax_id)}</span></div>
           <div>ที่อยู่: ${escv(addr(co.address))}</div><div>สำนักงาน: ${escv(branch(co))}</div>
           <h3>ผู้ถูกหักภาษี ณ ที่จ่าย (ผู้รับเงิน)</h3>
-          <div class="row"><span>ชื่อ: ${escv(partner.legal_name || partner.display_name || '')}</span><span>เลขประจำตัวผู้เสียภาษี: ${escv(partner.tax_id)}</span></div>
-          <div>ที่อยู่: ${escv(addr(partner.address))}</div><div>สำนักงาน: ${escv(partner.branch_number ? 'สาขา ' + partner.branch_number : 'สำนักงานใหญ่')}</div>
+          <div class="row"><span>ชื่อ: ${escv(partnerName)}</span><span>เลขประจำตัวผู้เสียภาษี: ${escv(partnerTaxId)}</span></div>
+          <div>ที่อยู่: ${escv(addr(partnerAddress))}</div><div>สำนักงาน: ${escv(partner.branch_number ? 'สาขา ' + partner.branch_number : 'สำนักงานใหญ่')}</div>
           <h3>รายละเอียดการจ่ายเงิน</h3>
           <table><thead><tr><th>ประเภทเงินได้ / รายละเอียด</th><th>วันจ่าย</th><th>จำนวนเงินที่จ่าย</th><th>อัตรา</th><th>ภาษีที่หัก</th></tr></thead>
           <tbody><tr><td>${escv(income)}</td><td>${dateText}</td><td class="num">${F.money(taxBase)}</td><td class="num">${rate}%</td><td class="num">${F.money(tax)}</td></tr></tbody></table>
