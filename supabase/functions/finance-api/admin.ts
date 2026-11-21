@@ -155,6 +155,7 @@ export async function setUser(body: Record<string, unknown>, u: User, rid: strin
 }
 
 export async function approvalsQueue(_url: URL, u: User) {
+  need(u, "approve");
   const sql = db();
   const [docs, pays, toPay, journals, filings] = await Promise.all([
     sql`select d.id, d.document_type, d.document_number, d.document_date, d.grand_total, d.created_by, p.display_name as partner_name from finance.documents d left join finance.partners p on p.id = d.partner_id
