@@ -25,7 +25,7 @@ function ocControlPage(){
  const width=ITCC.device==='pc'?720:ITCC.device==='ipad'?520:360;
  return `<style>
  .itcc-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:14px}
- .itcc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+ .itcc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}@media(max-width:640px){.itcc-row{grid-template-columns:minmax(0,1fr)}.itcc-row>.actions{justify-content:flex-start!important}}
  .itcc-row:last-child{border:0}.itcc-meta{font-size:12px;color:var(--muted);margin-top:4px}
  .itcc-preview-wrap{background:#e8eee9;border-radius:18px;padding:18px;overflow:auto}
  .itcc-device{margin:auto;background:#fff;border:8px solid #26352e;border-radius:24px;min-height:260px;box-shadow:0 10px 28px #183b2b22;overflow:hidden}

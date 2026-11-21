@@ -9,29 +9,41 @@
   const KEY = 'ocf.open.v1';
   const st = document.createElement('style');
   st.textContent = [
-    '.ocf{margin:10px 0;border:1px solid var(--line,#e3e9e4);border-radius:16px;background:var(--surface,#fff);overflow:hidden}',
-    '.ocf>.ocf-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;min-height:52px}',
-    '.ocf>.ocf-head:hover{background:color-mix(in srgb,var(--sunk,#f1f4f1) 70%,transparent)}',
-    '.ocf>.ocf-head:focus-visible{outline:2px solid var(--brand,#1d7a4e);outline-offset:-2px}',
-    '.ocf-title{flex:1;min-width:0}.ocf-title>*{margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}',
-    '.ocf-title .h3,.ocf-title h3,.ocf-title .h2,.ocf-title h2{font-size:16px!important;line-height:1.3}',
-    '.ocf-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center;flex:none;max-width:58%}',
-    '.ocf-b{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;line-height:1.4}',
+    /* แบบ ก) หัวข้อ h3 ระดับหน้า: หัวข้อเป็นการ์ด · ขยายแล้วเนื้อหาเดิม (การ์ดเดิม) ต่อด้านล่าง ไม่ซ้อนการ์ด */
+    '.ocf{margin:10px 0;min-width:0;max-width:100%;white-space:normal}.ocf>.ocf-body{min-width:0;max-width:100%}',   /* อยู่ในการ์ดแบบ grid/flex ห้ามกว้างเกินการ์ด */
+    '.ocf>.ocf-head{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;min-height:50px;border-radius:14px}',
+    '.ocf.ocf-card>.ocf-head{background:var(--surface,#fff);border:1px solid var(--line,#e3e9e4);box-shadow:0 1px 3px rgba(16,57,42,.04)}',
+    '.ocf.ocf-card.open>.ocf-head{border-color:color-mix(in srgb,var(--brand,#1d7a4e) 35%,var(--line,#e3e9e4))}',
+    '.ocf>.ocf-head:hover{background:color-mix(in srgb,var(--sunk,#f1f4f1) 75%,var(--surface,#fff))}',
+    '.ocf>.ocf-head:focus-visible{outline:2px solid var(--brand,#1d7a4e);outline-offset:2px}',
+    '.ocf.ocf-card>.ocf-body{padding:8px 0 0}.ocf.ocf-card>.ocf-body>:first-child{margin-top:0}',
+    /* แบบ ข) การ์ดที่มีหัวข้อในตัว: หัวข้ออยู่ในการ์ดเดิม ไม่มีกรอบเพิ่ม */
+    '.ocf.ocf-inner{margin:0}.ocf.ocf-inner>.ocf-head{padding:2px 0;min-height:40px;border-radius:10px}.ocf.ocf-inner>.ocf-head:hover{background:none}.ocf.ocf-inner>.ocf-body{padding:10px 0 0}',
+    '.ocf-title{flex:1;min-width:0}.ocf-title>*{margin:0!important;border:0!important;background:none!important;box-shadow:none!important}',
+    '.ocf.ocf-card .ocf-title>*{padding:0!important}',
+    '.ocf-title .h3,.ocf-title h3{font-size:16px!important;line-height:1.35}',
+    '.ocf-side{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}',
+    '.ocf-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}',
+    '.ocf-b{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;line-height:1.45}',
     '.ocf-b.bad{background:#fde8e6;color:#a23b2a}.ocf-b.warn{background:#fdf1d9;color:#8a5a00}.ocf-b.ok{background:#e4f3ea;color:#1d6b45}.ocf-b.n{background:var(--sunk,#eef2ee);color:var(--muted,#5b6a60)}',
-    '.ocf-bell{flex:none;font-size:18px;line-height:1;display:inline-block;transform-origin:50% 10%}',
-    '.ocf-bell.on{animation:ocfring 1.6s ease-in-out infinite}',
-    '@keyframes ocfring{0%,55%,100%{transform:rotate(0)}5%{transform:rotate(16deg)}10%{transform:rotate(-14deg)}15%{transform:rotate(12deg)}20%{transform:rotate(-10deg)}25%{transform:rotate(6deg)}30%{transform:rotate(-4deg)}35%{transform:rotate(0)}}',
-    '.ocf-chev{flex:none;width:22px;height:22px;display:grid;place-items:center;color:var(--muted,#5b6a60);transition:transform .18s}',
+    /* กระดิ่ง: ไอคอนเส้น ในวงกลมสีอ่อน + จุดแดง · สั่นเบาๆ */
+    '.ocf-bell{flex:none;position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#fdf1d9;color:#b07a00}',
+    '.ocf-bell.bad{background:#fde8e6;color:#c0392b}',
+    '.ocf-bell svg{width:17px;height:17px;transform-origin:50% 12%}',
+    '.ocf-bell:after{content:"";position:absolute;top:4px;right:5px;width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 2px var(--surface,#fff)}',
+    '.ocf-bell.on svg{animation:ocfring 2.4s ease-in-out infinite}',
+    '@keyframes ocfring{0%,40%,100%{transform:rotate(0)}4%{transform:rotate(14deg)}8%{transform:rotate(-12deg)}12%{transform:rotate(9deg)}16%{transform:rotate(-6deg)}20%{transform:rotate(3deg)}24%{transform:rotate(0)}}',
+    '.ocf-chev{flex:none;width:24px;height:24px;display:grid;place-items:center;color:var(--muted,#5b6a60);transition:transform .18s}',
     '.ocf.open>.ocf-head .ocf-chev{transform:rotate(180deg)}',
-    '.ocf>.ocf-body{padding:0 14px 14px}.ocf>.ocf-body[hidden]{display:none!important}',
-    '.ocf>.ocf-body>.group:first-child,.ocf>.ocf-body>.group{margin-top:0}',
-    '.ocf-tools{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 2px}',
-    '.ocf-nb{display:inline-flex;align-items:center;gap:2px;margin-left:6px;font-size:11px;font-weight:700;color:#a23b2a;background:#fde8e6;border-radius:999px;padding:1px 6px;line-height:1.4;vertical-align:middle}',
-    '.ocf-nb.warn{color:#8a5a00;background:#fdf1d9}.ocf-nb .ocf-bell{font-size:12px}',
+    '.ocf>.ocf-body[hidden]{display:none!important}',
+    '.ocf-tools{display:flex;justify-content:flex-end;gap:8px;margin:10px 0 4px}',
+    /* เมนู: กระดิ่ง + จำนวน */
+    '.ocf-nb{display:inline-flex;align-items:center;gap:3px;margin-left:auto;font-size:11px;font-weight:700;color:#c0392b;background:#fde8e6;border-radius:999px;padding:2px 7px 2px 5px;line-height:1.3;flex:none}',
+    '.ocf-nb.warn{color:#8a5a00;background:#fdf1d9}.ocf-nb svg{width:12px;height:12px;transform-origin:50% 12%;animation:ocfring 2.4s ease-in-out infinite}',
     '[data-oc]:has(>.ocf-nb){position:relative}',
-    '@media (max-width:899px){.ocf-nb{position:absolute;top:2px;left:calc(50% + 6px);margin:0;box-shadow:0 0 0 2px var(--surface,#fff)}}',
-    '@media (max-width:600px){.ocf>.ocf-head{padding:11px 12px;gap:8px;flex-wrap:wrap}.ocf-title{flex:1 1 60%}.ocf-badges{max-width:none;flex:1 1 100%;justify-content:flex-start;order:3}.ocf>.ocf-body{padding:0 10px 12px}}',
-    '@media (prefers-reduced-motion:reduce){.ocf-bell.on{animation:none}}'
+    '@media (max-width:899px){.ocf-nb{position:absolute;top:2px;left:calc(50% + 8px);margin:0;box-shadow:0 0 0 2px var(--surface,#fff)}}',
+    '@media (max-width:600px){.ocf>.ocf-head{flex-wrap:wrap;row-gap:6px;padding:10px 12px}.ocf-title{flex:1 1 auto;min-width:40%}.ocf-badges{justify-content:flex-start}.ocf-side{gap:6px}}',
+    '@media (prefers-reduced-motion:reduce){.ocf-bell.on svg,.ocf-nb svg{animation:none}}'
   ].join('');
   document.head.appendChild(st);
 
@@ -41,6 +53,7 @@
   const view = () => (oc() && oc().view) || (location.hash.slice(1) || 'page');
   // คีย์จำสถานะ: หน้า + คำแรกของหัวข้อ (หัวข้อที่มีวันที่ต่อท้ายยังจำได้)
   const keyOf = el => view() + ':' + String((el.innerText || el.textContent || '').trim()).split(/\s+/)[0].slice(0, 40);
+  const BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
   const chev = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 
   /** นับสถานะ: ทีละแถว (แถวละ 1 สถานะ) ถ้าไม่มีแถว ใช้ป้ายสถานะ */
@@ -58,7 +71,7 @@
     return c;
   }
   function badges(f) {
-    const body = f.querySelector(':scope>.ocf-body'), box = f.querySelector(':scope>.ocf-head>.ocf-badges'), bell = f.querySelector(':scope>.ocf-head>.ocf-bell');
+    const body = f.querySelector(':scope>.ocf-body'), box = f.querySelector(':scope>.ocf-head>.ocf-badges'), bell = f.querySelector(':scope>.ocf-head .ocf-bell');
     if (!body || !box) return;
     const c = count(body);
     const h = [];
@@ -69,7 +82,7 @@
     const html = h.join('');
     if (box.innerHTML !== html) box.innerHTML = html;
     const alert = c.bad + c.warn > 0;
-    bell.classList.toggle('on', alert); bell.hidden = !alert;
+    bell.classList.toggle('on', alert); bell.classList.toggle('bad', c.bad > 0); bell.hidden = !alert;
     bell.setAttribute('aria-label', alert ? 'มีรายการต้องตรวจ' : '');
   }
   function setOpen(f, open, remember) {
@@ -78,9 +91,9 @@
     head.setAttribute('aria-expanded', String(open)); body.hidden = !open;
     if (remember) { const s = opened(); open ? s.add(f.dataset.key) : s.delete(f.dataset.key); saveOpen(s); }
   }
-  function build(titleEl, bodyNodes, host) {
+  function build(titleEl, bodyNodes, host, kind) {
     const f = document.createElement('section');
-    f.className = 'ocf'; f.dataset.key = keyOf(titleEl);
+    f.className = 'ocf ' + (kind === 'a' ? 'ocf-card' : 'ocf-inner');   /* อย่าใช้ ocf-b: ชื่อชนกับป้ายสถานะ */ f.dataset.key = keyOf(titleEl);
     const head = document.createElement('div');
     head.className = 'ocf-head'; head.setAttribute('role', 'button'); head.tabIndex = 0;
     const t = document.createElement('div'); t.className = 'ocf-title';
@@ -88,7 +101,7 @@
     host.parentNode.insertBefore(f, host);
     t.appendChild(titleEl);
     head.appendChild(t);
-    head.insertAdjacentHTML('beforeend', '<span class="ocf-badges"></span><span class="ocf-bell" hidden>🔔</span><span class="ocf-chev">' + chev + '</span>');
+    head.insertAdjacentHTML('beforeend', '<span class="ocf-badges"></span><span class="ocf-side"><span class="ocf-bell" hidden role="img">' + BELL + '</span><span class="ocf-chev">' + chev + '</span></span>');
     bodyNodes.forEach(n => body.appendChild(n));
     f.appendChild(head); f.appendChild(body);
     setOpen(f, opened().has(f.dataset.key), false);
@@ -97,13 +110,15 @@
   }
   const STOP = el => el.matches('h1, h3.h3, .oc-it-section-head, section, .ocf, .oc-it-hero, .oc-it-summary, .oc-it-actions, style, script');
 
+  const SKIP = { dash: 1 };   // หน้าที่ไม่ย่อ: แดชบอร์ด (กราฟ + แตะวันดูรายละเอียด) แสดงแบบเดิม
   function process(main) {
+    if (SKIP[view()]) return;
     // ก) หัวข้อ h3 ระดับบนสุดของหน้า → หัวข้อ + เนื้อหาถัดไปจนถึงหัวข้อถัดไป
     [...main.querySelectorAll(':scope > h3.h3')].forEach(h => {
       const nodes = []; let n = h.nextElementSibling;
       while (n && !STOP(n) && !n.matches('p.note:last-child')) { nodes.push(n); n = n.nextElementSibling; }
       if (!nodes.length) return;
-      build(h, nodes, h);
+      build(h, nodes, h, 'a');
     });
     // ข) การ์ดที่มีหัวข้อในตัว (AI Monitoring, IT Control Center, Copilot) → หัวการ์ด + เนื้อหาที่เหลือ
     main.querySelectorAll('section.group.pad, section.oc-ops-panel, .itcc-grid > section').forEach(sec => {
@@ -115,8 +130,7 @@
       sec.classList.add('ocf-host');
       const marker = document.createElement('span'); marker.className = 'ocf-wrapped'; marker.hidden = true;
       sec.insertBefore(marker, sec.firstChild);
-      const f = build(title, rest, marker);
-      f.style.cssText = 'margin:0;border:0;border-radius:0;background:none';
+      build(title, rest, marker, 'b');
     });
     // ปุ่มขยาย/ย่อทั้งหมด
     const all = main.querySelectorAll('.ocf');
@@ -137,7 +151,7 @@
       if (!bad && !warn) { if (b) b.remove(); return; }
       if (!b) { b = document.createElement('span'); b.className = 'ocf-nb'; a.appendChild(b); }
       b.className = 'ocf-nb' + (bad ? '' : ' warn');
-      const html = `<span class="ocf-bell on">🔔</span>${bad || warn}`;
+      const html = BELL + (bad || warn);
       if (b.innerHTML !== html) b.innerHTML = html;
       b.title = (bad ? `ผิดปกติ ${bad} ` : '') + (warn ? `ควรดู ${warn}` : '');
     });
@@ -166,7 +180,7 @@
     const head = e.target.closest('.ocf-head');
     if (!head) return;
     // ปุ่ม/ลิงก์/ช่องกรอกที่อยู่ในหัวข้อเดิม ทำงานตามเดิม ไม่ย่อ/ขยาย
-    if (e.target.closest('button, a, input, select, textarea, label, [data-oc], [data-heal]') && !e.target.closest('.ocf-chev, .ocf-badges, .ocf-bell')) return;
+    if (e.target.closest('button, a, input, select, textarea, label, [data-oc], [data-heal]') && !e.target.closest('.ocf-side, .ocf-badges')) return;
     const f = head.parentElement; setOpen(f, !f.classList.contains('open'), true);
   });
   document.addEventListener('keydown', e => {
