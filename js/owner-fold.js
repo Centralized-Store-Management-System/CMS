@@ -12,15 +12,21 @@
     /* แบบ ก) หัวข้อ h3 ระดับหน้า: หัวข้อเป็นการ์ด · ขยายแล้วเนื้อหาเดิม (การ์ดเดิม) ต่อด้านล่าง ไม่ซ้อนการ์ด */
     '.ocf{margin:10px 0;min-width:0;max-width:100%;white-space:normal}.ocf>.ocf-body{min-width:0;max-width:100%}',   /* อยู่ในการ์ดแบบ grid/flex ห้ามกว้างเกินการ์ด */
     '.ocf>.ocf-head{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;min-height:50px;border-radius:14px}',
-    '.ocf.ocf-card>.ocf-head{background:var(--surface,#fff);border:1px solid var(--line,#e3e9e4);box-shadow:0 1px 3px rgba(16,57,42,.04)}',
+    '.ocf.ocf-card>.ocf-head{background:var(--surface,#fff);border:1px solid var(--line,#e3e9e4);box-shadow:0 6px 18px rgba(16,57,42,.06);padding:16px 18px;min-height:76px;border-radius:20px;gap:12px}',
+    /* ไอคอนสถานะซ้ายของหัวข้อ (แบบเดียวกับกล่องสรุปด้านบน) */
+    '.ocf-ico{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:18px;background:#e4f3ea;color:#1d7a4e}',
+    '.ocf-ico.warn{background:#fdf1d9;color:#b07a00}.ocf-ico.bad{background:#fde8e6;color:#c0392b}.ocf-ico.n{background:var(--sunk,#eef2ee);color:var(--muted,#5b6a60)}',
+    /* บรรทัดสรุปใต้ชื่อหัวข้อ: ระบบไหนผิดปกติ / ควรดู */
+    '.ocf-sub{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--muted,#5b6a60);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}',
+    '.ocf-sub b{font-weight:600}.ocf-sub .bad b{color:#a23b2a}.ocf-sub .warn b{color:#8a5a00}',
     '.ocf.ocf-card.open>.ocf-head{border-color:color-mix(in srgb,var(--brand,#1d7a4e) 35%,var(--line,#e3e9e4))}',
     '.ocf>.ocf-head:hover{background:color-mix(in srgb,var(--sunk,#f1f4f1) 75%,var(--surface,#fff))}',
     '.ocf>.ocf-head:focus-visible{outline:2px solid var(--brand,#1d7a4e);outline-offset:2px}',
     '.ocf.ocf-card>.ocf-body{padding:8px 0 0}.ocf.ocf-card>.ocf-body>:first-child{margin-top:0}',
     /* แบบ ข) การ์ดที่มีหัวข้อในตัว: หัวข้ออยู่ในการ์ดเดิม ไม่มีกรอบเพิ่ม */
     '.ocf.ocf-inner{margin:0}.ocf.ocf-inner>.ocf-head{padding:2px 0;min-height:40px;border-radius:10px}.ocf.ocf-inner>.ocf-head:hover{background:none}.ocf.ocf-inner>.ocf-body{padding:10px 0 0}',
-    '.ocf-title{flex:1;min-width:0}.ocf-title>*{margin:0!important;border:0!important;background:none!important;box-shadow:none!important}',
-    '.ocf.ocf-card .ocf-title>*{padding:0!important}',
+    '.ocf-title{flex:1;min-width:0}.ocf-title>:not(.ocf-sub){margin:0!important;border:0!important;background:none!important;box-shadow:none!important}',
+    '.ocf.ocf-card .ocf-title>:not(.ocf-sub){padding:0!important}.ocf-sub[hidden]{display:none!important}',
     '.ocf-title .h3,.ocf-title h3{font-size:16px!important;line-height:1.35}',
     '.ocf-side{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}',
     '.ocf-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}',
@@ -42,7 +48,7 @@
     '.ocf-nb.warn{color:#8a5a00;background:#fdf1d9}.ocf-nb svg{width:12px;height:12px;transform-origin:50% 12%;animation:ocfring 2.4s ease-in-out infinite}',
     '[data-oc]:has(>.ocf-nb){position:relative}',
     '@media (max-width:899px){.ocf-nb{position:absolute;top:2px;left:calc(50% + 8px);margin:0;box-shadow:0 0 0 2px var(--surface,#fff)}}',
-    '@media (max-width:600px){.ocf>.ocf-head{flex-wrap:wrap;row-gap:6px;padding:10px 12px}.ocf-title{flex:1 1 auto;min-width:40%}.ocf-badges{justify-content:flex-start}.ocf-side{gap:6px}}',
+    '@media (max-width:600px){.ocf>.ocf-head{flex-wrap:wrap;row-gap:6px;padding:10px 12px}.ocf.ocf-card>.ocf-head{padding:14px 14px;column-gap:10px}.ocf-title{flex:1 1 auto;min-width:40%}.ocf-badges{justify-content:flex-start}.ocf-side{gap:6px}.ocf-ico{width:36px;height:36px;font-size:16px}}',
     '@media (prefers-reduced-motion:reduce){.ocf-bell.on svg,.ocf-nb svg{animation:none}}'
   ].join('');
   document.head.appendChild(st);
@@ -54,17 +60,20 @@
   // คีย์จำสถานะ: หน้า + คำแรกของหัวข้อ (หัวข้อที่มีวันที่ต่อท้ายยังจำได้)
   const keyOf = el => view() + ':' + String((el.innerText || el.textContent || '').trim()).split(/\s+/)[0].slice(0, 40);
   const BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+  const esc = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const chev = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 
   /** นับสถานะ: ทีละแถว (แถวละ 1 สถานะ) ถ้าไม่มีแถว ใช้ป้ายสถานะ */
   function count(body) {
-    const c = { bad: 0, warn: 0, ok: 0, rows: 0 };
+    const c = { bad: 0, warn: 0, ok: 0, rows: 0, list: [] };
+    const nm = r => { const t = r.querySelector('.t, td'); return String((t || r).innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60); };
     const rows = body.querySelectorAll('.row, .itcc-row, tr');
     rows.forEach(r => {
       if (r.closest('.ocf-head')) return;
       c.rows++;
-      if (r.querySelector('.oc-dot.bad, .chip.bad')) c.bad++;
-      else if (r.querySelector('.oc-dot.warn, .chip.warn')) c.warn++;
+      const dt = () => { const d = r.querySelector('.s'); return d ? String(d.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 90) : ''; };
+      if (r.querySelector('.oc-dot.bad, .chip.bad')) { c.bad++; c.list.push(['bad', nm(r), dt()]); }
+      else if (r.querySelector('.oc-dot.warn, .chip.warn')) { c.warn++; c.list.push(['warn', nm(r), dt()]); }
       else if (r.querySelector('.oc-dot.ok, .chip.ok')) c.ok++;
     });
     if (!c.bad && !c.warn && !c.ok) body.querySelectorAll('.chip').forEach(ch => { if (ch.classList.contains('bad')) c.bad++; else if (ch.classList.contains('warn')) c.warn++; else if (ch.classList.contains('ok')) c.ok++; });
@@ -81,6 +90,19 @@
     if (!h.length && c.rows) h.push(`<span class="ocf-b n">${c.rows} รายการ</span>`);
     const html = h.join('');
     if (box.innerHTML !== html) box.innerHTML = html;
+    // บรรทัดสรุป: ชื่อรายการที่ผิดปกติ / ควรดู (สูงสุด 2) หรือ "ปกติทั้งหมด"
+    const sub = f.querySelector(':scope>.ocf-head .ocf-sub');
+    if (sub) {
+      const one = c.list.length === 1;   // มีปัญหารายการเดียว → แสดงรายละเอียดสั้นๆ ด้วย
+      const pick = st => c.list.filter(x => x[0] === st).map(x => '<b>● ' + esc(x[1]) + '</b>' + (one && x[2] ? ' — ' + esc(x[2]) : ''));
+      const bads = pick('bad'), warns = pick('warn'), items = bads.map(t => `<span class="bad">${t}</span>`).concat(warns.map(t => `<span class="warn">${t}</span>`));
+      let txt = items.slice(0, 2).join(' &nbsp;') + (items.length > 2 ? ` และอีก ${items.length - 2} รายการ` : '');
+      if (!txt && f.classList.contains('ocf-card')) txt = c.ok ? `ตรวจ ${c.rows} รายการ · ปกติทั้งหมด` : (c.rows ? `${c.rows} รายการ` : '');
+      if (sub.innerHTML !== txt) sub.innerHTML = txt;
+      sub.hidden = !txt;
+    }
+    const ico = f.querySelector(':scope>.ocf-head .ocf-ico');
+    if (ico) { const k = c.bad ? 'bad' : c.warn ? 'warn' : c.ok ? 'ok' : 'n'; ico.className = 'ocf-ico ' + k; ico.textContent = k === 'bad' ? '×' : k === 'warn' ? '!' : k === 'ok' ? '✓' : '•'; }
     const alert = c.bad + c.warn > 0;
     bell.classList.toggle('on', alert); bell.classList.toggle('bad', c.bad > 0); bell.hidden = !alert;
     bell.setAttribute('aria-label', alert ? 'มีรายการต้องตรวจ' : '');
@@ -100,6 +122,8 @@
     const body = document.createElement('div'); body.className = 'ocf-body';
     host.parentNode.insertBefore(f, host);
     t.appendChild(titleEl);
+    const sub = document.createElement('span'); sub.className = 'ocf-sub'; sub.hidden = true; t.appendChild(sub);
+    if (kind === 'a') head.insertAdjacentHTML('beforeend', '<span class="ocf-ico n" aria-hidden="true">•</span>');
     head.appendChild(t);
     head.insertAdjacentHTML('beforeend', '<span class="ocf-badges"></span><span class="ocf-side"><span class="ocf-bell" hidden role="img">' + BELL + '</span><span class="ocf-chev">' + chev + '</span></span>');
     bodyNodes.forEach(n => body.appendChild(n));
@@ -144,7 +168,8 @@
   }
   function navBadge() {
     const o = oc(), s = o && o.status && o.status.checks;
-    document.querySelectorAll('[data-oc="it"]').forEach(a => {
+    document.querySelectorAll('.btn .ocf-nb, .oc-card .ocf-nb').forEach(b => b.remove());   // ปุ่ม "ตรวจใหม่" / การ์ดหน้าแรก ใช้ data-oc="it" เหมือนเมนู → ไม่ใส่กระดิ่ง
+    document.querySelectorAll('[data-oc="it"]:not(.btn):not(.oc-card)').forEach(a => {
       let b = a.querySelector('.ocf-nb');
       if (!s) { if (b) b.remove(); return; }
       const bad = s.filter(c => c.status === 'bad').length, warn = s.filter(c => c.status === 'warn').length;
