@@ -74,10 +74,16 @@
         <button type="button" class="fm-btn fm-btn-sm fm-btn-ghost" id="fmAddLine">＋ เพิ่มบรรทัด</button>
         <div class="fm-totals" id="fmTot"></div>
         <label class="fm-field fm-field-full" style="margin-top:10px"><span>หมายเหตุ</span><textarea name="notes" rows="2" maxlength="2000">${esc(d ? d.notes || '' : '')}</textarea></label>
+        ${F.session.actor.role === 'owner' && !F.session.company.allowSelfApproval ? '<div class="fm-notice warn"><span>!</span><div><b>โหมดผู้ใช้คนเดียวยังไม่เปิด</b><small>เปิด “อนุมัติรายการที่ตัวเองบันทึกได้” ในข้อมูลบริษัท เพื่อบันทึกและลงบัญชีได้ในขั้นตอนเดียว</small><button type="button" class="fm-btn fm-btn-sm" data-go="#company">เปิดข้อมูลบริษัท</button></div></div>' : ''}
         <div class="fm-form-actions"><button type="button" class="fm-btn fm-btn-light" data-go="${d ? '#document/' + d.id : '#' + kind}">ยกเลิก</button><button type="submit" class="fm-btn fm-btn-light" data-mode="draft">บันทึกร่าง</button><button type="submit" class="fm-btn fm-btn-primary" data-mode="submit">${singleOwnerMode ? 'บันทึกและลงบัญชี' : 'บันทึกและส่งอนุมัติ'}</button></div>
       </form>`;
     const form = el.querySelector('#fmDoc'), body = el.querySelector('#fmLines');
     if (d && d.partner_id) form.partner_id.value = d.partner_id;
+    form.partner_id.addEventListener('change', () => {
+      const p = partners.find(x => x.id === form.partner_id.value);
+      if (p && p.default_wht_rate != null && !d) form.wht_rate.value = String(Number(p.default_wht_rate));
+      calc();
+    });
     const addLine = l => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td><input name="description" maxlength="300" placeholder="เช่น ค่าเมล็ดกาแฟ" value="${esc(l.description || '')}"></td><td><input name="quantity" type="number" step="any" min="0" value="${esc(l.quantity == null ? 1 : Number(l.quantity))}"></td><td><input name="unit_price" type="number" step="0.01" min="0" value="${esc(l.unit_price === '' ? '' : Number(l.unit_price))}"></td><td><select name="account_code">${accOpts}</select></td><td class="fm-right fm-mono" data-amt>0.00</td><td><button type="button" class="del" title="ลบบรรทัด">×</button></td>`;
