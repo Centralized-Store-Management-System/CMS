@@ -301,6 +301,20 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
            ${vatRate}, ${line.vatAmount}, ${whtRate}, ${line.whtAmount}, ${line.amount})
       `;
     }
+    const taxPeriod = date.slice(0, 7);
+    if (vat > 0) {
+      const taxType = ["invoice","tax_invoice","receipt","debit_note"].includes(type) ? "vat_output" : "vat_input";
+      await tx`insert into finance.tax_transactions
+        (company_id,document_id,tax_type,tax_period,tax_base,tax_rate,tax_amount,counterparty_id,status)
+        values (${user.companyId}::uuid,${String(created.id)}::uuid,${taxType},${taxPeriod},${subtotal},${vatRate},${vat},${partnerId || null}::uuid,'unreviewed')
+        on conflict (document_id,tax_type,tax_period) do nothing`;
+    }
+    if (wht > 0) {
+      await tx`insert into finance.tax_transactions
+        (company_id,document_id,tax_type,tax_period,tax_base,tax_rate,tax_amount,counterparty_id,status)
+        values (${user.companyId}::uuid,${String(created.id)}::uuid,'wht',${taxPeriod},${subtotal},${whtRate},${wht},${partnerId || null}::uuid,'unreviewed')
+        on conflict (document_id,tax_type,tax_period) do nothing`;
+    }
     await tx`
       insert into finance.audit_events (company_id, actor_ref, action, entity_type, entity_id, after_data, request_id)
       values (${user.companyId}::uuid, ${user.actorRef}, 'create', 'document', ${String(created.id)}, ${tx.json({ ...created, line_count: normalized.length })}, ${requestId})
