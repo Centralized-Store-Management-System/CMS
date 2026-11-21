@@ -67,3 +67,15 @@ Branch: `feat/hr-position-user-sync-hardening`
 - Existing role, branch, branch-access and employment-status synchronization behavior is retained.
 - This is local application-state synchronization after the existing DB write. It does not claim a transactional server-side identity sync or cross-application IAM provisioning.
 - Automated browser regression and live HR/Users account validation remain required before merge/deployment.
+
+
+## Phase 3 — Runtime authorization evaluator foundation
+
+Branch: `feat/iam-runtime-authorization-foundation`
+
+- Added `iam-authorize` Edge Function and deployed version 1 to UAT project `ytxbnqosenolojifeikf`.
+- Evaluator revalidates the existing CMS Back Office session, applies default-deny checks across active Application → Permission → Role → Principal Grant relationships, checks grant validity windows and requested scope, and writes allow/deny audit entries.
+- No IAM grants or application activation were created. Current seeded applications and roles remain Draft.
+- Position-role bindings are not resolved by this evaluator because canonical employee↔principal links and effective-dated employee assignments are not yet authoritative.
+- No existing module has been changed to call this endpoint. It is not yet an enforcement boundary until each protected backend integrates it and fails closed.
+- UAT authenticated positive/negative matrix remains pending; deployment status alone is not a security test.
