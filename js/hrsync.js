@@ -1,6 +1,8 @@
 /* HR ↔ Users (34_HrUserSync.gs) ฝั่งหน้าเว็บ
  * - ประวัติตำแหน่งในหน้าข้อมูลพนักงาน (ตำแหน่ง / Role / สาขา / สถานะ / รหัส เปลี่ยนเมื่อไร โดยใคร)
- * - บันทึกที่ HR แล้ว หน้า Users เห็นค่าใหม่ทันที (และกลับกัน) ไม่ต้องรีเฟรช */
+ * - บันทึกที่ HR แล้ว หน้า Users เห็นค่าใหม่ทันที (และกลับกัน) ไม่ต้องรีเฟรช
+ * - Position ID/Code เป็น canonical reference; legacy position label คงไว้เพื่อ compatibility
+ */
 'use strict';
 if (!TABLES.includes('emphist')) TABLES.push('emphist');
 if (!S.t.emphist) S.t.emphist = [];
@@ -18,8 +20,15 @@ function empHistHTML(id) {
         const e = empById(r.id); if (!e) return;
         (S.t.users || []).filter(u => u.empId === e.id).forEach(u => {
           const ch = { id: u.id, branch: e.branch || '', branchAccess: e.branchAccess || '' };
+          // Keep the stable HR position reference and the human-readable legacy label in sync.
+          if (e.positionId !== undefined) ch.positionId = e.positionId || null;
+          if (e.positionCode !== undefined) ch.positionCode = e.positionCode || '';
+          if (e.position !== undefined) ch.position = e.position || '';
           if (e.role && e.role !== 'owner' && e.role !== u.role) {
-            ch.role = e.role; ch.perms = '';
+            ch.role = e.role;
+            // Legacy custom permissions are role-specific. Clear only on an actual role change,
+            // never on a position-only change; centrally resolved IAM grants remain separate.
+            ch.perms = '';
             const pre = (typeof UPREFIX !== 'undefined' && UPREFIX[e.role]) || '';
             let base = String(u.username || '').toLowerCase();
             for (let c = true; c;) { c = false; for (const p of ['owner_', 'admin_', 'hr_', 'mgr_', 'staff_']) if (base.startsWith(p) && base.length > p.length) { base = base.slice(p.length); c = true; } }
@@ -32,10 +41,12 @@ function empHistHTML(id) {
       if (table === 'users') (rows || []).forEach(r => {
         if (!r.empId) return;
         const ch = { id: r.empId };
-        ['role', 'branch', 'branchAccess'].forEach(k => { if (r[k] !== undefined) ch[k] = r[k]; });
+        ['role', 'branch', 'branchAccess', 'positionId', 'positionCode', 'position'].forEach(k => {
+          if (r[k] !== undefined) ch[k] = r[k];
+        });
         if (Object.keys(ch).length > 1 && empById(r.empId)) DB.local('employees', ch);
       });
-    } catch (e) { /* แสดงค่าใหม่ตอนโหลดรอบถัดไป */ }
+    } catch (e) { console.warn('HR ↔ Users local sync deferred until next load', e); }
     return res;
   };
 })();
