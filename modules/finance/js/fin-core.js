@@ -161,9 +161,21 @@
   let current = '';
   async function go(hash, opt0 = {}) {
     const [key0, arg] = String(hash || '').replace(/^#/, '').split('/');
-    const key = key0 || 'dashboard';
+    let key = key0 || 'dashboard';
     const content = $('#fmContent');
     if (!content) return;
+    const role = FIN.session && FIN.session.actor && FIN.session.actor.role;
+    const rolePages = {
+      manager: ['dashboard', 'income', 'expense', 'document', 'payments', 'verification'],
+      staff: ['income', 'expense', 'document', 'payments', 'verification'],
+      verifier: ['verification'],
+    };
+    if (role === 'staff' && key === 'dashboard') { key = 'expense'; if (EMB) W.location.hash = '#fin/expense'; else W.location.hash = '#expense'; return go('#' + key, opt0); }
+    if (role === 'verifier' && key === 'dashboard') { key = 'verification'; if (EMB) W.location.hash = '#fin/verification'; else W.location.hash = '#verification'; return go('#' + key, opt0); }
+    if (rolePages[role] && !rolePages[role].includes(key)) {
+      content.innerHTML = head('FINANCE', 'ไม่มีสิทธิ์เข้าถึง') + errorBox('บทบาทของคุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+      return;
+    }
     current = key + (arg ? '/' + arg : '');
     try { await loadFor(key); } catch (e) { content.innerHTML = errorBox(e.message); return; }
     const p = PAGES[key] || PAGES.dashboard;
