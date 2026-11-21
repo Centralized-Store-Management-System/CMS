@@ -1,5 +1,6 @@
 /* ระบบ HR บุคคล (Owner และ HR): ข้อมูลพนักงานทุกอย่าง รูปถ่าย สิทธิ์ใช้งาน PIN สาขาประจำ สาขาที่ดูแล และผู้สมัคร
  * กะและวันหยุดของแต่ละคน ตั้งที่เมนู ตารางงาน > รูปแบบกะ */
+let HR_DEPARTMENTS = [];
 let HR_POSITIONS = [
   { id:'legacy-manager', position_code:'MANAGER', name_th:'ผู้จัดการร้าน', status:'active' },
   { id:'legacy-assistant', position_code:'ASST_MANAGER', name_th:'ผู้ช่วยผู้จัดการ', status:'active' },
@@ -23,6 +24,7 @@ async function hrLoadPositions() {
     const p=await hrPositionRequest();
     if(!Array.isArray(p.positions)) throw new Error('Position API ส่งข้อมูลไม่ถูกต้อง');
     HR_POSITIONS=p.positions;
+    HR_DEPARTMENTS=Array.isArray(p.departments)?p.departments:[];
     HR_POSITION_SYNC=Array.isArray(p.sync)?p.sync:[];
     return p;
   } catch(e) {
@@ -35,7 +37,7 @@ let HR_POSITION_LOADED=false, HR_POSITION_LOADING=false, HR_POSITION_ERROR='', H
 function pPositions() {
  if(!HR_POSITION_LOADED&&!HR_POSITION_LOADING){HR_POSITION_LOADING=true;hrLoadPositions().catch(()=>{}).finally(()=>{HR_POSITION_LOADED=true;HR_POSITION_LOADING=false;if(typeof App!=='undefined')App.render();});return '<p class="loading">กำลังโหลด Position Master…</p>';}
  const rows=HR_POSITIONS;
- return `<div class="h2">Position Master <span class="spacer"></span><button class="btn primary" data-a="newPosition" ${HR_POSITION_ERROR?'disabled':''}>Create Position</button></div>
+ return `<div class="h2">Position Master <span class="spacer"></span><button class="btn" data-a="newDepartment" ${HR_POSITION_ERROR?'disabled':''}>+ Department</button><button class="btn primary" data-a="newPosition" ${HR_POSITION_ERROR?'disabled':''}>Create Position</button></div>
  ${HR_POSITION_ERROR?`<p class="status bad">เชื่อมต่อ Position Master ไม่สำเร็จ: ${esc(HR_POSITION_ERROR)} · ข้อมูลสำรองแสดงเพื่อดูเท่านั้น <button class="btn sm" data-a="reloadPositions">ลองใหม่</button></p>`:''}
  <p class="note">HR เป็นเจ้าของข้อมูลตำแหน่งและส่งเหตุการณ์ไปยัง IT ผ่าน Sync Queue · การสร้างตำแหน่งไม่ให้สิทธิ์ใช้งานโดยอัตโนมัติ IT ต้องกำหนด Role, Permission และ Data Scope ก่อน</p>
  ${HR_POSITION_SYNC.length?`<p class="chips">${HR_POSITION_SYNC.map(x=>`<span class="chip ${x.status==='processed'?'ok':x.status==='failed'||x.status==='dead_letter'?'bad':'warn'}">${esc(x.status)}: ${Number(x.count)||0}</span>`).join('')}</p>`:''}
@@ -49,11 +51,14 @@ function openPosition(id) {
   {k:'position_code',label:'Position Code',req:1,help:'ภาษาอังกฤษ ตัวเลข _ หรือ -'},
   {k:'name_th',label:'ชื่อตำแหน่ง (ไทย)',req:1},
   {k:'name_en',label:'Position Name (English)'},
-  {k:'department',label:'Department'},
+  {k:'department_id',label:'Department',type:'select',options:[['','ไม่ระบุแผนก'],...HR_DEPARTMENTS.map(d=>[d.id,d.name])]},
+  {k:'department',label:'Department Name (legacy label)',help:'ระบบจะเติมให้อัตโนมัติจาก Department Master'},
   {k:'level',label:'Position Level'},
   {k:'description',label:'รายละเอียดหน้าที่',type:'textarea'},
   {k:'status',label:'สถานะ',type:'select',options:[['active','Active'],['inactive','Inactive']]}
  ],data:p,onSave:async v=>{
+  const dept=HR_DEPARTMENTS.find(d=>d.id===v.department_id);
+  if(dept)v.department=dept.name;else if(!v.department_id)v.department='';
   const x=await hrPositionRequest('POST',{action:'save-position',...v,id:id||undefined});
   const i=HR_POSITIONS.findIndex(z=>z.id===x.position.id);
   if(i<0)HR_POSITIONS.push(x.position);else HR_POSITIONS[i]=x.position;
@@ -61,6 +66,20 @@ function openPosition(id) {
   toast(x.position.sync_status==='pending'?'บันทึกแล้ว · เข้าคิวส่งข้อมูลให้ IT แล้ว · ยังไม่มีการให้สิทธิ์อัตโนมัติ':'บันทึก Position Master แล้ว · IT ต้องกำหนดสิทธิ์ก่อนใช้งาน');
  },onDelete:null});
 }
+
+function openDepartment() {
+ if(HR_POSITION_ERROR) throw new Error('Position API ยังไม่พร้อม');
+ openForm({title:'Create Department',fields:[
+  {k:'department_code',label:'Department Code',req:1,help:'อังกฤษ ตัวเลข _ หรือ -'},
+  {k:'name',label:'Department Name',req:1}
+ ],data:{},onSave:async v=>{
+  const r=await hrPositionRequest('POST',{action:'save-department',...v});
+  if(r.department&&!HR_DEPARTMENTS.some(d=>d.id===r.department.id))HR_DEPARTMENTS.push(r.department);
+  HR_DEPARTMENTS.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  toast('บันทึก Department Master แล้ว');
+ }});
+}
+
 const PAYTYPES = [['monthly', 'รายเดือน'], ['daily', 'รายวัน'], ['hourly', 'รายชั่วโมง (พาร์ทไทม์)']];
 const EMP_STAT = ['ทดลองงาน', 'ประจำ', 'ลาออก'];
 const APP_STAT = ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์', 'ไม่ผ่าน', 'รับเข้าทำงานแล้ว'];
@@ -193,5 +212,5 @@ defMod({
     { key: 'docs', label: 'Documents', view: () => window.HRDocuments ? window.HRDocuments.view() : '<p class="note">กำลังโหลดเมนู Documents…</p>' }
   ],
   summary: () => { const n = activeEmps().length, a = S.t.applicants.filter(x => ['ใหม่', 'นัดสัมภาษณ์', 'ผ่านสัมภาษณ์'].includes(x.status)).length; return `พนักงาน ${n} คน${a ? `, ผู้สมัครรอดำเนินการ ${a}` : ''}`; },
-  acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id), newPosition: () => openPosition(), position: id => openPosition(id), reloadPositions: async () => { HR_POSITION_LOADING=true; try { await hrLoadPositions(); HR_POSITION_LOADED=true; } catch(e) {} finally { HR_POSITION_LOADING=false; if(typeof App!=='undefined') App.render(); } } }
+  acts: { newEmp: () => openEmp(), emp: id => openEmp(id), newApp: () => openApp(), app: id => openApp(id), newPosition: () => openPosition(), newDepartment: () => openDepartment(), position: id => openPosition(id), reloadPositions: async () => { HR_POSITION_LOADING=true; try { await hrLoadPositions(); HR_POSITION_LOADED=true; } catch(e) {} finally { HR_POSITION_LOADING=false; if(typeof App!=='undefined') App.render(); } } }
 });
