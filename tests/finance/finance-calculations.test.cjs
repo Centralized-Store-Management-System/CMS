@@ -19,14 +19,14 @@ test('calculates WHT on pre-VAT base', () => {
 
 test('rounds tax per line before summing', () => {
   const result = FinanceCalculations.calculate([
-    {description:'A',quantity:1,unit_price:0.05},
+    {description:'A',quantity:1,unit_price:0.08},
     {description:'B',quantity:1,unit_price:0.05},
     {description:'C',quantity:1,unit_price:0.05},
   ],7,3);
-  assert.equal(result.subtotal,0.15);
+  assert.equal(result.subtotal,0.24);
   assert.equal(result.vat_total,0.03);
   assert.equal(result.wht_total,0);
-  assert.equal(result.grand_total,0.18);
+  assert.equal(result.grand_total,0.27);
 });
 
 test('supports zero-rated VAT and no withholding', () => {
