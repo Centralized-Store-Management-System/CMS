@@ -72,13 +72,27 @@ async function authenticate(token: string) {
   const cmsOwner = String(me.role).toLowerCase() === "owner";
   const cmsAccounting = Array.isArray(me.perms) && me.perms.map(String).includes("acct");
   if (!cmsOwner && !cmsAccounting) throw new HttpError(403, "บัญชีนี้ไม่มีสิทธิ์ Finance");
-  const [mapping] = await db!`
+  let [mapping] = await db!`
     select ur.company_id, ur.role_code, c.legal_name, c.currency_code
     from finance.user_roles ur
     join finance.companies c on c.id = ur.company_id
     where ur.cms_actor_ref = ${actorRef} and ur.is_active = true and c.status = 'active'
     order by ur.created_at asc limit 2
   `;
+  if (!mapping && cmsOwner) {
+    const [state] = await db!\`select
+      (select count(*)::int from finance.user_roles where is_active = true) as active_role_count,
+      (select count(*)::int from finance.companies where status = 'active' and environment = 'uat') as active_uat_company_count,
+      (select id from finance.companies where status = 'active' and environment = 'uat' order by created_at asc limit 1) as uat_company_id\`;
+    if (Number(state?.active_role_count || 0) === 0 && Number(state?.active_uat_company_count || 0) === 1 && state?.uat_company_id) {
+      const [created] = await db!\`insert into finance.user_roles (company_id,cms_actor_ref,role_code,is_active)
+        values (${String(state.uat_company_id)}::uuid,${actorRef},'owner',true)
+        on conflict (company_id,cms_actor_ref) do update set role_code='owner',is_active=true,updated_at=now()
+        returning company_id,role_code\`;
+      const [company] = await db!\`select legal_name,currency_code from finance.companies where id=${String(created.company_id)}::uuid\`;
+      mapping = { company_id: created.company_id, role_code: created.role_code, legal_name: company.legal_name, currency_code: company.currency_code };
+    }
+  }
   if (!mapping) throw new HttpError(403, "ยังไม่ได้กำหนดสิทธิ์ Finance ให้ผู้ใช้งานนี้");
   if (mapping.role_code === "owner" && !cmsOwner) throw new HttpError(403, "สิทธิ์ CMS ไม่ตรงกับ Finance Owner");
   if (mapping.role_code === "accounting" && !cmsAccounting && !cmsOwner) throw new HttpError(403, "สิทธิ์ CMS ไม่ตรงกับ Finance Accounting");
