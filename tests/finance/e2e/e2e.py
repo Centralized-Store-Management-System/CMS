@@ -23,12 +23,12 @@ def upload_file(tok, payment_id, category, filename='proof.pdf', mime='applicati
     boundary = '----finance-' + uuid.uuid4().hex
     parts = []
     for name, value in [('action', 'file.upload'), ('payment_id', payment_id), ('category', category)]:
-        parts.append(b'--' + boundary.encode() + b'\\r\\n')
-        parts.append(f'Content-Disposition: form-data; name="{name}"\\r\\n\\r\\n{value}\\r\\n'.encode())
-    parts.append(b'--' + boundary.encode() + b'\\r\\n')
-    parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\\r\\n'.encode())
-    parts.append(f'Content-Type: {mime}\\r\\n\\r\\n'.encode())
-    parts.append(data + b'\\r\\n--' + boundary.encode() + b'--\\r\\n')
+        parts.append(b'--' + boundary.encode() + b'\r\n')
+        parts.append(f'Content-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
+    parts.append(b'--' + boundary.encode() + b'\r\n')
+    parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode())
+    parts.append(f'Content-Type: {mime}\r\n\r\n'.encode())
+    parts.append(data + b'\r\n--' + boundary.encode() + b'--\r\n')
     req = urllib.request.Request(API, data=b''.join(parts), method='POST')
     req.add_header('content-type', f'multipart/form-data; boundary={boundary}')
     if tok: req.add_header('x-cms-session', tok)
