@@ -1,20 +1,21 @@
-/* Responsive IT confirmation dialogs: phone, tablet, desktop */
-.it-dialog-backdrop{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:20px max(20px,env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));background:rgba(9,28,21,.48);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:itDialogIn .18s ease-out}
-.it-dialog{width:min(100%,440px);max-height:min(86dvh,720px);overflow:auto;background:#fff;border:1px solid #e0ebe4;border-radius:26px;padding:26px;box-shadow:0 24px 80px rgba(5,35,23,.24);color:#173d2e;animation:itDialogCard .22s cubic-bezier(.2,.8,.2,1)}
-.it-dialog-mark{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:#e5f3eb;color:#08734d;font-size:25px;font-weight:700;margin-bottom:16px}
+/* Responsive IT dialogs · centered compact modal across phone, tablet and desktop */
+.it-dialog-backdrop{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:16px max(16px,env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:rgba(9,28,21,.48);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:itDialogIn .18s ease-out}
+.it-dialog{width:min(100%,390px);max-height:min(78dvh,620px);overflow:auto;background:#fff;border:1px solid #e0ebe4;border-radius:22px;padding:22px;box-shadow:0 20px 64px rgba(5,35,23,.22);color:#173d2e;animation:itDialogCard .2s cubic-bezier(.2,.8,.2,1)}
+.it-dialog-mark{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:#e5f3eb;color:#08734d;font-size:22px;font-weight:700;margin-bottom:13px}
 .it-dialog-mark.danger{background:#fff0ed;color:#bd493b}
-.it-dialog h2{font:600 21px/1.35 'Prompt','IBM Plex Sans Thai',sans-serif;margin:0 0 10px;color:#103f2e}
-.it-dialog-message{font:400 16px/1.65 'IBM Plex Sans Thai',sans-serif;margin:0;color:#344b40;white-space:pre-line}
-.it-dialog-detail{font:400 13px/1.6 'IBM Plex Sans Thai',sans-serif;margin:12px 0 0;padding:12px 14px;background:#f3f7f4;border-radius:12px;color:#718278}
-.it-dialog-input{width:100%;min-height:48px;margin-top:18px;border:1px solid #cddbd2;border-radius:12px;padding:10px 13px;font:16px 'IBM Plex Sans Thai',sans-serif;color:#173d2e;background:#fbfdfb;outline:none}
+.it-dialog h2{font:600 19px/1.35 'Prompt','IBM Plex Sans Thai',sans-serif;margin:0 0 8px;color:#103f2e}
+.it-dialog-message{font:400 15px/1.6 'IBM Plex Sans Thai',sans-serif;margin:0;color:#344b40;white-space:pre-line}
+.it-dialog-detail{font:400 12px/1.55 'IBM Plex Sans Thai',sans-serif;margin:10px 0 0;padding:10px 12px;background:#f3f7f4;border-radius:11px;color:#718278}
+.it-dialog-input{box-sizing:border-box;width:100%;min-height:44px;margin-top:14px;border:1px solid #cddbd2;border-radius:11px;padding:9px 12px;font:15px 'IBM Plex Sans Thai',sans-serif;color:#173d2e;background:#fbfdfb;outline:none}
 .it-dialog-input:focus{border-color:#16845c;box-shadow:0 0 0 3px #16845c20}
-.it-dialog-actions{display:flex;gap:10px;margin-top:24px}
-.it-dialog-actions button{flex:1;min-height:48px;border-radius:14px;padding:10px 14px;font:600 15px 'IBM Plex Sans Thai',sans-serif;cursor:pointer}
+.it-dialog-actions{display:flex;gap:9px;margin-top:19px}
+.it-dialog-actions button{flex:1;min-width:0;min-height:44px;border-radius:12px;padding:9px 12px;font:600 14px 'IBM Plex Sans Thai',sans-serif;cursor:pointer}
 .it-dialog-cancel{border:1px solid #dce7df;background:#fff;color:#476254}
-.it-dialog-ok{border:1px solid #075b40;background:#075b40;color:#fff;box-shadow:0 7px 18px #075b4024}
+.it-dialog-ok{border:1px solid #075b40;background:#075b40;color:#fff;box-shadow:0 5px 14px #075b4020}
 .it-dialog-ok.is-danger{background:#b94336;border-color:#b94336}
 .it-dialog-backdrop.is-closing{opacity:0;transition:opacity .13s}
-@keyframes itDialogIn{from{opacity:0}to{opacity:1}}@keyframes itDialogCard{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-@media(max-width:600px){.it-dialog-backdrop{align-items:end;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}.it-dialog{width:100%;border-radius:26px 26px 20px 20px;padding:24px 20px max(20px,env(safe-area-inset-bottom));max-height:82dvh}.it-dialog-actions button{min-height:52px}}
-@media(min-width:601px) and (max-width:1024px){.it-dialog{width:min(82vw,520px);padding:30px;border-radius:28px}}
+@keyframes itDialogIn{from{opacity:0}to{opacity:1}}@keyframes itDialogCard{from{opacity:0;transform:translateY(7px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:600px){.it-dialog-backdrop{place-items:center;padding:16px max(16px,env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}.it-dialog{width:min(100%,370px);max-height:76dvh;border-radius:21px;padding:20px}.it-dialog-actions button{min-height:44px}}
+@media(min-width:601px) and (max-width:1024px){.it-dialog{width:min(78vw,400px);max-height:76dvh;padding:22px;border-radius:22px}}
+@media(min-width:1025px){.it-dialog{width:min(90vw,390px)}}
 @media(prefers-reduced-motion:reduce){.it-dialog-backdrop,.it-dialog{animation:none}}
