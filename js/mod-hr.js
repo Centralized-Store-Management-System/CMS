@@ -52,7 +52,6 @@ function openPosition(id) {
   {k:'name_th',label:'ชื่อตำแหน่ง (ไทย)',req:1},
   {k:'name_en',label:'Position Name (English)'},
   {k:'department_id',label:'Department',type:'select',options:[['','ไม่ระบุแผนก'],...HR_DEPARTMENTS.map(d=>[d.id,d.name])]},
-  {k:'department',label:'Department Name (legacy label)',help:'ระบบจะเติมให้อัตโนมัติจาก Department Master'},
   {k:'level',label:'Position Level'},
   {k:'description',label:'รายละเอียดหน้าที่',type:'textarea'},
   {k:'status',label:'สถานะ',type:'select',options:[['active','Active'],['inactive','Inactive']]}
