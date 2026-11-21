@@ -1,7 +1,6 @@
 import postgres from "npm:postgres@3.4.5";
 
 const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const DB_URL = Deno.env.get("SUPABASE_DB_URL") || "";
 const BACKOFFICE_URL = SUPABASE_URL + "/functions/v1/backoffice";
 const ORIGINS = new Set([
@@ -29,7 +28,7 @@ const json = (body: unknown, status = 200, origin = "") => new Response(JSON.str
   },
 });
 function requireEnv() {
-  if (!SUPABASE_URL || !SERVICE_KEY || !DB_URL || !db) {
+  if (!SUPABASE_URL || !DB_URL || !db) {
     throw new HttpError(503, "Finance API ยังไม่ได้ตั้งค่าฐานข้อมูลและ Secrets");
   }
 }
