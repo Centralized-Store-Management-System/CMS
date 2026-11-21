@@ -152,7 +152,7 @@
       <label class="fm-field"><span>เลขสาขา (ถ้ามี)</span><input name="branch_number" maxlength="5" placeholder="00000"></label>
       <label class="fm-field fm-field-full"><span>ที่อยู่</span><textarea name="address" rows="2" maxlength="500"></textarea></label>
       <label class="fm-field"><span>แบบหัก ณ ที่จ่าย</span><select name="default_wht_type"><option value="pnd53">ภ.ง.ด.53 — นิติบุคคล</option><option value="pnd3">ภ.ง.ด.3 — บุคคลธรรมดา</option></select></label>
-      <label class="fm-field"><span>อัตราหัก ณ ที่จ่ายเริ่มต้น</span><select name="default_wht_rate"><option value="">ไม่กำหนด</option>${[1,1.5,2,3,5,10].map(v => `<option value="${v}" ${v === 3 ? 'selected' : ''}>${v}%</option>`).join('')}</select></label>
+      <label class="fm-field"><span>อัตราหัก ณ ที่จ่ายเริ่มต้น</span><select name="default_wht_rate"><option value="" selected>ไม่กำหนด</option>${[1,1.5,2,3,5,10].map(v => `<option value="${v}" >${v}%</option>`).join('')}</select></label>
       <div class="fm-form-actions fm-field-full"><button type="button" class="fm-btn fm-btn-light" data-close>ยกเลิก</button><button class="fm-btn fm-btn-primary">บันทึกคู่ค้า</button></div></form>`);
     const f = m.el.querySelector('#fmPQ');
     f.onsubmit = async e => { e.preventDefault(); const r = await run(f.querySelector('.fm-btn-primary'), () => api.post('partner.save', Object.fromEntries(new FormData(f))), 'เพิ่มคู่ค้าแล้ว'); if (r) { F.bust('partners'); m.close(); done(r); } };
