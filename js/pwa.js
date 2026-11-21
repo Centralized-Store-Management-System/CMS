@@ -5,7 +5,7 @@ const PWA = { prompt: null, standalone: matchMedia('(display-mode: standalone)')
 PWA.ios = /iPhone|iPad|iPod/.test(navigator.userAgent) && !/CriOS|FxiOS|Line\//.test(navigator.userAgent);
 PWA.inLine = /\bLine\//i.test(navigator.userAgent);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-  window.addEventListener('load', () => { try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* */ } });
+  window.addEventListener('load', () => { try { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => { reg.update().catch(() => {}); setInterval(() => { if (!document.hidden) reg.update().catch(() => {}); }, 60000); document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); }); }).catch(() => {}); } catch (e) { /* */ } });
 }
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.prompt = e; pwaButtons(); });
 window.addEventListener('appinstalled', () => { PWA.prompt = null; PWA.standalone = true; pwaButtons(); });
