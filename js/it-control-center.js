@@ -18,6 +18,27 @@ const ITCC_PKG={classic:'Theme เดิม',prototype:'Prototype (หลัง�
 function itccHere(){const a=window.AMZ_SCOPE;if(!a)return'';return `<div class="note">เครื่องนี้: <b>${esc(a.scope||'-')}</b> · ${esc(a.device)} · ${a.surface==='installed_app'?'แอปที่ติดตั้ง':a.surface==='line_liff'?'LINE':'เว็บ'} · ตอนนี้ใช้ ${esc(ITCC_PKG[a.pkg]||a.pkg)} · แต่ละแถวตั้งแยกกัน ไม่กระทบแถวอื่น · ล็อกไว้ = เปลี่ยนไม่ได้จนกว่าจะปลดล็อก</div>`;}
 const itccDeviceLabel=r=>r.device_class==='pc'?'PC':r.device_class==='mobile'?'Mobile':r.device_class==='ipad'?'iPad':r.device_class.replaceAll('_',' / ').toUpperCase();
 function itccGroupLabel(r){return r.app_label+' · '+(r.user_class==='owner'?'Owner':r.user_class==='staff_manager'?'Staff / Manager':r.user_class==='owner_staff'?'Owner / Staff':'LINE User')+' · '+(r.surface==='installed_app'?'Installed App':r.surface==='line_liff'?'LINE / LIFF':'Web')+' · '+itccDeviceLabel(r);}
+
+async function itccPositionAccess(){
+ try{
+  const p=await hrPositionRequest();const positions=p.positions||[],maps=p.permissions||[];
+  if(!positions.length)throw new Error('ยังไม่มี Position Master จาก HR');
+  const opts=positions.map(x=>[x.id,x.name_th+' ('+x.position_code+')']);
+  const current=maps[0]||{};
+  openForm({title:'Position Permission Mapping · IT',fields:[
+   {k:'position_id',label:'Position',type:'select',options:opts,req:1},
+   {k:'application_key',label:'Application Key',req:1,help:'เช่น finance, accounting, hr, staff, manager, owner'},
+   {k:'permission_codes',label:'Permission Codes',type:'textarea',rows:5,help:'หนึ่งสิทธิ์ต่อบรรทัด เช่น finance.final_verify'},
+   {k:'branch_scope',label:'Branch Scope',type:'select',options:[['assigned','เฉพาะสาขาที่กำหนด'],['all','ทุกสาขา']]},
+   {k:'status',label:'สถานะ Mapping',type:'select',options:[['draft','Draft — ยังไม่เปิดใช้'],['active','Active — อนุมัติแล้ว']]}
+  ],data:{position_id:current.position_id||positions[0].id,application_key:current.application_key||'finance',permission_codes:(current.permission_codes||[]).join('\n'),branch_scope:current.branch_scope||'assigned',status:'draft'},onSave:async v=>{
+   const codes=String(v.permission_codes||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
+   await hrPositionRequest('POST',{action:'set-permissions',position_id:v.position_id,application_key:v.application_key,permission_codes:codes,branch_scope:v.branch_scope,status:v.status});
+   toast('บันทึก Position Permission Mapping แล้ว');
+  }});
+ }catch(e){toast(e.message||'เปิดการกำหนดสิทธิ์ไม่สำเร็จ');}
+}
+
 function ocControlPage(){
  const ownerRows=ITCC.rows.filter(x=>x.app_key==='owner');
  const visible=ITCC.rows.filter(x=>ITCC.filter==='all'||x.app_key===ITCC.filter);
@@ -37,7 +58,7 @@ function ocControlPage(){
  .itcc-audit{font-size:12px;padding:9px 0;border-bottom:1px solid var(--line)}
  @media(max-width:900px){.itcc-grid{grid-template-columns:1fr}.itcc-device{max-width:100%}}
  </style>
- <h1>IT Control Center</h1><p class="muted">ควบคุม Theme, rollout และ Authentication Policy แยกตามระบบ ผู้ใช้ อุปกรณ์ และช่องทางติดตั้ง</p>
+ <h1>IT Control Center <button class="btn" onclick="itccPositionAccess()">Position Permissions</button></h1><p class="muted">ควบคุม Theme, rollout และ Authentication Policy แยกตามระบบ ผู้ใช้ อุปกรณ์ และช่องทางติดตั้ง</p>
  <div class="kpis" style="margin:12px 0"><div class="kpi ok"><b>${ownerRows.filter(x=>x.theme_enabled).length}</b><span>Owner Theme scopes ON</span></div><div class="kpi"><b>${ITCC.rows.length}</b><span>Scopes ที่ลงทะเบียน</span></div><div class="kpi warn"><b>OFF</b><span>Auth Enforcement</span></div></div>
  <div class="note">การตั้งค่า Theme และ Authentication แยกจากกัน · การแก้ไข Login ปัจจุบันยังไม่เปิดใช้ · ทุกการบันทึกเก็บ Audit Log บนฐานข้อมูล</div>
  <div class="itcc-grid" style="margin-top:14px">
