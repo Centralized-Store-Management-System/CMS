@@ -102,7 +102,7 @@ export async function uploadPaymentFile(form: FormData, u: User, rid: string) {
   canManagePayment(u, p.created_by);
   const [existingVerification] = await sql`select status from finance.payment_verifications
     where company_id = ${u.companyId}::uuid and payment_id = ${paymentId}::uuid`;
-  if (existingVerification?.status === "verified") fail(409, "รายการนี้ตรวจเอกสารครบถ้วนแล้ว หากต้องแก้ไขให้ Owner จัดการก่อน");
+  if (existingVerification?.status === "verified") fail(409, "รายการนี้ตรวจเอกสารครบถ้วนแล้ว จึงไม่สามารถเพิ่มหรือเปลี่ยนหลักฐานผ่านขั้นตอนนี้ได้");
 
   const { base, key } = storageConfig();
   const path = `${u.companyId}/${paymentId}/${crypto.randomUUID()}-${safeName(file.name)}`;
