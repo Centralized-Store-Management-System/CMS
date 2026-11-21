@@ -23,12 +23,21 @@
   const ST = { page: 'dashboard', title: 'ภาพรวม', pending: 0, open: null };   // open: null = ตามหน้าปัจจุบัน
   const FINX = () => window.FIN;
   const canSee = need => !need || (FINX() && FINX().session ? FINX().can(need) : false);
+  const canSeePage = key => {
+    const role = FINX() && FINX().session && FINX().session.actor && FINX().session.actor.role;
+    const pages = {
+      manager: ['dashboard', 'income', 'expense', 'document', 'payments', 'verification'],
+      staff: ['income', 'expense', 'document', 'payments', 'verification'],
+      verifier: ['verification'],
+    };
+    return !pages[role] || pages[role].includes(key);
+  };
   const localHash = () => { const h = location.hash; return h.startsWith('#fin/') ? '#' + h.slice(5) : '#'; };
   const pageOf = () => (localHash().slice(1).split('/')[0] || 'dashboard');
   function subLinks(cls) {
     const cur = ST.page;
     return MENU.map(([g, items]) => {
-      const vis = items.filter(i => canSee(i[2]));
+      const vis = items.filter(i => canSee(i[2]) && canSeePage(i[0]));
       if (!vis.length) return '';
       return (g ? `<small class="${cls}-h">${g}</small>` : '') + vis.map(([k, label]) => {
         const n = k === 'approvals' && ST.pending ? `<b class="${cls}-n">${ST.pending > 99 ? '99+' : ST.pending}</b>` : '';
