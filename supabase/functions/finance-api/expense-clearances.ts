@@ -136,9 +136,13 @@ export async function verifyClearance(body:Record<string,unknown>,u:User,rid:str
     const [evidence]=await tx`select count(*)::int n from finance.document_files
       where company_id=${u.companyId}::uuid and clearance_id=${id}::uuid and deleted_at is null and file_category='payment_evidence'`;
     if(Number(evidence.n)<1) fail(409,"ต้องแนบหลักฐานการจ่ายเงินจริงอย่างน้อย 1 ไฟล์");
-    const actual=round2(num(c.actual_amount)), grand=round2(num(c.grand_total));
-    if(Math.abs(actual-grand)>0.004)
-      fail(409,"ยอดจ่ายจริงไม่เท่ากับยอดเอกสารที่อนุมัติ ระบบยังไม่ลงบัญชีเพื่อป้องกันยอดภาษีคลาดเคลื่อน กรุณาให้ Owner ปรับเอกสารและส่งเคลียร์ใหม่");
+    const actual=round2(num(c.actual_paid_amount ?? c.actual_amount)), grand=round2(num(c.grand_total));
+    const actualExpense=round2(num(c.actual_expense_amount ?? c.actual_amount));
+    const refund=round2(num(c.refund_amount));
+    // Until line-level/tax allocation is implemented, only full settlement is eligible for automatic posting.
+    // This prevents posting the full approved document when the receipt or advance refund is partial.
+    if(Math.abs(actual-grand)>0.004 || Math.abs(actualExpense-grand)>0.004 || refund>0.004)
+      fail(409,"รายการนี้เป็นการเคลียร์บางส่วนหรือมียอดคืนเงิน ระบบยังไม่ลงบัญชีอัตโนมัติจนกว่าจะรองรับการจัดสรรค่าใช้จ่ายและภาษีรายบรรทัด กรุณาให้ Finance ตรวจสอบก่อน");
     const lines=await tx`select * from finance.document_lines where document_id=${c.doc_id}::uuid order by line_no`;
     if(!lines.length) fail(409,"ไม่พบรายละเอียดค่าใช้จ่ายสำหรับลงบัญชี");
     const desc=String(c.document_number)+(c.partner_name?" · "+c.partner_name:"");
