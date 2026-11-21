@@ -20,10 +20,7 @@ const RUM = { q: [], slow: 3000, started: performance.now() };
 })();
 function rumAdd(action, ms, ok, force = false) {
   if (!force && ms < RUM.slow && ok) return;
-  const ua = navigator.userAgent || '';
-  const device = /iPad|Tablet/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ipad'
-    : /iPhone|Android/i.test(ua) ? 'mobile' : 'desktop';
-  RUM.q.push({ a: String(action).slice(0, 48), ms: Math.max(0, Math.round(ms)), ok: !!ok, device });
+  RUM.q.push({ a: String(action).slice(0, 48), ms: Math.max(0, Math.round(ms)), ok: !!ok });
   if (RUM.q.length > 80) RUM.q.shift();
 }
 window.addEventListener('amz:auth-performance', e => {
