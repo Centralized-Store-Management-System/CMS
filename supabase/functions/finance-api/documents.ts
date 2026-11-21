@@ -251,7 +251,7 @@ export async function reverseDocument(body: Record<string, unknown>, u: User, ri
     if (paid.n) fail(409, "เอกสารนี้มีรายการรับ/จ่ายเงินแล้ว — ยกเลิกหรือกลับรายการชำระเงินก่อน หรือออกใบลดหนี้แทน");
     const [filed] = await tx`select count(*)::int n from finance.tax_transactions where document_id = ${id}::uuid and status = 'filed'`;
     if (filed.n) fail(409, "ภาษีของเอกสารนี้ถูกยื่นแบบแล้ว — ใช้ใบลดหนี้/เพิ่มหนี้ในงวดถัดไปแทน");
-    const [je] = await tx`select id from finance.journal_entries where source_document_id = ${id}::uuid and source_type = 'document' and status = 'posted'`;
+    const [je] = await tx`select id from finance.journal_entries where source_document_id = ${id}::uuid and source_type in ('document', 'expense_clearance') and status = 'posted'`;
     const d = body.reversal_date ? date(body.reversal_date, "วันที่กลับรายการ") : (doc.document_date instanceof Date ? doc.document_date.toISOString().slice(0, 10) : String(doc.document_date));
     const rev = je ? await reverseEntry(tx, u, je.id, d, reason) : null;
     await tx`update finance.tax_transactions set status = 'adjusted' where document_id = ${id}::uuid`;
