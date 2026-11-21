@@ -140,9 +140,46 @@ function pExp() {
   ${list.length ? `<div class="group">${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, v]) => statRow(esc(k), fmt(v), '')).join('')}</div>` : ''}
   <h3 class="h3">รายการ</h3><div class="group">${list.map(x => `<button class="row" data-a="exp:${x.id}"><span class="main"><span class="t">${esc(x.category)}${x.vendor ? ', ' + esc(x.vendor) : ''} ${x.branch ? (S.branch ? '' : branchChip(x.branch)) : '<span class="chip br">ส่วนกลาง</span>'}</span><span class="s">${thDate(x.date)}${x.payMethod ? ', ' + esc(x.payMethod) : ''}${x.note ? ', ' + esc(x.note) : ''}</span></span><span class="v">${fmt(x.amount)}</span></button>`).join('') || empty('ยังไม่มีรายจ่ายเดือนนี้')}</div>`;
 }
+async function syncExpenseToFinance(row) {
+  const token = (() => { try { return sessionStorage.getItem('amz.tok') || sessionStorage.getItem('amz.it.tok') || ''; } catch (_) { return ''; } })();
+  if (!token) throw new Error('ไม่พบรหัสเข้าใช้งาน จึงยังส่งรายการเข้า Finance ไม่ได้');
+  const url = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
+  const payload = {
+    action: 'document.create',
+    document_type: 'expense',
+    document_date: row.date || today(),
+    lines: [{ description: [row.category || 'รายจ่าย', row.note || '', row.vendor ? 'ผู้รับเงิน: ' + row.vendor : ''].filter(Boolean).join(' · '), quantity: 1, unit_price: num(row.amount), account_code: null }],
+    vat_rate: 0,
+    wht_rate: 0,
+    notes: 'นำเข้าจาก Manager > Accounting > Expenses · สาขา: ' + (row.branch || 'ส่วนกลาง') + ' · วิธีจ่าย: ' + (row.payMethod || 'ไม่ระบุ') + (row.ref ? ' · เลขที่ใบเสร็จ: ' + row.ref : ''),
+    reference: row.ref || ('MANAGER-' + row.id),
+    source_system: 'manager_expenses',
+    source_record_id: String(row.id),
+    submit: true
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-cms-session': token, 'idempotency-key': 'manager-expense-' + row.id },
+    body: JSON.stringify(payload),
+    cache: 'no-store'
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || 'ส่งข้อมูลเข้า Finance ไม่สำเร็จ');
+  return data.data;
+}
 function openExp(id) {
   const x = id ? S.t.expenses.find(e => e.id === id) : { date: today(), category: 'วัสดุสิ้นเปลือง', payMethod: 'เงินสด', branch: oneBranch() };
-  openForm({ title: id ? 'แก้ไขรายจ่าย' : 'บันทึกรายจ่าย', sub: myBranches().length > 1 || allBranch() ? '' : esc(branchName(x.branch)), fields: F_EXP(), data: x, onSave: v => { if (v.branch === undefined) v.branch = oneBranch(); return DB.upsert('expenses', v); }, onDelete: id ? () => DB.remove('expenses', id) : null });
+  openForm({ title: id ? 'แก้ไขรายจ่าย' : 'บันทึกรายจ่าย', sub: myBranches().length > 1 || allBranch() ? '' : esc(branchName(x.branch)), fields: F_EXP(), data: x, onSave: async v => {
+    if (v.branch === undefined) v.branch = oneBranch();
+    const saved = await DB.upsert('expenses', v);
+    try {
+      const financeDoc = await syncExpenseToFinance(saved);
+      toast('บันทึกรายจ่ายและส่ง Finance แล้ว' + (financeDoc.document_number ? ' · ' + financeDoc.document_number : ''));
+    } catch (err) {
+      toast('บันทึกรายจ่ายแล้ว แต่ยังส่ง Finance ไม่สำเร็จ: ' + err.message);
+    }
+    return saved;
+  }, onDelete: id ? () => DB.remove('expenses', id) : null });
 }
 function pPnl() {
   const p = pnl(S.month), st = S.settings;
