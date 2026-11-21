@@ -2,6 +2,19 @@
 
 Status: CODE PREPARATION ONLY. No Development Branch, SQL migration, bucket, or Edge Function has been created or deployed.
 
+## CMS session bridge — implementation update
+- Confirmed from the current CMS source: `js/app.js` stores the active custom session in `sessionStorage` key `amz.tok`; it clears that key on logout/session expiry.
+- Added `modules/finance/js/finance-cms-session.js` and loaded it only from `modules/finance/finance.html`. It injects a provider into `FinanceAuth`; it does not alter CMS Login/PIN, read tokens from URLs, or add Finance scripts to existing application pages.
+- The token is sent only in the `x-cms-session` request header. The Finance API must revalidate it through Back Office bootstrap on every request.
+- Automated bridge tests: 3/3 passed (provider injection, missing session, Finance cache clear).
+- Remaining identity gate: the exact immutable actor field in the bootstrap response has not yet been verified from a real session fixture. HR Documents currently references `me.username || me.code || me.role` for its audit actor; Finance must not assume `me.id` is stable until confirmed. No Finance role rows have been provisioned.
+- Finance is still a standalone preview page and is not linked from the live Owner menu. Owner navigation integration remains gated on staging authorization tests.
+
+## Workflow schema draft update
+- Added `004_finance_workflows_and_storage_draft.sql`: payment allocations/events, tax filing snapshots, private document metadata, journal number sequences, posted-journal balance constraint, parent-line immutability guards, and payment state-transition guards.
+- Draft 004 depends on drafts 001–003. It has not been executed. The Storage bucket `finance-private-documents` has not been created.
+- Payment approvals, journal posting, tax submission and document upload/download APIs remain disabled until the separate test environment, schema review and accounting rules are approved.
+
 ## Current implementation
 - Isolated Edge Function source: `supabase/functions/finance-api/index.ts`.
 - CMS session verification uses the existing Back Office bootstrap endpoint.
