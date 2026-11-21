@@ -13,8 +13,8 @@ function render(kind,root){
   async function load(){
    body.innerHTML='<tr><td colspan="6" class="fm-empty-cell">กำลังโหลด…</td></tr>';
    try{
-    const query=$('fmPaymentFilter').value, result=await window.FinanceAuth.request('payments'+(query?'&status='+encodeURIComponent(query):''));
-    const items=result.items||[];
+    const query=$('fmPaymentFilter').value, result=await window.FinanceAuth.request('payments');
+    const items=(result.items||[]).filter(row=>!query||row.status===query);
     if(!items.length){body.innerHTML='<tr><td colspan="6" class="fm-empty-cell">ยังไม่มีรายการชำระเงิน</td></tr>';return}
     body.innerHTML='';
     items.forEach(row=>{
