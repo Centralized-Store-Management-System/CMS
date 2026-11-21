@@ -13,8 +13,9 @@
 
   // ---------- เมนูย่อย ----------
   const MENU = [
-    ['', [['dashboard', 'ภาพรวม'], ['approvals', 'รออนุมัติ', 'approve'], ['verification', 'ตรวจเอกสารหลังจ่าย']]],
-    ['รายรับ–รายจ่าย', [['income', 'รายรับ / ลูกหนี้'], ['expense', 'รายจ่าย / เจ้าหนี้'], ['payments', 'รับ–จ่ายเงิน'], ['partners', 'คู่ค้า']]],
+    ['', [['dashboard', 'ภาพรวม']]],
+    ['รายการธุรกรรม', [['income', 'รายรับ / ลูกหนี้'], ['expense', 'รายจ่าย / เจ้าหนี้'], ['payments', 'รับ–จ่ายเงิน'], ['partners', 'คู่ค้า']]],
+    ['อนุมัติและตรวจสอบ', [['approvals', 'รออนุมัติ', 'approve'], ['verification', 'ตรวจเอกสารหลังจ่าย']]],
     ['ภาษี', [['vat', 'ภาษีซื้อ–ภาษีขาย (VAT)'], ['wht', 'ภาษีหัก ณ ที่จ่าย'], ['filings', 'แบบภาษี (ภ.พ.30 / ภ.ง.ด.)']]],
     ['บัญชี', [['journals', 'สมุดรายวัน'], ['accounts', 'ผังบัญชี'], ['periods', 'รอบบัญชี']]],
     ['รายงาน', [['profit-loss', 'งบกำไรขาดทุน'], ['balance-sheet', 'งบแสดงฐานะการเงิน'], ['trial-balance', 'งบทดลอง'], ['ledger', 'บัญชีแยกประเภท'], ['aging', 'อายุลูกหนี้ / เจ้าหนี้']]],
@@ -39,10 +40,13 @@
     return MENU.map(([g, items]) => {
       const vis = items.filter(i => canSee(i[2]) && canSeePage(i[0]));
       if (!vis.length) return '';
-      return (g ? `<small class="${cls}-h">${g}</small>` : '') + vis.map(([k, label]) => {
+      const links = vis.map(([k, label]) => {
         const n = k === 'approvals' && ST.pending ? `<b class="${cls}-n">${ST.pending > 99 ? '99+' : ST.pending}</b>` : '';
         return `<a href="#fin/${k}" data-fin-page="${k}"${k === cur ? ' aria-current="page"' : ''}>${esc(label)}${n}</a>`;
       }).join('');
+      if (!g) return links;
+      const active = vis.some(i => i[0] === cur);
+      return `<details class="${cls}-group"${active ? ' open' : ''}><summary>${esc(g)}</summary><div class="${cls}-items">${links}</div></details>`;
     }).join('');
   }
 
@@ -143,6 +147,8 @@
     '.nav a.fin-main[aria-expanded="true"]::after{transform:rotate(-135deg)}',
     '.nav a.fin-main .dot{margin-left:auto}.nav a.fin-main .dot+*{margin-left:8px}',
     '.fin-subnav{margin:2px 0 10px 26px;padding-left:10px;border-left:2px solid color-mix(in srgb,currentColor 22%,transparent);display:flex;flex-direction:column}',
+    '.fin-subnav-group{margin:2px 0}.fin-subnav-group>summary{list-style:none;cursor:pointer;padding:7px 10px;border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between}.fin-subnav-group>summary::-webkit-details-marker{display:none}.fin-subnav-group>summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);opacity:.65}.fin-subnav-group[open]>summary::after{transform:rotate(225deg)}.fin-subnav-group>summary:hover{background:color-mix(in srgb,currentColor 10%,transparent)}.fin-subnav-items{display:flex;flex-direction:column;padding-left:8px}',
+    '.fin-mnav-group{margin:2px 0}.fin-mnav-group>summary{list-style:none;cursor:pointer;padding:10px;border-radius:9px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}.fin-mnav-group>summary::-webkit-details-marker{display:none}.fin-mnav-group>summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg)}.fin-mnav-group[open]>summary::after{transform:rotate(225deg)}.fin-mnav-items{display:flex;flex-direction:column;padding-left:8px}',
     '.fin-subnav-h{display:block;margin:10px 0 3px 10px;font-size:11px;opacity:.6;letter-spacing:.3px}',
     '.side .nav .fin-subnav a{display:flex;align-items:center;gap:8px;min-height:0;margin:1px 0;padding:6px 10px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500}',
     '.side .nav .fin-subnav a:not([aria-current]):hover{background:color-mix(in srgb,currentColor 10%,transparent)}',
