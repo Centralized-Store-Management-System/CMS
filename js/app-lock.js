@@ -29,17 +29,18 @@
   /* ---------- หน้าล็อก ---------- */
   const st = document.createElement('style');
   st.textContent = [
-    '#applock{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px 16px calc(24px + env(safe-area-inset-bottom));background:linear-gradient(160deg,var(--brand),color-mix(in srgb,var(--brand) 70%,#000));color:#fff;font-family:var(--font);-webkit-user-select:none;user-select:none}',
-    '#applock .al-logo{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.16);display:grid;place-items:center}#applock .al-logo svg{width:30px;height:30px}',
+    '#applock{position:fixed;inset:0;z-index:9999;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,1.8vh,18px);padding:24px 16px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 82% 70%,rgba(77,174,112,.28),transparent 35%),linear-gradient(160deg,var(--brand),color-mix(in srgb,var(--brand) 70%,#000));color:#fff;font-family:var(--font);-webkit-user-select:none;user-select:none}#applock:before{content:"";position:absolute;z-index:-1;left:-8%;right:-8%;bottom:-3%;height:34%;opacity:.6;pointer-events:none;background:radial-gradient(ellipse at 12% 100%,rgba(116,190,88,.65) 0 8%,transparent 34%),radial-gradient(ellipse at 88% 88%,rgba(130,194,83,.58) 0 9%,transparent 33%),radial-gradient(ellipse at 58% 100%,rgba(25,113,72,.85) 0 12%,transparent 42%);filter:blur(2px);mask-image:linear-gradient(to top,#000 8%,transparent 100%)}#applock>*{position:relative;z-index:1}',
+    '#applock .al-logo{width:76px;height:76px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.45);display:grid;place-items:center;box-shadow:0 8px 26px rgba(0,25,15,.18)}#applock .al-logo img{width:100%;height:100%;object-fit:cover}#applock .al-logo .al-initial{font-size:24px;font-weight:600;color:#fff}',
     '#applock .al-hi{font-size:20px;font-weight:600;text-align:center}#applock .al-sub{font-size:14px;opacity:.85;margin-top:-10px;text-align:center}',
     '#applock .al-dots{display:flex;gap:16px;margin:6px 0}#applock .al-dots i{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.85);transition:background .12s}#applock .al-dots i.on{background:#fff}',
     '#applock .al-msg{min-height:20px;font-size:14px;color:#FFE1A8;text-align:center}',
-    '#applock .al-pad{display:grid;grid-template-columns:repeat(3,76px);gap:14px 26px}',
-    '#applock .al-pad button{width:76px;height:76px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:28px;font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}',
-    '#applock .al-pad button:active{background:rgba(255,255,255,.32)}#applock .al-pad button.al-t{background:transparent;font-size:14px}',
+    '#applock .al-pad{display:grid;grid-template-columns:repeat(3,minmax(76px,84px));justify-content:center;gap:clamp(10px,1.8vh,16px) clamp(14px,4vw,24px);width:min(100%,330px)}',
+    '#applock .al-pad button{width:100%;height:clamp(68px,9.2vh,84px);min-height:68px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.17);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 7px 18px rgba(0,30,18,.12);color:#fff;font-size:clamp(27px,4vh,34px);font-family:inherit;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:grid;place-items:center}',
+    '#applock .al-pad button:active{background:rgba(255,255,255,.34);transform:scale(.96)}#applock .al-pad button.al-t{width:100%;height:clamp(60px,8.2vh,76px);min-height:60px;border-radius:22px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);font-size:clamp(12px,1.8vh,14px);font-weight:500}#applock .al-pad button[data-al="back"]{font-size:clamp(22px,3vh,28px);font-weight:600}',
     '#applock.al-shake .al-dots{animation:alshake .35s}@keyframes alshake{25%{transform:translateX(-10px)}50%{transform:translateX(10px)}75%{transform:translateX(-6px)}}',
     '#applock .al-spin{width:28px;height:28px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:alspin .8s linear infinite}@keyframes alspin{to{transform:rotate(360deg)}}'
   ].join('');
+  st.textContent += '@media(max-height:700px){#applock{gap:8px;padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}#applock .al-pad{gap:8px 18px}#applock .al-pad button{height:clamp(56px,8vh,68px);min-height:56px}#applock .al-pad button.al-t{height:54px;min-height:54px}}@media(min-width:700px){#applock .al-pad{width:340px;grid-template-columns:repeat(3,88px);gap:16px 24px}#applock .al-pad button{height:88px}}';
   document.head.appendChild(st);
 
   function show(m, msg) {
@@ -48,7 +49,8 @@
     let el = document.getElementById('applock');
     if (!el) { el = document.createElement('div'); el.id = 'applock'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'ปลดล็อกแอป'); document.body.appendChild(el); }
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'forget', '0', 'back'];
-    el.innerHTML = `<div class="al-logo">${typeof icon === 'function' ? icon('cup') : ''}</div><div class="al-hi">สวัสดี ${h(d.name || d.username)}</div><div class="al-sub">ใส่รหัสปลดล็อกแอป 6 หลัก</div>
+    const profile = d.photo ? `<img src="${h(d.photo)}" alt="รูปโปรไฟล์">` : `<span class="al-initial">${h(String(d.name || d.username || 'U').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase())}</span>`;
+    el.innerHTML = `<div class="al-logo">${profile}</div><div class="al-hi">สวัสดี ${h(d.name || d.username)}</div><div class="al-sub">ใส่รหัสปลดล็อกแอป 6 หลัก</div>
       <div class="al-dots">${'<i></i>'.repeat(6)}</div><div class="al-msg" id="al-msg">${h(msg || '')}</div>
       <div class="al-pad">${keys.map(k => k === 'forget' ? '<button class="al-t" data-al="forget">ลืมรหัส</button>' : k === 'back' ? '<button class="al-t" data-al="back" aria-label="ลบ">⌫</button>' : `<button data-al="${k}">${k}</button>`).join('')}</div>`;
     if (typeof API !== 'undefined') API.call('ping').catch(() => {});   // ปลุก Google ระหว่างพิมพ์รหัส
@@ -199,7 +201,7 @@
       try {
         const r = await busy(ev.target, () => API.call('devReg', { t: S.token, code: c1, device: devName() }), 'กำลังตั้ง…');
         const salt = r.id + ':' + Math.random().toString(36).slice(2);
-        setDev({ id: r.id, secret: r.secret, name: r.name, username: r.username, salt, ph: await derive(c1, salt), at: Date.now() });
+        setDev({ id: r.id, secret: r.secret, name: r.name, username: r.username, photo: (S.me && S.me.photo) || (C.my && C.my.photo) || '', salt, ph: await derive(c1, salt), at: Date.now() });
         mem = c1; unlocked = true; closeSheet();
         if (typeof toast === 'function') toast('ตั้งรหัสปลดล็อกแล้ว ครั้งต่อไปเปิดแอปใส่รหัสนี้ได้เลย');
       } catch (x) { err.textContent = x.message; }
