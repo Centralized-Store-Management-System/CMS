@@ -346,6 +346,31 @@ ok('ภาษีซื้อ/หัก ณ ที่จ่ายเข้าร�
 s, r = post(OWN, 'document.reverse', document_id=pb, reason='ทดสอบกลับรายการ'); ok('กลับรายการเอกสารที่ปิดเคลียร์แล้วได้ (สมุดรายวันกลับด้าน)', s == 200 and r['data']['reversal_journal'], r)
 s, r = get(OWN, 'trial-balance', **{'from': '2026-11-01', 'to': '2026-12-31'}); ok('งบทดลองยังสมดุลหลังเคลียร์', r['data']['totals']['balanced'], r['data']['totals'])
 
+print('— หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ผูกกับคำขอเบิก —')
+s, r = post(MGR, 'document.create', idem=k(), document_type='expense', document_date=FD, reference='นายสมชาย ช่างซ่อม', wht_rate=3,
+            lines=[{'description': 'ค่าซ่อมเครื่องชงกาแฟ', 'quantity': 1, 'unit_price': 10000}]); wd = r['data']['id']
+s, r = get(MGR, 'wht-certificate-draft', document_id=wd); dr = r['data']['draft'] if s == 200 else {}
+ok('ร่าง 50 ทวิ: ผู้รับเงิน/ยอด/ภาษีดึงจากคำขอ (ฐาน 10,000 หัก 300 · ภ.ง.ด.3 · ค่าบริการ)', s == 200 and dr['payee']['name'] == 'นายสมชาย ช่างซ่อม' and dr['items'][0]['amount'] == 10000 and dr['items'][0]['tax'] == 300 and dr['form_type'] == 'pnd3' and dr['items'][0]['code'] == '5', r)
+cert = {**dr, 'payer': {**dr['payer'], 'name': 'บริษัท คาเฟ่ ตัวอย่าง จำกัด', 'tax_id': '0105566000001'}, 'payee': {**dr['payee'], 'tax_id': '3100100123456'}, 'book_no': '1'}
+s, r = post(MGR, 'wht-certificate.save', **cert); c1 = r.get('data', {})
+ok('Manager บันทึก 50 ทวิ → ได้เลขที่ WTI-YYYYMM-0001 ผูกกับคำขอ', s == 200 and c1['cert_number'] == 'WTI-' + FD[:7].replace('-', '') + '-0001' and c1['document_id'] == wd and float(c1['total_tax']) == 300, r)
+s, r = post(MGR, 'wht-certificate.save', **cert); ok('ออกฉบับที่ 2 → เลขที่รันต่อ 0002', s == 200 and r['data']['cert_number'].endswith('-0002'), r); c2 = r.get('data', {})
+s, r = post(MGR, 'wht-certificate.save', **{**cert, 'items': [{**dr['items'][0], 'tax': 20000}]}); ok('ภาษีมากกว่ายอดจ่าย → ไม่ผ่าน', s == 400, r)
+s, r = post(MGR, 'wht-certificate.save', **{**cert, 'payee': {**cert['payee'], 'tax_id': '12345'}}); ok('เลขผู้เสียภาษีไม่ครบ 13 หลัก → ไม่ผ่าน', s == 400 and '13 หลัก' in r['error'], r)
+s, r = post(MGR, 'wht-certificate.save', **{**cert, 'payer': {**cert['payer'], 'tax_id': ''}}); ok('ไม่มีเลขผู้เสียภาษีของผู้จ่าย → ไม่ผ่าน', s == 400, r)
+s, r = post(MGR, 'wht-certificate.save', **{**cert, 'items': [{**dr['items'][0], 'code': '6', 'label': ''}]}); ok('ประเภท "อื่น ๆ" ต้องระบุ', s == 400, r)
+s, r = post(STF, 'wht-certificate.save', **cert); ok('Staff ออก 50 ทวิ ให้คำขอของคนอื่นไม่ได้', s == 403, r)
+s, r = post(VER, 'wht-certificate.save', **cert); ok('ผู้ตรวจสุดท้ายออก 50 ทวิ ไม่ได้ (ดูได้อย่างเดียว)', s == 403, r)
+s, r = get(VER, 'wht-certificates', document_id=wd); ok('ผู้ตรวจสุดท้ายเห็นรายการ 50 ทวิ ของคำขอ', s == 200 and len(r['data']['items']) == 2, r)
+s, r = flow(MGR, wd); ok('หน้าคำขอแสดง 50 ทวิ ที่แนบอยู่ + ปุ่มสร้าง', s == 200 and len(r['data']['wht']) == 2 and r['data']['actions']['wht_create'], r)
+s, r = post(MGR, 'wht-certificate.save', **{**cert, 'id': c1['id'], 'items': [{**dr['items'][0], 'amount': 8000, 'tax': 240}]})
+s2, r2 = get(MGR, 'wht-certificate', id=c1['id'])
+ok('แก้ไข 50 ทวิ (เลขที่เดิม ยอดใหม่)', s == 200 and r['data']['cert_number'] == c1['cert_number'] and float(r2['data']['certificate']['total_tax']) == 240 and r2['data']['certificate']['payee']['tax_id'] == '3100100123456', (r, r2))
+s, r = post(MGR, 'wht-certificate.void', id=c2['id'], reason='ออกซ้ำ'); ok('ยกเลิก 50 ทวิ ฉบับที่ออกซ้ำ', s == 200 and r['data']['status'] == 'voided', r)
+s, r = post(MGR, 'wht-certificate.save', **{**cert, 'id': c2['id']}); ok('ฉบับที่ยกเลิกแล้วแก้ไม่ได้', s == 409, r)
+post(MGR, 'document.void', document_id=wd, reason='ทดสอบ')
+s, r = post(MGR, 'wht-certificate.save', **cert); ok('คำขอที่ยกเลิกแล้วออก 50 ทวิ ไม่ได้', s == 409, r)
+
 print('— ล้างข้อมูลทดสอบ / เริ่มใช้งานจริง —')
 s, r = post(OWN, 'company.purge-test-data', confirm='ผิด'); ok('ล้างข้อมูลต้องพิมพ์ยืนยัน', s == 400, r)
 s, r = post(APR, 'company.purge-test-data', confirm='ล้างข้อมูลทดสอบ'); ok('ผู้อนุมัติล้างข้อมูลไม่ได้', s == 403, r)
@@ -353,8 +378,8 @@ s, r = post(OWN, 'company.purge-test-data', confirm='ล้างข้อมู
 ok('หลังล้าง: เอกสาร 0, ผังบัญชี 29, คู่ค้า 3, รอบบัญชีเปิดทั้งหมด, ประวัติ = เฉพาะการล้าง',
    psql("select count(*) from finance.documents")+'|'+psql("select count(*) from finance.chart_of_accounts")+'|'+psql("select count(*) from finance.partners")+'|'+psql("select count(*) from finance.accounting_periods where status<>'open'")+'|'+psql("select string_agg(action,',') from finance.audit_events") == '0|29|3|0|purge_test_data',
    psql("select string_agg(action,',') from finance.audit_events"))
-ok('หลังล้าง: ลบรายการเคลียร์ ประวัติ final verification และ metadata ไฟล์แนบแล้ว',
-   psql("select count(*) from finance.payment_verifications") == '0' and psql("select count(*) from finance.document_files") == '0' and psql("select count(*) from finance.expense_clearances") == '0')
+ok('หลังล้าง: ลบรายการเคลียร์ ประวัติ final verification และ metadata ไฟล์แนบ + 50 ทวิ แล้ว',
+   psql("select count(*) from finance.payment_verifications") == '0' and psql("select count(*) from finance.document_files") == '0' and psql("select count(*) from finance.expense_clearances") == '0' and psql("select count(*) from finance.wht_certificates") == '0')
 s, r = post(OWN, 'company.go-live', confirm='เริ่มใช้งานจริง'); ok('ชื่อบริษัทยังเป็นชื่อทดสอบ → เริ่มใช้งานจริงไม่ได้', s == 409, r)
 post(OWN, 'company.update', legal_name='บริษัท คาเฟ่ ทดลอง จำกัด'.replace('ทดลอง', 'ตัวอย่าง'), tax_id='0105566000001', vat_registered=True)
 s, r = post(OWN, 'company.go-live', confirm='เริ่มใช้งานจริง'); ok('เริ่มใช้งานจริง', s == 200 and r['data']['environment'] == 'production', r)

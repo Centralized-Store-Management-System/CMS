@@ -60,3 +60,21 @@
   .ff-item{grid-template-columns:minmax(0,1fr)}
   .ff-item-side{flex-direction:row;justify-content:space-between;align-items:center}
 }
+/* หนังสือรับรองหัก ณ ที่จ่าย 50 ทวิ (fin-pages-wht.js) */
+.ff-file.ff-void{opacity:.55}
+.wt-chips{display:flex;flex-wrap:wrap;gap:8px}
+.wt-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer;font-size:13.5px}
+.wt-chip:has(input:checked){border-color:var(--green);background:color-mix(in srgb,var(--green) 10%,var(--surface));font-weight:600}
+.wt-chip input{margin:0}
+.wt-item{display:grid;grid-template-columns:minmax(220px,2.2fr) minmax(150px,1.6fr) 140px 150px 92px 120px auto;gap:10px;align-items:end;padding:10px 0;border-bottom:1px dashed var(--line)}
+.wt-item:last-child{border-bottom:0}
+.wt-item .wt-del{margin-bottom:4px}
+.wt-total{display:flex;flex-wrap:wrap;gap:10px 26px;align-items:baseline;margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--sunk)}
+.wt-total div{display:flex;flex-direction:column}.wt-total small{color:var(--muted);font-size:12px}.wt-total b{font-size:18px}
+.wt-total .wt-words{flex:1;min-width:220px;color:var(--muted);font-size:13px;align-self:center}
+.wt-more{margin-top:12px}.wt-more summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8px}
+.wt-actions{position:sticky;bottom:0;background:linear-gradient(to top,var(--surface) 70%,transparent);padding:12px 0 4px}
+.wt-pick{display:grid;gap:8px;max-height:60vh;overflow:auto}.wt-pick button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;height:auto;padding:10px 12px}
+.wt-pick small{color:var(--muted);font-weight:400}
+.wt-preview{overflow:auto;padding:10px;background:var(--sunk)}.wt-frame{display:block;width:560px;max-width:none;min-height:780px;border:0;margin:0 auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+@media (max-width:900px){.wt-item{grid-template-columns:1fr 1fr}.wt-item .wt-code,.wt-item .wt-lab{grid-column:1/-1}}

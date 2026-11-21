@@ -12,13 +12,14 @@ import * as A from "./admin.ts";
 import * as V from "./verification.ts";
 import * as C from "./expense-clearances.ts";
 import * as EF from "./expense-flow.ts";
+import * as W from "./wht-certificates.ts";
 
 const ORIGINS = new Set([
   "https://centralized-store-management.github.io",
   "https://centralized-store-management-system.github.io",
   ...String(Deno.env.get("FINANCE_TEST_ORIGINS") || "").split(",").map(s => s.trim()).filter(Boolean),
 ]);
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 
 type Reader = (url: URL, u: User) => Promise<unknown>;
 type Writer = (body: Record<string, unknown>, u: User, rid: string, idem: string) => Promise<unknown>;
@@ -30,6 +31,7 @@ const READ: Record<string, Reader> = {
   payments: P.listPayments, "open-documents": P.openDocuments,
   "verification-queue": V.verificationQueue, "payment-files": V.listPaymentFiles, "file-url": V.fileUrl,
   "expense-flow": EF.listFlow, "expense-flow-item": EF.getFlowItem,
+  "wht-certificates": W.listWht, "wht-certificate": W.getWht, "wht-certificate-draft": W.whtDraft,
   "expense-clearances": C.listClearances, "expense-clearance-files": C.listClearanceFiles, "expense-clearance-file-url": C.clearanceFileUrl,
   journals: J.listJournals, journal: J.getJournal, periods: J.listPeriods,
   "tax-report": T.taxReport, filings: T.listFilings,
@@ -44,6 +46,7 @@ const WRITE: Record<string, Writer> = {
   "payment.verify-documents": V.verifyPaymentDocuments,
   "expense-clearance.submit": C.submitClearance, "expense-clearance.approve": C.approveClearance, "expense-clearance.return": C.returnClearance, "expense-clearance.verify": C.verifyClearance,
   "expense-clearance.verifier-return": C.verifierReturnClearance, "expense-file.delete": EF.deleteFile,
+  "wht-certificate.save": W.saveWht, "wht-certificate.void": W.voidWht,
   "journal.create": J.createJournal, "journal.submit": J.submitJournal, "journal.post": J.postJournal, "journal.reject": J.rejectJournal, "journal.delete": J.deleteDraftJournal, "journal.reverse": J.reverseJournal,
   "period.create-year": J.createPeriods, "period.close": J.closePeriod, "period.reopen": J.reopenPeriod,
   "tax.prepare": T.prepareFiling, "tax.submit-review": T.submitFilingReview, "tax.return": T.returnFiling, "tax.approve": T.approveFiling, "tax.mark-submitted": T.markFiled, "tax.mark-paid": T.markFilingPaid,
@@ -78,9 +81,9 @@ Deno.serve(async (req: Request) => {
         capabilities: capabilities(user),
       } }, 200, origin);
       const limitedReads: Record<string, string[]> = {
-        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item"],
-        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item"],
-        verifier: ["verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item"],
+        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item", "wht-certificates", "wht-certificate", "wht-certificate-draft"],
+        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item", "wht-certificates", "wht-certificate", "wht-certificate-draft"],
+        verifier: ["verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item", "wht-certificates", "wht-certificate", "wht-certificate-draft"],
       };
       const allowedReads = limitedReads[user.role];
       if (allowedReads && !allowedReads.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ดูข้อมูลส่วนนี้");
@@ -108,8 +111,8 @@ Deno.serve(async (req: Request) => {
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "รูปแบบข้อมูลไม่ถูกต้อง");
     const action = text(body.action, 40);
     const limitedWrites: Record<string, string[]> = {
-      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit", "expense-file.delete"],
-      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit", "expense-file.delete"],
+      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit", "expense-file.delete", "wht-certificate.save", "wht-certificate.void"],
+      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit", "expense-file.delete", "wht-certificate.save", "wht-certificate.void"],
       verifier: ["payment.verify-documents", "expense-clearance.verify", "expense-clearance.verifier-return"],
     };
     const allowedWrites = limitedWrites[user.role];

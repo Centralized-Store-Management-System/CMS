@@ -11,7 +11,7 @@ $P -d fin -c "create schema if not exists storage; create table if not exists st
 $P -d fin -v ON_ERROR_STOP=1 -f /home/claude/fin/supabase/migrations/202611210004_finance_operational_v1.sql >/dev/null 2>&1 || echo "MIGRATION 004 FAILED"
 $P -d fin -v ON_ERROR_STOP=1 -f /home/claude/fin/supabase/migrations/202611210005_finance_fix_search_path.sql >/dev/null 2>&1 || echo "MIGRATION 005 FAILED"
 $P -d fin -v ON_ERROR_STOP=1 -f /home/claude/fin/supabase/migrations/202611210006_finance_manager_final_verification.sql >/dev/null 2>&1 || echo "MIGRATION 006 FAILED"
-for m in /home/claude/fin/supabase/migrations/202611211[89]*.sql /home/claude/fin/supabase/migrations/2026112120*.sql /home/claude/fin/supabase/migrations/2026112121*.sql /home/claude/fin/supabase/migrations/2026112122*.sql /home/claude/fin/supabase/migrations/2026112123*.sql; do
+for m in /home/claude/fin/supabase/migrations/202611211[89]*.sql /home/claude/fin/supabase/migrations/2026112120*.sql /home/claude/fin/supabase/migrations/2026112121*.sql /home/claude/fin/supabase/migrations/2026112122*.sql /home/claude/fin/supabase/migrations/2026112123*.sql /home/claude/fin/supabase/migrations/2026112[2-9]*.sql; do
   [ -f "$m" ] || continue
   $P -d fin -v ON_ERROR_STOP=1 -f "$m" >/tmp/fe2e/mig.log 2>&1 || { echo "MIGRATION FAILED $m"; tail -3 /tmp/fe2e/mig.log; }
 done

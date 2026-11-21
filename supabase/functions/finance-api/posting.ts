@@ -37,7 +37,7 @@ export const DEFAULT_COA: [string, string, string, string | null][] = [
 
 export const DOC_PREFIX: Record<string, string> = {
   tax_invoice: "TIV", invoice: "INV", receipt: "RE", credit_note: "CN", debit_note: "DN",
-  expense: "EXP", bill: "BIL", payment_voucher: "PV", other: "DOC",
+  expense: "EXP", bill: "BIL", payment_voucher: "PV", other: "DOC", wht_certificate: "WTI",
 };
 export const REVENUE_DOCS = ["tax_invoice", "invoice", "receipt", "debit_note", "credit_note"];
 export const EXPENSE_DOCS = ["expense", "bill", "payment_voucher"];

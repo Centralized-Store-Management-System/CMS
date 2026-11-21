@@ -150,7 +150,8 @@
     'js/fin-pages-reports.js?v=1.0.0': ['trial-balance', 'profit-loss', 'balance-sheet', 'ledger', 'aging'],
     'js/fin-pages-admin.js?v=1.0.1': ['company', 'partners', 'users', 'audit', 'settings'],
     'js/fin-pages-verification.js?v=1.0.0': ['verification'],
-    'js/fin-pages-flow.js?v=1.0.0': ['expflow'],
+    'js/fin-pages-flow.js?v=1.1.0': ['expflow'],
+    'js/fin-pages-wht.js?v=1.0.0': ['wht50'],
   };
   const loaded = {};
   function loadFor(key) {
@@ -167,9 +168,9 @@
     if (!content) return;
     const role = FIN.session && FIN.session.actor && FIN.session.actor.role;
     const rolePages = {
-      manager: ['dashboard', 'expflow', 'income', 'expense', 'document', 'payments', 'verification'],
-      staff: ['expflow', 'income', 'expense', 'document', 'payments', 'verification'],
-      verifier: ['expflow', 'verification'],
+      manager: ['dashboard', 'expflow', 'wht50', 'income', 'expense', 'document', 'payments', 'verification'],
+      staff: ['expflow', 'wht50', 'income', 'expense', 'document', 'payments', 'verification'],
+      verifier: ['expflow', 'wht50', 'verification'],
     };
     // Staff / ผู้ตรวจสุดท้าย เริ่มที่หน้าเบิก–เคลียร์ (งานหลักของบทบาท)
     if ((role === 'staff' || role === 'verifier') && key === 'dashboard') { key = 'expflow'; W.location.hash = EMB ? '#fin/expflow' : '#expflow'; return go('#' + key, opt0); }
@@ -219,6 +220,7 @@
   const FIN = W.FIN = {
     api, upload, idem, esc, $, money, baht, d10, thDate, thDateTime, today, thisMonth, monthName, L, badge,
     toast, modal, ask, run, table, csv, head, loading, errorBox, nav, go,
+    load: loadFor,   // โหลดไฟล์ของหน้าล่วงหน้า (เช่น ใช้ฟังก์ชันพิมพ์ของหน้าอื่น)
     session: null,
     page(key, def) { PAGES[key] = def; },
     can(cap) { return !!(FIN.session && FIN.session.capabilities && FIN.session.capabilities[cap]); },
