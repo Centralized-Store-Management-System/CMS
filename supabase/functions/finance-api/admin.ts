@@ -140,7 +140,7 @@ export async function setUser(body: Record<string, unknown>, u: User, rid: strin
   need(u, "admin");
   const ref = text(body.actor_ref, 90);
   if (!/^u:[\w.-]{1,80}$/.test(ref)) fail(400, "รหัสผู้ใช้ไม่ถูกต้อง (เลือกจากรายชื่อผู้ใช้ CMS)");
-  const role = oneOf(body.role, ["approver", "accountant", "viewer"] as const, "สิทธิ์");
+  const role = oneOf(body.role, ["manager", "staff", "verifier", "approver", "accountant", "viewer"] as const, "สิทธิ์");
   const name = text(body.display_name, 120) || ref;
   const active = body.is_active !== false;
   return await db().begin(async (tx: Tx) => {
