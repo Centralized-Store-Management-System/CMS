@@ -169,20 +169,20 @@ async function listData(url: URL, user: { companyId: string }, action: string) {
   if (action === "payments") {
     const status = asText(url.searchParams.get("status"), 20);
     const rows = status
-      ? await db!.\`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid and status = ${status} order by payment_date desc, created_at desc limit ${limit} offset ${offset}\`
-      : await db!.\`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid order by payment_date desc, created_at desc limit ${limit} offset ${offset}\`;
+      ? await db!.`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid and status = ${status} order by payment_date desc, created_at desc limit ${limit} offset ${offset}`
+      : await db!.`select id, document_id, payment_type, payment_date, amount, method, reference_number, status, approved_by, paid_at, created_by, created_at from finance.payments where company_id = ${user.companyId}::uuid order by payment_date desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "tax-transactions") {
-    const rows = await db!.\`select id, document_id, tax_type, tax_period, tax_base, tax_rate, tax_amount, counterparty_id, tax_form_code, status, created_at from finance.tax_transactions where company_id = ${user.companyId}::uuid order by tax_period desc, created_at desc limit ${limit} offset ${offset}\`;
+    const rows = await db!.`select id, document_id, tax_type, tax_period, tax_base, tax_rate, tax_amount, counterparty_id, tax_form_code, status, created_at from finance.tax_transactions where company_id = ${user.companyId}::uuid order by tax_period desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "journals") {
-    const rows = await db!.\`select id, journal_number, journal_date, description, status, total_debit, total_credit, created_by, approved_by, posted_at, created_at from finance.journal_entries where company_id = ${user.companyId}::uuid order by journal_date desc, created_at desc limit ${limit} offset ${offset}\`;
+    const rows = await db!.`select id, journal_number, journal_date, description, status, total_debit, total_credit, created_by, approved_by, posted_at, created_at from finance.journal_entries where company_id = ${user.companyId}::uuid order by journal_date desc, created_at desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
   if (action === "periods") {
-    const rows = await db!.\`select id, period_code, starts_on, ends_on, status, closed_at from finance.accounting_periods where company_id = ${user.companyId}::uuid order by starts_on desc limit ${limit} offset ${offset}\`;
+    const rows = await db!.`select id, period_code, starts_on, ends_on, status, closed_at from finance.accounting_periods where company_id = ${user.companyId}::uuid order by starts_on desc limit ${limit} offset ${offset}`;
     return { items: rows, limit, offset };
   }
 throw new HttpError(404, "ไม่พบ Finance API action");
@@ -308,25 +308,25 @@ async function createPayment(body: Record<string, unknown>, user: { companyId: s
   const documentId = asText(body.document_id, 36);
   if (documentId && !/^[0-9a-f-]{36}$/i.test(documentId)) throw new HttpError(400, "รหัสเอกสารไม่ถูกต้อง");
   const [payment] = await db!.begin(async tx => {
-    await tx.\`select pg_advisory_xact_lock(hashtextextended(${user.companyId + ":payment:" + idempotencyKey}, 0))\`;
-    const [existing] = await tx.\`select id, payment_type, payment_date, amount, method, reference_number, status, created_at from finance.payments where company_id=${user.companyId}::uuid and idempotency_key=${idempotencyKey} limit 1\`;
+    await tx.`select pg_advisory_xact_lock(hashtextextended(${user.companyId + ":payment:" + idempotencyKey}, 0))`;
+    const [existing] = await tx.`select id, payment_type, payment_date, amount, method, reference_number, status, created_at from finance.payments where company_id=${user.companyId}::uuid and idempotency_key=${idempotencyKey} limit 1`;
     if (existing) return [existing];
     if (documentId) {
-      const [doc] = await tx.\`select id from finance.documents where id=${documentId}::uuid and company_id=${user.companyId}::uuid and status in ('approved','posted') limit 1\`;
+      const [doc] = await tx.`select id from finance.documents where id=${documentId}::uuid and company_id=${user.companyId}::uuid and status in ('approved','posted') limit 1`;
       if (!doc) throw new HttpError(400, "ไม่พบเอกสารที่อนุมัติแล้วในบริษัทนี้");
     }
-    const [row] = await tx.\`
+    const [row] = await tx.`
       insert into finance.payments
         (company_id, document_id, payment_type, payment_date, amount, method, reference_number, status, created_by, idempotency_key)
       values
         (${user.companyId}::uuid, ${documentId || null}::uuid, ${type}, ${date}::date, ${amount}, ${method},
          ${asText(body.reference_number,120) || null}, 'pending', ${user.actorRef}, ${idempotencyKey})
       returning id, document_id, payment_type, payment_date, amount, method, reference_number, status, created_by, created_at
-    \`;
-    await tx.\`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id)
-      values (${user.companyId}::uuid,${String(row.id)}::uuid,${user.actorRef},'created',${asText(body.note,500)||null},${requestId})\`;
-    await tx.\`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id)
-      values (${user.companyId}::uuid,${user.actorRef},'create','payment',${String(row.id)},${tx.json(row)},${requestId})\`;
+    `;
+    await tx.`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id)
+      values (${user.companyId}::uuid,${String(row.id)}::uuid,${user.actorRef},'created',${asText(body.note,500)||null},${requestId})`;
+    await tx.`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id)
+      values (${user.companyId}::uuid,${user.actorRef},'create','payment',${String(row.id)},${tx.json(row)},${requestId})`;
     return [row];
   });
   return payment;
@@ -336,14 +336,14 @@ async function approvePayment(body: Record<string, unknown>, user: { companyId: 
   const id = asText(body.payment_id,36);
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400,"รหัสการชำระเงินไม่ถูกต้อง");
   const [payment] = await db!.begin(async tx => {
-    const [row] = await tx.\`select id,status,created_by from finance.payments where id=${id}::uuid and company_id=${user.companyId}::uuid for update\`;
+    const [row] = await tx.`select id,status,created_by from finance.payments where id=${id}::uuid and company_id=${user.companyId}::uuid for update`;
     if (!row) throw new HttpError(404,"ไม่พบรายการชำระเงิน");
     if (row.created_by === user.actorRef) throw new HttpError(403,"ผู้สร้างรายการไม่สามารถอนุมัติรายการของตนเองได้");
     if (row.status !== "pending") throw new HttpError(409,"รายการนี้ไม่ได้อยู่ในสถานะรออนุมัติ");
-    const [updated] = await tx.\`update finance.payments set status='approved', approved_by=${user.actorRef} where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,payment_type,payment_date,amount,method,reference_number,status,approved_by,created_by,created_at\`;
-    await tx.\`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id) values (${user.companyId}::uuid,${id}::uuid,${user.actorRef},'approved',${asText(body.note,500)||null},${requestId})\`;
-    await tx.\`insert into finance.approval_events (company_id,entity_type,entity_id,action,actor_ref,note,request_id) values (${user.companyId}::uuid,'payment',${id}::uuid,'approved',${user.actorRef},${asText(body.note,500)||null},${requestId})\`;
-    await tx.\`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'approve','payment',${id},${tx.json(updated)},${requestId})\`;
+    const [updated] = await tx.`update finance.payments set status='approved', approved_by=${user.actorRef} where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,payment_type,payment_date,amount,method,reference_number,status,approved_by,created_by,created_at`;
+    await tx.`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id) values (${user.companyId}::uuid,${id}::uuid,${user.actorRef},'approved',${asText(body.note,500)||null},${requestId})`;
+    await tx.`insert into finance.approval_events (company_id,entity_type,entity_id,action,actor_ref,note,request_id) values (${user.companyId}::uuid,'payment',${id}::uuid,'approved',${user.actorRef},${asText(body.note,500)||null},${requestId})`;
+    await tx.`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'approve','payment',${id},${tx.json(updated)},${requestId})`;
     return [updated];
   });
   return payment;
@@ -355,12 +355,12 @@ async function markPaymentPaid(body: Record<string, unknown>, user: { companyId:
   const paidAt=body.paid_at?new Date(String(body.paid_at)):new Date();
   if(Number.isNaN(paidAt.getTime())) throw new HttpError(400,"วันเวลาชำระเงินจริงไม่ถูกต้อง");
   const [payment]=await db!.begin(async tx=>{
-    const [row]=await tx.\`select id,status from finance.payments where id=${id}::uuid and company_id=${user.companyId}::uuid for update\`;
+    const [row]=await tx.`select id,status from finance.payments where id=${id}::uuid and company_id=${user.companyId}::uuid for update`;
     if(!row) throw new HttpError(404,"ไม่พบรายการชำระเงิน");
     if(row.status!=="approved") throw new HttpError(409,"ต้องอนุมัติรายการก่อนบันทึกว่าชำระแล้ว");
-    const [updated]=await tx.\`update finance.payments set status='paid',paid_at=${paidAt.toISOString()}::timestamptz where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,status,paid_at,approved_by\`;
-    await tx.\`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id) values (${user.companyId}::uuid,${id}::uuid,${user.actorRef},'marked_paid',${asText(body.note,500)||null},${requestId})\`;
-    await tx.\`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'mark_paid','payment',${id},${tx.json(updated)},${requestId})\`;
+    const [updated]=await tx.`update finance.payments set status='paid',paid_at=${paidAt.toISOString()}::timestamptz where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,status,paid_at,approved_by`;
+    await tx.`insert into finance.payment_events (company_id,payment_id,actor_ref,action,note,request_id) values (${user.companyId}::uuid,${id}::uuid,${user.actorRef},'marked_paid',${asText(body.note,500)||null},${requestId})`;
+    await tx.`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'mark_paid','payment',${id},${tx.json(updated)},${requestId})`;
     return [updated];
   });
   return payment;
