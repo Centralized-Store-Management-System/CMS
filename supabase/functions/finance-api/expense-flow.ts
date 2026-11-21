@@ -9,7 +9,7 @@ export const STAGES = ["draft", "request_review", "to_clear", "clear_review", "v
 type Row = Record<string, any>;
 
 function stageOf(r: Row) {
-  if (["void", "reversed"].includes(r.status)) return "cancelled";
+  if (["voided", "void", "reversed"].includes(r.status)) return "cancelled";
   if (r.status === "posted") return "closed";
   if (r.status === "pending_review") return "request_review";
   if (r.status === "draft") return "draft";
