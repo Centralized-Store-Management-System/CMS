@@ -354,6 +354,66 @@ async function approveDocument(body: Record<string, unknown>, user: { companyId:
   });
   return doc;
 }
+async function createJournal(body: Record<string, unknown>, user: { companyId: string; actorRef: string }, requestId: string) {
+  const date=validDate(body.journal_date,"วันที่สมุดรายวัน");
+  const description=asText(body.description,500);
+  const lines=Array.isArray(body.lines)?body.lines as Record<string,unknown>[]:[];
+  if(!description||lines.length<2||lines.length>200) throw new HttpError(400,"สมุดรายวันต้องมีคำอธิบายและรายการอย่างน้อย 2 บรรทัด");
+  const normalized=lines.map((line,index)=>{
+    const accountId=asText(line.account_id,36), debit=asMoney(line.debit,"เดบิต"), credit=asMoney(line.credit,"เครดิต");
+    if(!/^[0-9a-f-]{36}$/i.test(accountId)||((debit>0)===(credit>0))) throw new HttpError(400,"บรรทัด "+(index+1)+" ต้องระบุบัญชีและกรอกเดบิตหรือเครดิตเพียงด้านเดียว");
+    return {accountId,debit,credit,description:asText(line.description,500)};
+  });
+  const totalDebit=round2(normalized.reduce((a,x)=>a+x.debit,0)), totalCredit=round2(normalized.reduce((a,x)=>a+x.credit,0));
+  if(totalDebit<=0||Math.abs(totalDebit-totalCredit)>0.005) throw new HttpError(400,"ยอดเดบิตและเครดิตต้องเท่ากันและมากกว่า 0");
+  const periodKey=date.slice(0,7);
+  const [journal]=await db!.begin(async tx=>{
+    for(const line of normalized){
+      const [account]=await tx`select id from finance.chart_of_accounts where id=${line.accountId}::uuid and company_id=${user.companyId}::uuid and is_active=true limit 1`;
+      if(!account) throw new HttpError(400,"พบรหัสบัญชีที่ไม่มีอยู่หรือไม่อยู่ในบริษัทนี้");
+    }
+    const [seq]=await tx`insert into finance.journal_sequences(company_id,prefix,period_key,next_number,padding)
+      values(${user.companyId}::uuid,'JE',${periodKey},2,5)
+      on conflict(company_id,period_key) do update set next_number=finance.journal_sequences.next_number+1
+      returning next_number-1 as allocated`;
+    const journalNo="JE-"+periodKey.replace("-","")+"-"+String(seq.allocated).padStart(5,"0");
+    const [created]=await tx`insert into finance.journal_entries(company_id,journal_number,journal_date,description,status,total_debit,total_credit,created_by)
+      values(${user.companyId}::uuid,${journalNo},${date}::date,${description},'pending_review',${totalDebit},${totalCredit},${user.actorRef})
+      returning id,journal_number,journal_date,description,status,total_debit,total_credit,created_by`;
+    for(let i=0;i<normalized.length;i++){
+      const line=normalized[i];
+      await tx`insert into finance.journal_lines(journal_entry_id,account_id,line_no,description,debit,credit)
+        values(${String(created.id)}::uuid,${line.accountId}::uuid,${i+1},${line.description||null},${line.debit},${line.credit})`;
+    }
+    await tx`insert into finance.approval_events(company_id,entity_type,entity_id,action,actor_ref,note,request_id)
+      values(${user.companyId}::uuid,'journal',${String(created.id)}::uuid,'submitted',${user.actorRef},'Journal created for review',${requestId})`;
+    await tx`insert into finance.audit_events(company_id,actor_ref,action,entity_type,entity_id,after_data,request_id)
+      values(${user.companyId}::uuid,${user.actorRef},'create','journal',${String(created.id)},${tx.json({...created,line_count:normalized.length})},${requestId})`;
+    return [created];
+  });
+  return journal;
+}
+async function postJournal(body: Record<string, unknown>, user: { companyId: string; actorRef: string; role: string }, requestId: string) {
+  requireOwner(user);
+  const id=asText(body.journal_id,36);
+  if(!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400,"รหัสสมุดรายวันไม่ถูกต้อง");
+  const [journal]=await db!.begin(async tx=>{
+    const [row]=await tx`select id,status,created_by,journal_date,total_debit,total_credit from finance.journal_entries where id=${id}::uuid and company_id=${user.companyId}::uuid for update`;
+    if(!row) throw new HttpError(404,"ไม่พบสมุดรายวัน");
+    if(row.created_by===user.actorRef) throw new HttpError(403,"ผู้สร้างสมุดรายวันไม่สามารถอนุมัติรายการของตนเองได้");
+    if(row.status!=="pending_review") throw new HttpError(409,"สมุดรายวันไม่ได้อยู่ในสถานะรออนุมัติ");
+    if(Number(row.total_debit)<=0||Math.abs(Number(row.total_debit)-Number(row.total_credit))>0.005) throw new HttpError(409,"สมุดรายวันไม่สมดุล");
+    const [period]=await tx`select id from finance.accounting_periods where company_id=${user.companyId}::uuid and starts_on<=${row.journal_date}::date and ends_on>=${row.journal_date}::date and status in ('open','reopened') limit 1`;
+    if(!period) throw new HttpError(409,"ไม่พบรอบบัญชีที่เปิดอยู่สำหรับวันที่นี้");
+    const [updated]=await tx`update finance.journal_entries set status='posted',approved_by=${user.actorRef},posted_at=now() where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,journal_number,journal_date,status,total_debit,total_credit,approved_by,posted_at`;
+    await tx`insert into finance.approval_events(company_id,entity_type,entity_id,action,actor_ref,note,request_id)
+      values(${user.companyId}::uuid,'journal',${id}::uuid,'posted',${user.actorRef},${asText(body.note,500)||null},${requestId})`;
+    await tx`insert into finance.audit_events(company_id,actor_ref,action,entity_type,entity_id,after_data,request_id)
+      values(${user.companyId}::uuid,${user.actorRef},'post','journal',${id},${tx.json(updated)},${requestId})`;
+    return [updated];
+  });
+  return journal;
+}
 async function createPayment(body: Record<string, unknown>, user: { companyId: string; actorRef: string }, requestId: string, idempotencyKey: string) {
   if (!idempotencyKey || idempotencyKey.length < 8) throw new HttpError(400, "ต้องมี Idempotency Key เพื่อป้องกันการบันทึกซ้ำ");
   const type = asText(body.payment_type, 20);
@@ -488,7 +548,15 @@ Deno.serve(async (req: Request) => {
       const payment = await markPaymentPaid(body, user, requestId);
       return json({ ok: true, data: payment }, 200, origin);
     }
-    if (action === "period.close" || action === "journal.post" || action === "tax.submit") {
+    if (action === "journal.create") {
+      const journal = await createJournal(body, user, requestId);
+      return json({ ok: true, data: journal }, 201, origin);
+    }
+    if (action === "journal.post") {
+      const journal = await postJournal(body, user, requestId);
+      return json({ ok: true, data: journal }, 200, origin);
+    }
+    if (action === "period.close" || action === "tax.submit") {
       requireOwner(user);
       throw new HttpError(501, "Workflow นี้ยังไม่เปิดใช้");
     }
