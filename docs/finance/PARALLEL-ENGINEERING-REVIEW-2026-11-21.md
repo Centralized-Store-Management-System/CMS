@@ -120,3 +120,42 @@ Migration source:
 `supabase/migrations/202611210002_finance_journal_line_tenant_integrity.sql`
 
 No Finance transaction records were created or changed. Current key row counts remain: companies=1 (UAT workspace), partners=0, documents=0, payments=0, journal_entries=0, journal_lines=0, audit_events=0.
+
+
+## Finance module implementation progress (2026-11-21, latest)
+
+### Database migrations applied and verified
+- `finance_tenant_integrity_v2`: 14 composite tenant-consistency foreign keys plus supporting unique indexes.
+- `finance_journal_line_tenant_integrity`: non-null journal_lines.company_id, parent-derived trigger, and composite FKs to journal, account, and partner.
+- `finance_payment_idempotency`: company-scoped unique idempotency key for safe payment retries.
+- All migrations were applied to the existing isolated UAT workspace only. No real income/expense/payment transactions were seeded.
+
+### Edge Function deployed
+- Function: `finance-api`
+- Live status: ACTIVE
+- Deployed version: 4
+- Gateway JWT verification: false by design because the function performs CMS custom-session validation itself.
+- Runtime readiness check: an unauthenticated GET returned HTTP 401 (expected), rather than a missing-function or configuration error. This confirms the deployed route is responding and the function's deny-without-CMS-session path is active. A valid CMS-authenticated browser test is still required.
+
+### API actions implemented in deployed source
+- Reads: session, company, summary, audit, partners, accounts, documents, payments, tax-transactions, journals, periods.
+- Writes: partner.create, account.create, document.create, document.submit, document.approve, payment.create, payment.approve, payment.mark-paid, journal.create, journal.post.
+- Document and payment approval enforce maker-checker separation. Journal posting requires balanced totals and an open accounting period.
+- VAT output/input and WHT source transactions are generated from document line totals. The tax screen labels them as source transactions, not as a Revenue Department filing or proof of submission.
+- The first CMS Owner can be provisioned automatically only when there are zero active Finance role mappings and exactly one active UAT company. No role was manually seeded and no CMS actor reference was guessed.
+
+### Frontend changes
+- Dashboard now authenticates and loads live summary from Finance API.
+- Income and expense forms persist draft documents and submit them for review.
+- Payment screen connects to payment register with pending/approved/paid states and approval actions.
+- VAT/WHT screen reads source tax transactions.
+- Journal screen creates balanced entries and offers posting actions, subject to maker-checker and open-period controls.
+- JavaScript parse checks passed for Finance controller, transaction module, and new workflow module.
+
+### Still outstanding / not claimed as complete
+- A valid CMS session has not yet been exercised against Finance API from the user's browser. Therefore first-owner bootstrap and actor mapping remain pending live confirmation.
+- No live business UAT transaction has been created or end-to-end approved/posted yet.
+- Company legal profile, tax profile, accounting periods, and chart of accounts need operator/accountant review and setup. The current company is explicitly named `Café Amazon – CMS Finance Test Workspace`, environment `uat`, VAT registration false.
+- External tax filing to the Revenue Department is not integrated; no filing has been submitted.
+- Browser/mobile regression and full Deno type-check are not yet verified.
+- Existing CMS authentication and shared runtime files were not changed.
