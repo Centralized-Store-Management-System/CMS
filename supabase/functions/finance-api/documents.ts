@@ -57,7 +57,7 @@ async function writeLines(tx: Tx, docId: string, c: Calc) {
 const COLS = "id, document_type, document_number, document_date, due_date, partner_id, status, subtotal, vat_total, wht_total, grand_total, reference, notes, created_by, submitted_by, approved_by, posted_at, created_at";
 
 export async function createDocument(body: Record<string, unknown>, u: User, rid: string, idem: string) {
-  need(u, "write");
+  need(u, "request");
   const type = oneOf(body.document_type, TYPES, "ประเภทเอกสาร");
   const d = date(body.document_date, "วันที่เอกสาร");
   const due = body.due_date ? date(body.due_date, "วันครบกำหนด") : null;
@@ -90,13 +90,13 @@ export async function createDocument(body: Record<string, unknown>, u: User, rid
 }
 
 export async function updateDocument(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "write");
+  need(u, "request");
   const id = uuid(body.document_id, "รหัสเอกสาร")!;
   return await db().begin(async (tx: Tx) => {
     const [old] = await tx`select * from finance.documents where id = ${id}::uuid and company_id = ${u.companyId}::uuid for update`;
     if (!old) fail(404, "ไม่พบเอกสาร");
     if (old.status !== "draft") fail(409, "แก้ไขได้เฉพาะเอกสารฉบับร่าง (ถ้าส่งตรวจแล้ว ให้ผู้อนุมัติตีกลับก่อน)");
-    if (old.created_by !== u.actorRef && !["owner", "approver"].includes(u.role)) fail(403, "แก้ไขได้เฉพาะผู้สร้างเอกสาร หรือผู้อนุมัติ");
+    if (old.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "แก้ไขได้เฉพาะผู้สร้างเอกสาร หรือ Manager");
     const d = date(body.document_date, "วันที่เอกสาร");
     const due = body.due_date ? date(body.due_date, "วันครบกำหนด") : null;
     if (due && due < d) fail(400, "วันครบกำหนดต้องไม่ก่อนวันที่เอกสาร");
@@ -115,12 +115,13 @@ export async function updateDocument(body: Record<string, unknown>, u: User, rid
 }
 
 export async function submitDocument(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "write");
+  need(u, "request");
   const id = uuid(body.document_id, "รหัสเอกสาร")!;
   return await db().begin(async (tx: Tx) => {
-    const [r] = await tx`select id, status from finance.documents where id = ${id}::uuid and company_id = ${u.companyId}::uuid for update`;
+    const [r] = await tx`select id, status, created_by from finance.documents where id = ${id}::uuid and company_id = ${u.companyId}::uuid for update`;
     if (!r) fail(404, "ไม่พบเอกสาร");
     if (r.status !== "draft") fail(409, "ส่งตรวจได้เฉพาะเอกสารฉบับร่าง");
+    if (r.created_by !== u.actorRef && !["owner", "approver", "manager"].includes(u.role)) fail(403, "ส่งตรวจได้เฉพาะรายการของคุณ หรือให้ Manager ดำเนินการ");
     const [doc] = await tx`update finance.documents set status = 'pending_review', submitted_by = ${u.actorRef} where id = ${id}::uuid returning id, document_number, status`;
     await approvalEvent(tx, u, "document", id, "submitted", opt(body.note, 500), rid);
     await audit(tx, u, "submit", "document", id, doc, rid);
@@ -145,7 +146,7 @@ export async function returnDocument(body: Record<string, unknown>, u: User, rid
 }
 
 export async function voidDocument(body: Record<string, unknown>, u: User, rid: string) {
-  need(u, "write");
+  need(u, "request");
   const id = uuid(body.document_id, "รหัสเอกสาร")!;
   const reason = text(body.reason, 500);
   if (!reason) fail(400, "กรุณาระบุเหตุผลที่ยกเลิก");
