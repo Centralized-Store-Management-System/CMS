@@ -27,6 +27,26 @@ if(key==='partners'&&tableBody&&window.FinanceAuth){
   items.forEach(row=>{const tr=document.createElement('tr');[row.display_name,row.partner_type,row.tax_id||'—',row.phone||'—',row.is_active?'ใช้งาน':'ปิดใช้งาน'].forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td)});tableBody.appendChild(tr)});
  }).catch(err=>{const td=document.createElement('td');td.colSpan=5;td.className='fm-empty-cell';td.textContent=err.message||'ไม่สามารถโหลดข้อมูลคู่ค้าได้';tableBody.replaceChildren(td)});
 }
-validate('fmAccountForm','fmAccountResult',d=>!/^[0-9A-Za-z.-]{2,20}$/.test(d.account_code)?'รหัสบัญชีต้องมี 2–20 ตัวอักษร':'')}
+validate('fmAccountForm','fmAccountResult',d=>!/^[0-9A-Za-z.-]{2,20}$/.test(d.account_code)?'รหัสบัญชีต้องมี 2–20 ตัวอักษร':'');
+const accountForm=$('fmAccountForm'),accountResult=$('fmAccountResult');
+if(accountForm)accountForm.onsubmit=async e=>{
+ e.preventDefault();const d=Object.fromEntries(new FormData(accountForm));
+ if(!/^[0-9A-Za-z.-]{2,20}$/.test(d.account_code)){accountResult.textContent='รหัสบัญชีต้องมี 2–20 ตัวอักษร';accountResult.classList.add('error');return}
+ accountResult.textContent='กำลังบันทึกผังบัญชี…';accountResult.classList.remove('error');
+ try{
+  const row=await window.FinanceAuth.request('account.create',{method:'POST',body:d});
+  const tbody=root.querySelector('.fm-table-wrap tbody');
+  if(tbody){if(tbody.querySelector('.fm-empty-cell'))tbody.innerHTML='';const tr=document.createElement('tr');[row.account_code,row.account_name,row.account_type,row.is_active?'ใช้งาน':'ปิดใช้งาน'].forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td)});tbody.prepend(tr)}
+  accountResult.textContent='เพิ่มบัญชีเรียบร้อย';accountForm.reset();open('fmAccountModal',false);
+ }catch(err){accountResult.textContent=err.message||'บันทึกผังบัญชีไม่สำเร็จ';accountResult.classList.add('error')}
+};
+const accountBody=root.querySelector('.fm-table-wrap tbody');
+if(key==='accounts'&&accountBody&&window.FinanceAuth){
+ window.FinanceAuth.request('accounts').then(result=>{
+  const items=result.items||[];if(!items.length)return;accountBody.innerHTML='';
+  items.forEach(row=>{const tr=document.createElement('tr');[row.account_code,row.account_name,row.account_type,row.is_active?'ใช้งาน':'ปิดใช้งาน'].forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td)});accountBody.appendChild(tr)});
+ }).catch(err=>{const td=document.createElement('td');td.colSpan=4;td.className='fm-empty-cell';td.textContent=err.message||'ไม่สามารถโหลดผังบัญชีได้';accountBody.replaceChildren(td)});
+}
+}
 window.FinanceMasterData=Object.freeze({render:(key,root)=>{root.innerHTML=key==='company'?company():key==='partners'?partners():accounts();bind(root,key)}});
 })();
