@@ -40,7 +40,7 @@ const WRITE: Record<string, Writer> = {
   "document.void": D.voidDocument, "document.approve": D.approveDocument, "document.reverse": D.reverseDocument,
   "payment.create": P.createPayment, "payment.approve": P.approvePayment, "payment.reject": P.rejectPayment, "payment.cancel": P.cancelPayment, "payment.mark-paid": P.markPaid,
   "payment.verify-documents": V.verifyPaymentDocuments,
-  "expense-clearance.submit": C.submitClearance, "expense-clearance.approve": C.approveClearance, "expense-clearance.return": C.returnClearance,
+  "expense-clearance.submit": C.submitClearance, "expense-clearance.approve": C.approveClearance, "expense-clearance.return": C.returnClearance, "expense-clearance.verify": C.verifyClearance,
   "journal.create": J.createJournal, "journal.submit": J.submitJournal, "journal.post": J.postJournal, "journal.reject": J.rejectJournal, "journal.delete": J.deleteDraftJournal, "journal.reverse": J.reverseJournal,
   "period.create-year": J.createPeriods, "period.close": J.closePeriod, "period.reopen": J.reopenPeriod,
   "tax.prepare": T.prepareFiling, "tax.submit-review": T.submitFilingReview, "tax.return": T.returnFiling, "tax.approve": T.approveFiling, "tax.mark-submitted": T.markFiled, "tax.mark-paid": T.markFilingPaid,
@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
       const limitedReads: Record<string, string[]> = {
         manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances"],
         staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances"],
-        verifier: ["verification-queue", "payment-files", "file-url"],
+        verifier: ["verification-queue", "payment-files", "file-url", "expense-clearances"],
       };
       const allowedReads = limitedReads[user.role];
       if (allowedReads && !allowedReads.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ดูข้อมูลส่วนนี้");
@@ -92,9 +92,9 @@ Deno.serve(async (req: Request) => {
       if (declaredLength > 20 * 1024 * 1024 + 256 * 1024) throw new HttpError(413, "ไฟล์ต้องมีขนาดไม่เกิน 20 MB");
       const form = await req.formData();
       const uploadAction = text(form.get("action"), 40);
-      if (uploadAction !== "file.upload") throw new HttpError(404, "ไม่พบ Finance API action");
+      if (uploadAction !== "file.upload" && uploadAction !== "expense-clearance.file.upload") throw new HttpError(404, "ไม่พบ Finance API action");
       if (!["owner", "manager", "staff", "approver", "accountant"].includes(user.role)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์แนบเอกสาร");
-      const data = await V.uploadPaymentFile(form, user, rid);
+      const data = uploadAction === "expense-clearance.file.upload" ? await C.uploadClearanceFile(form, user, rid) : await V.uploadPaymentFile(form, user, rid);
       return json({ ok: true, data }, 201, origin);
     }
     const raw = await req.text();
@@ -106,7 +106,7 @@ Deno.serve(async (req: Request) => {
     const limitedWrites: Record<string, string[]> = {
       manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit"],
       staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit"],
-      verifier: ["payment.verify-documents"],
+      verifier: ["payment.verify-documents", "expense-clearance.verify"],
     };
     const allowedWrites = limitedWrites[user.role];
     if (allowedWrites && !allowedWrites.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ทำรายการนี้");
