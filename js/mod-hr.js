@@ -127,7 +127,7 @@ function openEmp(id, draft) {
     title: id ? fullName(e) : 'เพิ่มพนักงาน', fields: F_EMP(e), data: { ...e, position: (HR_POSITIONS.find(p=>p.id===e.positionId)||{}).name_th || e.position || '', pin: '' },
     extraHTML: `${id && can('schedule_edit', 'schedule_view') ? `<p class="note">กะและวันหยุดประจำสัปดาห์: ${esc(patText(id) || 'ยังไม่ได้ตั้ง')} <a href="#sched/pattern">ตั้งที่ ตารางงาน > รูปแบบกะ</a></p>` : ''}<p class="note">เลขบัตรประชาชน บัญชีธนาคาร และรูปถ่ายเป็นข้อมูลส่วนบุคคล เก็บในไฟล์ HR แยกจากระบบอื่น เห็นได้เฉพาะ Owner และผู้มีสิทธิ์ HR ของสาขานั้น</p>${id && typeof empHistHTML === 'function' ? empHistHTML(id) : ''}`,
     onSave: async v => {
-      if(HR_POSITION_ERROR&&(!id||v.position!==e.position)) throw new Error('Position Master ไม่พร้อมใช้งาน จึงไม่สามารถสร้างพนักงานหรือเปลี่ยนตำแหน่งได้ในขณะนี้');
+      if(!HR_POSITION_LOADED||HR_POSITION_ERROR) throw new Error('กำลังโหลดหรือเชื่อมต่อ Position Master ไม่สำเร็จ กรุณารอให้โหลดข้อมูลตำแหน่งก่อนบันทึกพนักงาน');
       const pin = String(v.pin || '').trim();
       if (pin && !/^\d{4,6}$/.test(pin)) throw new Error('PIN ต้องเป็นตัวเลข 4–6 หลัก');
       if (S.t.employees.some(x => x.id !== v.id && String(x.code).toLowerCase() === String(v.code).toLowerCase())) throw new Error('รหัสพนักงานซ้ำ');
