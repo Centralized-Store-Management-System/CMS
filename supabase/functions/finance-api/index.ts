@@ -71,6 +71,14 @@ Deno.serve(async (req: Request) => {
         company: { id: user.companyId, name: user.companyName, currency: user.currency, environment: user.environment, vatRegistered: user.vatRegistered, allowSelfApproval: user.allowSelfApproval },
         capabilities: capabilities(user),
       } }, 200, origin);
+      const limitedReads: Record<string, string[]> = {
+        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url"],
+        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url"],
+        verifier: ["verification-queue", "payment-files", "file-url"],
+      };
+      const allowedReads = limitedReads[user.role];
+      if (allowedReads && !allowedReads.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ดูข้อมูลส่วนนี้");
+      if (action === "approvals" && !capabilities(user).approve) throw new HttpError(403, "เฉพาะ Owner หรือผู้อนุมัติเท่านั้น");
       const fn = READ[action];
       if (!fn) throw new HttpError(404, "ไม่พบ Finance API action");
       return json({ ok: true, data: await fn(url, user) }, 200, origin);
@@ -80,6 +88,7 @@ Deno.serve(async (req: Request) => {
       const form = await req.formData();
       const uploadAction = text(form.get("action"), 40);
       if (uploadAction !== "file.upload") throw new HttpError(404, "ไม่พบ Finance API action");
+      if (!["owner", "manager", "staff", "approver", "accountant"].includes(user.role)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์แนบเอกสาร");
       const data = await V.uploadPaymentFile(form, user, rid);
       return json({ ok: true, data }, 201, origin);
     }
@@ -89,6 +98,13 @@ Deno.serve(async (req: Request) => {
     try { body = JSON.parse(raw); } catch (_) { throw new HttpError(400, "รูปแบบข้อมูลไม่ถูกต้อง"); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "รูปแบบข้อมูลไม่ถูกต้อง");
     const action = text(body.action, 40);
+    const limitedWrites: Record<string, string[]> = {
+      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel"],
+      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel"],
+      verifier: ["payment.verify-documents"],
+    };
+    const allowedWrites = limitedWrites[user.role];
+    if (allowedWrites && !allowedWrites.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ทำรายการนี้");
     const fn = WRITE[action];
     if (!fn) throw new HttpError(404, "ไม่พบ Finance API action");
     const idem = text(req.headers.get("idempotency-key") || body.idempotency_key, 120);
