@@ -57,3 +57,13 @@ Updated: 21 Nov 2026, UAT project `ytxbnqosenolojifeikf`.
 ## Safety decision
 
 This phase is intentionally additive and isolated on a feature branch. Do not merge to main, apply the migration to the shared UAT project, or deploy the Edge Function until the Finance branch coordination and UAT test window are confirmed.
+
+## Phase 2 — HR ↔ Users position reference hardening
+
+Branch: `feat/hr-position-user-sync-hardening`
+
+- Updated the browser-side HR/User synchronization wrapper to propagate `positionId`, `positionCode`, and the legacy display label in both directions.
+- Position-only changes do not clear legacy custom permissions; legacy permissions are cleared only when the legacy role itself changes.
+- Existing role, branch, branch-access and employment-status synchronization behavior is retained.
+- This is local application-state synchronization after the existing DB write. It does not claim a transactional server-side identity sync or cross-application IAM provisioning.
+- Automated browser regression and live HR/Users account validation remain required before merge/deployment.
