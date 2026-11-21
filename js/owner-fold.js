@@ -115,7 +115,8 @@
   }
   function build(titleEl, bodyNodes, host, kind) {
     const f = document.createElement('section');
-    f.className = 'ocf ' + (kind === 'a' ? 'ocf-card' : 'ocf-inner');   /* อย่าใช้ ocf-b: ชื่อชนกับป้ายสถานะ */ f.dataset.key = keyOf(titleEl);
+    f.className = 'ocf ' + (kind === 'a' ? 'ocf-card' : 'ocf-inner');   /* อย่าใช้ ocf-b: ชื่อชนกับป้ายสถานะ */
+    const g = groupOf(titleEl); f.dataset.key = g ? view() + ':grp:' + g : keyOf(titleEl); if (g) f.dataset.grp = g;
     const head = document.createElement('div');
     head.className = 'ocf-head'; head.setAttribute('role', 'button'); head.tabIndex = 0;
     const t = document.createElement('div'); t.className = 'ocf-title';
@@ -134,7 +135,9 @@
   }
   const STOP = el => el.matches('h1, h3.h3, .oc-it-section-head, section, .ocf, .oc-it-hero, .oc-it-summary, .oc-it-actions, style, script');
 
-  const NOFOLD = /^(Theme Rollout|Owner Theme Preview)/;   // IT Control Center: ไม่ย่อ (เจ้าของขอ 21 พ.ย.)
+  // กลุ่มที่ย่อ/ขยายพร้อมกัน (เจ้าของขอ 21 พ.ย.): IT Control Center การ์ด Theme Rollout + Owner Theme Preview
+  const GROUPS = [['theme', /^(Theme Rollout|Owner Theme Preview)/]];
+  const groupOf = el => { const t = String(el.textContent || '').trim(); const g = GROUPS.find(x => x[1].test(t)); return g ? g[0] : ''; };
   const SKIP = { dash: 1 };   // หน้าที่ไม่ย่อ: แดชบอร์ด (กราฟ + แตะวันดูรายละเอียด) แสดงแบบเดิม
   function process(main) {
     if (SKIP[view()]) return;
@@ -150,7 +153,7 @@
       if (sec.closest('.ocf') || sec.querySelector(':scope > .ocf-wrapped')) return;
       const title = sec.querySelector(':scope > .h2, :scope > h2, :scope > .oc-ops-head, :scope > h3');
       if (!title) return;
-      if (NOFOLD.test(String(title.textContent || '').trim())) return;   // การ์ดที่ใช้บ่อย แสดงเต็มเสมอ
+
       const rest = [...sec.children].filter(x => x !== title);
       if (!rest.length) return;
       sec.classList.add('ocf-host');
@@ -208,11 +211,17 @@
     if (!head) return;
     // ปุ่ม/ลิงก์/ช่องกรอกที่อยู่ในหัวข้อเดิม ทำงานตามเดิม ไม่ย่อ/ขยาย
     if (e.target.closest('button, a, input, select, textarea, label, [data-oc], [data-heal]') && !e.target.closest('.ocf-side, .ocf-badges')) return;
-    const f = head.parentElement; setOpen(f, !f.classList.contains('open'), true);
+    toggle(head.parentElement);
   });
+  // ย่อ/ขยาย: ถ้าอยู่ในกลุ่ม ทำพร้อมกันทั้งกลุ่ม
+  function toggle(f) {
+    const open = !f.classList.contains('open');
+    const list = f.dataset.grp ? document.querySelectorAll('#oc-main .ocf[data-grp="' + f.dataset.grp + '"]') : [f];
+    list.forEach(x => setOpen(x, open, true));
+  }
   document.addEventListener('keydown', e => {
     const head = e.target.closest && e.target.closest('.ocf-head');
-    if (head && e.target === head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); const f = head.parentElement; setOpen(f, !f.classList.contains('open'), true); }
+    if (head && e.target === head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(head.parentElement); }
   });
   window.OC_FOLD = { run };
 })();
