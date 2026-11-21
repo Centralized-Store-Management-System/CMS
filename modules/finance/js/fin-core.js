@@ -36,6 +36,25 @@
     return json.data;
   }
   const api = { get: (a, q, o) => req('GET', a, q, o), post: (a, b, o) => req('POST', a, b, o) };
+  async function upload(action, fields, file) {
+    const t = token();
+    if (!t) throw new ApiError(401, 'ไม่พบ CMS Session');
+    const form = new FormData();
+    form.append('action', action);
+    Object.entries(fields || {}).forEach(([k, v]) => form.append(k, String(v)));
+    form.append('file', file);
+    let res, json;
+    try {
+      res = await fetch(API_URL, { method: 'POST', headers: { 'x-cms-session': t, accept: 'application/json' }, body: form, cache: 'no-store' });
+      json = await res.json().catch(() => ({}));
+    } catch (_) { throw new ApiError(0, 'อัปโหลดไฟล์ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'); }
+    if (!res.ok || !json.ok) {
+      const err = new ApiError(res.status, json.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
+      if (res.status === 401) FIN.onAuthLost(err.message);
+      throw err;
+    }
+    return json.data;
+  }
 
   // ---------- รูปแบบ ----------
   const nf = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -57,7 +76,7 @@
       preparing: ['กำลังจัดทำ', 'n'], review: ['รอตรวจ', 'warn'], submitted: ['ยื่นแล้ว', 'info'], amended: ['ยื่นเพิ่มเติม', 'info'],
       reviewed: ['รอยื่น', 'n'], filed: ['ยื่นแล้ว', 'ok'], adjusted: ['ปรับปรุง', 'mute'], unreviewed: ['ยังไม่ตรวจ', 'n'],
     },
-    role: { owner: 'เจ้าของ (Owner)', approver: 'ผู้อนุมัติ', accountant: 'ผู้บันทึกบัญชี', viewer: 'ดูอย่างเดียว' },
+    role: { owner: 'เจ้าของ (Owner)', approver: 'ผู้อนุมัติ', manager: 'Manager', staff: 'Staff', verifier: 'Final Verifier', accountant: 'ผู้บันทึกบัญชี', viewer: 'ดูอย่างเดียว' },
     method: { cash: 'เงินสด', bank_transfer: 'โอนเงิน', credit_card: 'บัตรเครดิต', cheque: 'เช็ค', other: 'อื่นๆ' },
     payType: { receipt: 'รับเงิน', disbursement: 'จ่ายเงิน', refund: 'คืนเงิน' },
     acType: { asset: 'สินทรัพย์', liability: 'หนี้สิน', equity: 'ส่วนของเจ้าของ', revenue: 'รายได้', expense: 'ค่าใช้จ่าย' },
@@ -130,6 +149,7 @@
     'js/fin-pages-tax.js?v=1.0.0': ['vat', 'wht', 'filings'],
     'js/fin-pages-reports.js?v=1.0.0': ['trial-balance', 'profit-loss', 'balance-sheet', 'ledger', 'aging'],
     'js/fin-pages-admin.js?v=1.0.0': ['company', 'partners', 'users', 'audit', 'settings'],
+    'js/fin-pages-verification.js?v=1.0.0': ['verification'],
   };
   const loaded = {};
   function loadFor(key) {
@@ -168,7 +188,7 @@
   const layer = () => { if (!EMB) return document.body; let l = $('#finLayer'); if (!l) { l = document.createElement('div'); l.id = 'finLayer'; l.className = 'fin-embed fin-layer'; document.body.appendChild(l); } return l; };
 
   const FIN = W.FIN = {
-    api, idem, esc, $, money, baht, d10, thDate, thDateTime, today, thisMonth, monthName, L, badge,
+    api, upload, idem, esc, $, money, baht, d10, thDate, thDateTime, today, thisMonth, monthName, L, badge,
     toast, modal, ask, run, table, csv, head, loading, errorBox, nav, go,
     session: null,
     page(key, def) { PAGES[key] = def; },
