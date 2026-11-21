@@ -9,7 +9,7 @@ const CMS_URL = Deno.env.get("FINANCE_CMS_URL") || (SUPABASE_URL + "/functions/v
 const CACHE_MS = 30_000;
 const cache = new Map<string, { at: number; me: CmsMe }>();
 
-export type Role = "owner" | "approver" | "accountant" | "viewer";
+export type Role = "owner" | "approver" | "manager" | "staff" | "verifier" | "accountant" | "viewer";
 export type CmsMe = { role: string; uid?: string; code?: string; name?: string; perms?: string[] };
 export type User = {
   actorRef: string; displayName: string; role: Role; cmsRole: string; token: string;
@@ -103,12 +103,14 @@ export async function authenticate(token: string): Promise<User> {
 
 // สิทธิ์ตามบทบาท
 export const CAN = {
-  read: ["owner", "approver", "accountant", "viewer"],
-  write: ["owner", "approver", "accountant"],      // บันทึก/แก้ร่าง ส่งตรวจ สร้างรายการชำระ สมุดรายวัน คู่ค้า
-  approve: ["owner", "approver"],                  // อนุมัติ/ตีกลับ เอกสาร การชำระ สมุดรายวัน แบบภาษี
-  admin: ["owner"],                                // ผังบัญชี รอบบัญชี ตั้งค่าบริษัท ผู้ใช้ ล้างข้อมูลทดสอบ เริ่มใช้งานจริง
+  read: ["owner", "approver", "manager", "staff", "verifier", "accountant", "viewer"],
+  request: ["owner", "approver", "manager", "staff", "accountant"],
+  write: ["owner", "approver", "accountant"],
+  approve: ["owner", "approver"],
+  verify: ["owner", "verifier"],
+  admin: ["owner"],
 } as const;
-const LABEL: Record<keyof typeof CAN, string> = { read: "ดูข้อมูล", write: "บันทึกรายการ", approve: "อนุมัติ", admin: "ผู้ดูแล Finance (Owner)" };
+const LABEL: Record<keyof typeof CAN, string> = { read: "ดูข้อมูล", request: "สร้างคำขอ/บันทึกการจ่าย", write: "บันทึกรายการบัญชี", approve: "อนุมัติ", verify: "ตรวจเอกสารขั้นสุดท้าย", admin: "ผู้ดูแล Finance (Owner)" };
 export function need(u: User, cap: keyof typeof CAN) {
   if (!(CAN[cap] as readonly string[]).includes(u.role)) throw new HttpError(403, "สิทธิ์ของคุณไม่พอ — ต้องมีสิทธิ์" + LABEL[cap]);
 }
@@ -123,7 +125,7 @@ export function makerChecker(u: User, createdBy: string | null) {
 }
 export function capabilities(u: User) {
   const has = (c: keyof typeof CAN) => (CAN[c] as readonly string[]).includes(u.role);
-  return { read: has("read"), write: has("write"), approve: has("approve"), admin: has("admin") };
+  return { read: has("read"), request: has("request"), write: has("write"), approve: has("approve"), verify: has("verify"), admin: has("admin") };
 }
 export async function companyRow(tx: Tx, u: User) {
   const [c] = await tx`select * from finance.companies where id = ${u.companyId}::uuid`;
