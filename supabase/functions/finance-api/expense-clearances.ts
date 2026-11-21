@@ -14,8 +14,15 @@ export async function listClearances(url: URL, u: User) {
       (select count(*)::int from finance.document_files f where f.company_id=c.company_id and f.clearance_id=c.id and f.deleted_at is null) as file_count
     from finance.expense_clearances c join finance.documents d on d.id=c.document_id
     where c.company_id=${u.companyId}::uuid
-      and (${u.role} not in ('staff','manager') or d.created_by=${u.actorRef})
-      and (${u.role}<>'staff' or d.created_by=${u.actorRef})
+      and (
+        ${u.role} not in ('staff','manager')
+        or (${u.role}='staff' and d.created_by=${u.actorRef})
+        or (${u.role}='manager' and exists (
+          select 1 from public.staff ms
+          join public.staff rs on rs.cms_ref=d.created_by and rs.is_active=true
+          where ms.cms_ref=${u.actorRef} and ms.is_active=true and ms.branch_id=rs.branch_id
+        ))
+      )
       and (${status}='' or c.status=${status})
     order by c.updated_at desc limit 200`;
   return {items:rows};
@@ -33,7 +40,15 @@ export async function submitClearance(body: Record<string,unknown>,u:User,rid:st
     if(!doc) fail(404,"ไม่พบเอกสารเบิก");
     if(!EXPENSE_DOCS.includes(doc.document_type)) fail(400,"เอกสารนี้ไม่ใช่เอกสารรายจ่าย");
     if(doc.status!=="approved") fail(409,"ต้องได้รับอนุมัติคำขอเบิกก่อนจึงจะเคลียร์ได้");
-    if(doc.created_by!==u.actorRef && !["manager","owner","approver"].includes(u.role)) fail(403,"เคลียร์ได้เฉพาะผู้สร้างคำขอ หรือ Manager");
+    if(doc.created_by!==u.actorRef) {
+      if(["owner","approver"].includes(u.role)) { /* company-wide finance authority */ }
+      else if(u.role==="manager") {
+        const [scope]=await tx`select 1 from public.staff ms
+          join public.staff rs on rs.cms_ref=${doc.created_by} and rs.is_active=true
+          where ms.cms_ref=${u.actorRef} and ms.is_active=true and ms.branch_id=rs.branch_id limit 1`;
+        if(!scope) fail(403,"Manager สามารถเคลียร์ได้เฉพาะเอกสารในสาขาที่รับผิดชอบ");
+      } else fail(403,"เคลียร์ได้เฉพาะผู้สร้างคำขอ หรือผู้มีสิทธิ์ในสาขา");
+    }
     if(amount>Number(doc.grand_total)+0.004) fail(400,"ยอดจ่ายจริงเกินวงเงินที่ Owner อนุมัติ");
     const [existing]=await tx`select * from finance.expense_clearances where document_id=${documentId}::uuid for update`;
     let row;
@@ -154,14 +169,23 @@ const CLEARANCE_MAX_BYTES=20*1024*1024;
 const CLEARANCE_MIME=new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
 function clearanceStorage(){const base=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";if(!base||!key)fail(503,"ระบบจัดเก็บเอกสารยังไม่ได้ตั้งค่า");return{base,key};}
 function clearancePath(path:string){return path.split("/").map(encodeURIComponent).join("/");}
-function canManageClearance(u:User,creator:string){if(creator===u.actorRef||["owner","manager","approver"].includes(u.role))return;fail(403,"ไม่มีสิทธิ์จัดการเอกสารเคลียร์นี้");}
+async function canManageClearance(u:User,creator:string){
+  if(creator===u.actorRef||["owner","approver"].includes(u.role))return;
+  if(u.role==="manager"){
+    const [scope]=await db()`select 1 from public.staff ms
+      join public.staff rs on rs.cms_ref=${creator} and rs.is_active=true
+      where ms.cms_ref=${u.actorRef} and ms.is_active=true and ms.branch_id=rs.branch_id limit 1`;
+    if(scope)return;
+  }
+  fail(403,"ไม่มีสิทธิ์จัดการเอกสารเคลียร์นี้ หรือเอกสารอยู่นอกสาขาที่รับผิดชอบ");
+}
 
 export async function listClearanceFiles(url:URL,u:User){
   need(u,"read");const id=uuid(url.searchParams.get("clearance_id"),"รายการเคลียร์")!;
   const [c]=await db()`select c.id,c.status,d.created_by from finance.expense_clearances c join finance.documents d on d.id=c.document_id
     where c.id=${id}::uuid and c.company_id=${u.companyId}::uuid`;
   if(!c)fail(404,"ไม่พบรายการเคลียร์");
-  if(["staff","manager"].includes(u.role)&&c.created_by!==u.actorRef)fail(403,"ไม่มีสิทธิ์ดูเอกสารนี้");
+  if(["staff","manager"].includes(u.role)&&c.created_by!==u.actorRef) await canManageClearance(u,c.created_by);
   const items=await db()`select id,file_category,original_name,mime_type,size_bytes,created_at,uploaded_by
     from finance.document_files where company_id=${u.companyId}::uuid and clearance_id=${id}::uuid and deleted_at is null order by created_at desc`;
   return{items};
@@ -174,7 +198,7 @@ export async function clearanceFileUrl(url:URL,u:User){
     join finance.documents d on d.id=c.document_id
     where f.id=${fileId}::uuid and f.company_id=${u.companyId}::uuid and f.deleted_at is null`;
   if(!f)fail(404,"ไม่พบไฟล์");
-  if(["staff","manager"].includes(u.role)&&f.created_by!==u.actorRef)fail(403,"ไม่มีสิทธิ์ดูไฟล์นี้");
+  if(["staff","manager"].includes(u.role)&&f.created_by!==u.actorRef) await canManageClearance(u,f.created_by);
   const{base,key}=clearanceStorage();const res=await fetch(`${base}/storage/v1/object/sign/${f.storage_bucket}/${clearancePath(String(f.object_path))}`,{
     method:"POST",headers:{apikey:key,Authorization:`Bearer ${key}`,"content-type":"application/json"},body:JSON.stringify({expiresIn:120})});
   if(!res.ok)fail(502,"สร้างลิงก์เปิดเอกสารไม่สำเร็จ");
@@ -191,7 +215,7 @@ export async function uploadClearanceFile(form:FormData,u:User,rid:string){
   if(!CLEARANCE_MIME.has(file.type))fail(400,"รองรับเฉพาะ PDF, JPG, PNG และ WEBP");
   const sql=db();const[c]=await sql`select c.id,c.status,d.created_by from finance.expense_clearances c join finance.documents d on d.id=c.document_id
     where c.id=${id}::uuid and c.company_id=${u.companyId}::uuid`;
-  if(!c)fail(404,"ไม่พบรายการเคลียร์");canManageClearance(u,c.created_by);
+  if(!c)fail(404,"ไม่พบรายการเคลียร์");await canManageClearance(u,c.created_by);
   if(!["draft","returned","pending_owner_review"].includes(c.status))fail(409,"รายการนี้ถูกส่งตรวจขั้นสุดท้ายแล้ว ไม่สามารถเพิ่มหลักฐานได้");
   const{base,key}=clearanceStorage();const safe=String(file.name||"document").normalize("NFKC").replace(/[^\\p{L}\\p{N}._-]+/gu,"_").replace(/^\\.+/,"").slice(0,100)||"document";
   const path=`${u.companyId}/expense-clearance/${id}/${crypto.randomUUID()}-${safe}`;
