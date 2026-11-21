@@ -103,6 +103,85 @@ document.addEventListener('submit', e => {
 });
 
 
+
+/* Compact IT dashboard: convert existing section headings into tabs; preserve every original node. */
+(function injectItCompactStyles(){
+ if(document.getElementById('it-compact-style'))return;
+ const st=document.createElement('style');st.id='it-compact-style';
+ st.textContent=`
+ .it-tabs{margin:12px 0 18px;border:1px solid var(--line,rgba(120,140,130,.22));border-radius:16px;overflow:hidden;background:var(--card,#fff)}
+ .it-tablist{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;padding:10px;scrollbar-width:thin;border-bottom:1px solid var(--line,rgba(120,140,130,.18));-webkit-overflow-scrolling:touch}
+ .it-tab{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:9px 13px;border:1px solid var(--line,rgba(120,140,130,.25));border-radius:11px;background:transparent;color:inherit;font:600 13px/1.25 inherit;white-space:nowrap;cursor:pointer}
+ .it-tab[aria-selected="true"]{background:#e4f3eb;border-color:#9bcbb3;color:#07583f;box-shadow:inset 0 -2px #0a684a}
+ .it-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#e8ece9;color:#52645b;font-size:11px}
+ .it-tab-count.bad{background:#fee4e2;color:#b42318}
+ .it-tab-count.neutral{background:#fff2cc;color:#8a6410}
+ .it-tabpanel{padding:12px}
+ .it-tabpanel[hidden]{display:none!important}
+ .it-tabpanel h4{margin:0 0 10px;font-size:16px}
+ .it-tabpanel>*:last-child{margin-bottom:0}
+ .it-tab-status{font-size:10px;font-weight:700;padding:4px 7px;border-radius:99px;white-space:nowrap}
+ .it-tab-status.ok{background:#e5f5eb;color:#16794a}.it-tab-status.bad{background:#fee4e2;color:#b42318}.it-tab-status.neutral{background:#fff2cc;color:#8a6410}
+ .it-alert-bell{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid #f3c4c1;border-radius:50%;background:#fff5f4;color:#b42318;font-size:20px;position:relative;cursor:pointer}
+ .it-alert-bell.is-active{animation:itBellRing 1.4s ease-in-out infinite;transform-origin:top center}
+ .it-alert-bell.is-active:after{content:'';position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:50%;background:#e53935;box-shadow:0 0 0 3px rgba(229,57,53,.15)}
+ @keyframes itBellRing{0%,100%{transform:rotate(0)}8%,24%,40%{transform:rotate(12deg)}16%,32%,48%{transform:rotate(-12deg)}60%{transform:rotate(0)}}
+ @media(prefers-reduced-motion:reduce){.it-alert-bell.is-active{animation:none}}
+ `;
+ document.head.appendChild(st);
+})();
+function ocItFoldSections(box){
+ if(!box||box.dataset.itTabsReady==='1')return;
+ const headings=[...box.querySelectorAll(':scope > h4')];
+ if(!headings.length)return;
+ box.dataset.itTabsReady='1';
+ const tabs=document.createElement('section');tabs.className='it-tabs';
+ const list=document.createElement('div');list.className='it-tablist';list.setAttribute('role','tablist');list.setAttribute('aria-label','หมวดข้อมูล IT');
+ const panels=document.createElement('div');panels.className='it-tabpanels';
+ headings.forEach((h,i)=>{
+  const nodes=[];let n=h.nextSibling;
+  while(n&&!(n.nodeType===1&&n.tagName==='H4')){const next=n.nextSibling;nodes.push(n);n=next;}
+  const content=document.createElement('section');content.className='it-tabpanel';content.id='it-tabpanel-'+Math.random().toString(36).slice(2);
+  content.setAttribute('role','tabpanel');content.hidden=true;
+  const heading=document.createElement('h4');heading.textContent=h.textContent||'รายละเอียด';content.appendChild(heading);
+  nodes.forEach(node=>content.appendChild(node));
+  const txt=content.textContent||'';
+  const bad=/CRITICAL|ERROR|FAILED|ผิดปกติ|ล้มเหลว|critical|warning|open alert|รออนุมัติ [1-9]/i.test(txt);
+  const good=/ไม่มีรายการ|ไม่พบ|ปกติ|passed|healthy/i.test(txt);
+  const state=bad?'bad':good?'ok':'neutral';
+  const label=bad?'ผิดปกติ':good?'ปกติ':'ตรวจสอบ';
+  const tab=document.createElement('button');tab.type='button';tab.className='it-tab';tab.id=content.id+'-tab';tab.setAttribute('role','tab');tab.setAttribute('aria-controls',content.id);tab.setAttribute('aria-selected','false');tab.tabIndex=-1;
+  const name=document.createElement('span');name.textContent=h.textContent||'รายละเอียด';tab.appendChild(name);
+  const status=document.createElement('span');status.className='it-tab-status '+state;status.textContent=label;tab.appendChild(status);
+  tab.addEventListener('click',()=>ocItSelectTab(tabs,i));
+  tab.addEventListener('keydown',e=>{if(['ArrowRight','ArrowLeft','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?headings.length-1:(i+(e.key==='ArrowRight'?1:-1)+headings.length)%headings.length;ocItSelectTab(tabs,next,true);}});
+  list.appendChild(tab);panels.appendChild(content);h.remove();
+ });
+ tabs.append(list,panels);box.appendChild(tabs);
+ // Default is intentionally collapsed: show only category tabs and their status.
+}
+function ocItSelectTab(root,index,focus){
+ const tabs=[...root.querySelectorAll(':scope > .it-tablist > .it-tab')],panels=[...root.querySelectorAll(':scope > .it-tabpanels > .it-tabpanel')];
+ tabs.forEach((tab,i)=>{const active=i===index;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;panels[i].hidden=!active;});
+ if(focus&&tabs[index])tabs[index].focus();
+}
+
+function ocItBell(box,active,count){
+ if(!box)return;
+ const head=box.querySelector('.oc-ops-queue-head');if(!head)return;
+ let bell=head.querySelector('.it-alert-bell');
+ if(!bell){bell=document.createElement('button');bell.type='button';bell.className='it-alert-bell';bell.title='ดูการแจ้งเตือน';bell.setAttribute('aria-label','ดูการแจ้งเตือน');bell.textContent='🔔';head.appendChild(bell);}
+ bell.classList.toggle('is-active',!!active);
+ bell.title=active?count+' รายการแจ้งเตือนที่ต้องตรวจสอบ':'ไม่มีการแจ้งเตือนใหม่';
+ bell.setAttribute('aria-label',active?'มี '+count+' รายการแจ้งเตือน กดเพื่อเปิดหมวดเหตุการณ์':'ไม่มีการแจ้งเตือน');
+ bell.onclick=()=>{
+  const tabs=[...box.querySelectorAll('.it-tabs')];
+  let target=null,idx=-1;
+  for(const root of tabs){const labels=[...root.querySelectorAll('.it-tab')];idx=labels.findIndex(x=>/Alert|Anomaly|เหตุการณ์/i.test(x.textContent));if(idx>=0){target=root;break;}}
+  if(target){ocItSelectTab(target,idx);target.scrollIntoView({behavior:'smooth',block:'center'});}
+ };
+}
+
 function ocOpsParseArray(value) { if (Array.isArray(value)) return value; if (typeof value === 'string') { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch (_) {} } return []; }
 async function ocOpsLoadQueue() {
   const box = document.getElementById('oc-ops-queue');
@@ -222,6 +301,9 @@ async function ocOpsLoadQueue() {
       const detail = document.createElement('small'); detail.textContent = item.detail + ' · พบ ' + item.occurrence_count + ' ครั้ง'; row.appendChild(detail);
       box.appendChild(row);
     });
+    ocItFoldSections(box);
+    const activeAlerts=(p.incidents||[]).filter(x=>['open','acknowledged'].includes(x.status)&&['critical','warning'].includes(String(x.severity).toLowerCase()));
+    ocItBell(box,activeAlerts.length>0,activeAlerts.length);
   } catch (e) {
     box.textContent = 'ไม่สามารถโหลด Incident Center: ' + (e.message || 'connection error');
   }
@@ -273,6 +355,9 @@ async function ocOpsControlLoad(){
   section('Anomaly Events',p.anomalies).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.metric_key+' · '+x.severity+' · '+x.status;r.appendChild(b);const d=document.createElement('small');d.textContent='Observed '+x.observed_value+' / baseline '+x.baseline_value+' · samples '+x.sample_count+' · '+x.confidence;r.appendChild(d);box.appendChild(r);});
   section('Integration Test History',p.tests).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';const b=document.createElement('b');b.textContent=x.suite_key+' · '+x.status;r.appendChild(b);const d=document.createElement('small');d.textContent=new Date(x.created_at).toLocaleString('th-TH')+' · '+x.executed_by;r.appendChild(d);box.appendChild(r);});
   section('Forecast Snapshots',p.forecasts).forEach(x=>{const r=document.createElement('div');r.className='oc-ops-incident-row';r.textContent=x.metric_key+' · '+x.confidence+' · '+x.method;box.appendChild(r);});
+  ocItFoldSections(box);
+  const active=(p.alerts||[]).filter(x=>['open','acknowledged'].includes(x.status)&&['critical','warning'].includes(String(x.severity).toLowerCase()));
+  ocItBell(box,active.length>0,active.length);
  }catch(e){box.textContent=e.message||'โหลด Control Center ไม่สำเร็จ';}
 }
 document.addEventListener('click',async e=>{
