@@ -17,6 +17,13 @@
     const head=String(theme.head||defaults.head).replace(/["\\]/g,'');
     root.style.setProperty('--green',primary);
     root.style.setProperty('--brand',primary);
+    root.style.setProperty('--focus',accent);
+    root.style.setProperty('--bg',bg);
+    root.style.setProperty('--sunk', 'color-mix(in srgb,'+bg+' 93%,'+primary+')');
+    root.style.setProperty('--line', 'color-mix(in srgb,'+primary+' 15%,'+bg+')');
+    root.style.setProperty('--font','"'+font+'","IBM Plex Sans Thai","Leelawadee UI","Noto Sans Thai",sans-serif');
+    root.style.setProperty('--display','"'+head+'","IBM Plex Sans Thai","Leelawadee UI",sans-serif');
+    root.style.setProperty('--brand',primary);
     root.style.setProperty('--bg',bg);
     root.style.setProperty('--line', 'color-mix(in srgb,'+primary+' 15%,'+bg+')');
     root.style.setProperty('--dark',primary);
