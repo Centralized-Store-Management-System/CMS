@@ -315,9 +315,13 @@
 
 
 ## Finance CMS — Manager / Staff + Final Verification (21 พ.ย. 2569 · branch `feat/finance-manager-final-verification`)
-- Workflow: Manager/Staff สร้างคำขอ → Owner อนุมัติ → Manager/Staff จ่ายเงินจริงและบันทึกผล → แนบหลักฐานในระบบ → Final Verifier ตรวจและยืนยันความครบถ้วน
-- เตรียม role codes `manager`, `staff`, `verifier`; ยังไม่มีการมอบสิทธิ์ให้ผู้ใช้รายใดโดยอัตโนมัติ
-- Manager/Staff ได้สิทธิ์สร้างคำขอและบันทึกการจ่ายหลังอนุมัติ แต่ไม่มีสิทธิ์อนุมัติ
-- Final Verifier มีสิทธิ์อ่านรายการและตรวจเอกสารเท่านั้น ไม่มีสิทธิ์อนุมัติหรือแก้ไขยอดเงิน
-- หลักฐานจัดเก็บใน private Storage bucket; การแนบไฟล์ใหม่หลังตรวจแล้วจะถูกป้องกันไม่ให้แก้ประวัติการตรวจ
-- Migration เป็น additive; ยังไม่ apply กับ Supabase และยังไม่ deploy Edge Function ระหว่างพัฒนา PR
+- **สถานะ branch ล่าสุด:** `59d53b521e4e7e24edd49e615ba492083b4cde3b` · ahead `main` 41 commits · behind 0 · ยังไม่ merge เข้า main
+- Workflow: Manager/Staff สร้างคำขอ → Owner อนุมัติเอกสารรายจ่าย → Manager/Staff สร้างรายการจ่ายที่เชื่อมเอกสาร (ระบบส่งสถานะเป็น approved พร้อมบันทึกผู้อนุมัติเดิม) → ดำเนินการจ่ายเงินจริง → แนบหลักฐานใน private Storage → Final Verifier ตรวจและยืนยันความครบถ้วน
+- Role codes: `manager`, `staff`, `verifier` ถูกเพิ่มใน schema/API และหน้าจัดการผู้ใช้; **ยังไม่มีการมอบสิทธิ์ให้ผู้ใช้จริงโดยอัตโนมัติ** เจ้าของระบบต้องกำหนดจาก CMS users
+- Manager/Staff ได้สิทธิ์สร้างคำขอและบันทึกการจ่ายหลังอนุมัติ แต่ไม่มีสิทธิ์อนุมัติเอกสารหรือยืนยันเอกสารขั้นสุดท้าย
+- Final Verifier มีสิทธิ์ดูคิวตรวจเอกสาร/เปิด signed URL และยืนยันเอกสารเท่านั้น ไม่มีสิทธิ์อนุมัติ จ่ายเงิน หรือแก้ยอดเงิน
+- **Segregation of Duties:** ผู้สร้างรายการ, ผู้อนุมัติ และผู้บันทึกการจ่าย ห้ามเป็นผู้ตรวจเอกสารขั้นสุดท้ายของรายการเดียวกัน; API ตรวจ actor ทั้งสามและปฏิเสธเมื่อซ้ำกัน (403) · ตรวจซ้ำรายการที่ Verified แล้วจะถูกปฏิเสธ (409)
+- หลักฐานจัดเก็บใน private Storage bucket จำกัดชนิดไฟล์ PDF/JPG/PNG/WEBP ขนาดไม่เกิน 20 MB; หลัง Verified แล้วห้ามแนบ/เปลี่ยนหลักฐานผ่าน workflow นี้
+- E2E เพิ่มกรณี Manager/Staff/Verifier, multipart upload และ mock private Storage; **ยังไม่ได้ยืนยันผลรันชุด E2E ในรอบนี้ และยังต้องเพิ่มกรณีทดสอบ SoD actor ซ้ำโดยตรง**
+- Migration `202611210006_finance_manager_final_verification.sql` เป็น additive; **ยังไม่ apply กับ Supabase และยังไม่ deploy Edge Function** · ห้ามนำขึ้น Production ก่อนรัน migration + E2E + UAT และตรวจ regression ของ CMS login/Finance roles
+- Commits ล่าสุดที่รับเข้าประวัติ: `033ecb3` (SoD final verifier), `dd6a68b` (ส่งต่อ Owner approval ไปยัง disbursement ที่ผูกกับเอกสาร), `59d53b5` (เพิ่ม E2E ตรวจการอนุมัติ Owner ก่อนจ่าย)
