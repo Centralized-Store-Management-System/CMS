@@ -62,7 +62,12 @@ Deno.serve(async (req) => {
         and p.permission_code = ${permission}
       order by g.created_at desc
     `;
-    if (!rows.length) return reply({ ok: true, decision: "deny", reason: "no_active_grant", policy_version: null }, 200, origin);
+    if (!rows.length) {
+      await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state)
+        values(${refs[0]},'iam.authorization.denied','permission',${permission},
+          ${sql.json({ application_key: application, permission_code: permission, decision: "deny", reason: "no_active_grant" })})`;
+      return reply({ ok: true, decision: "deny", reason: "no_active_grant", policy_version: null }, 200, origin);
+    }
 
     const requested = body.resource_scope && typeof body.resource_scope === "object" && !Array.isArray(body.resource_scope) ? body.resource_scope : {};
     const granted = rows.find((row) => {
@@ -72,7 +77,12 @@ Deno.serve(async (req) => {
         return allowed === "*" || (Array.isArray(allowed) && allowed.map(String).includes(String(value))) || (allowed !== undefined && String(allowed) === String(value));
       });
     });
-    if (!granted) return reply({ ok: true, decision: "deny", reason: "scope_mismatch", policy_version: null }, 200, origin);
+    if (!granted) {
+      await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state)
+        values(${refs[0]},'iam.authorization.denied','permission',${permission},
+          ${sql.json({ application_key: application, permission_code: permission, decision: "deny", reason: "scope_mismatch", resource_scope: requested })})`;
+      return reply({ ok: true, decision: "deny", reason: "scope_mismatch", policy_version: null }, 200, origin);
+    }
 
     await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state)
       values(${refs[0]},'iam.authorization.checked','permission',${permission},
@@ -81,6 +91,6 @@ Deno.serve(async (req) => {
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500;
     if (status === 500) console.error("iam-authorize", e);
-    return reply({ ok: false, error: status === 500 ? "authorization_unavailable" : e.message }, status, origin);
+    return reply({ ok: false, error: status === 500 ? "authorization_unavailable" : (e instanceof Error ? e.message : "request_failed") }, status, origin);
   }
 });
