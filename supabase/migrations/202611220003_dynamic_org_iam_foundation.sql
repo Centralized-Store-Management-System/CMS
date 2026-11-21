@@ -25,6 +25,9 @@ create table if not exists public.org_departments (
   unique (organization_id, department_code)
 );
 
+alter table public.hr_positions add column if not exists department_id uuid references public.org_departments(id) on delete restrict;
+alter table public.hr_positions add column if not exists version integer not null default 1;
+
 create table if not exists public.iam_applications (
   id uuid primary key default gen_random_uuid(),
   application_key text not null unique check (application_key ~ '^[a-z0-9_-]{2,60}$'),
