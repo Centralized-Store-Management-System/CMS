@@ -127,19 +127,20 @@ create trigger trg_journal_lines_guard_parent
 before update or delete on finance.journal_lines
 for each row execute function finance.guard_posted_journal_line();
 
-drop trigger if exists trg_approval_events_immutable on finance.approval_events;
-create trigger trg_approval_events_immutable
-before update or delete on finance.approval_events
-for each row execute function finance.reject_audit_mutation();
 
 -- Audit history is append-only even for service_role application code.
 create or replace function finance.reject_audit_mutation()
 returns trigger language plpgsql set search_path = pg_catalog, finance
-as $$
+as $
 begin
   raise exception 'Finance audit events are append-only'
     using errcode = '55000';
-end $$;
+end $;
+
+drop trigger if exists trg_approval_events_immutable on finance.approval_events;
+create trigger trg_approval_events_immutable
+before update or delete on finance.approval_events
+for each row execute function finance.reject_audit_mutation();
 
 drop trigger if exists trg_audit_events_immutable on finance.audit_events;
 create trigger trg_audit_events_immutable
