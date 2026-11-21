@@ -99,9 +99,9 @@ document.addEventListener('click',async e=>{
  if(auth){
   const row=ITCC.rows.find(x=>x.scope_key===auth.dataset.itccAuth);if(!row)return;
   const p=row.auth_profile||{};
-  const login=prompt('Login Profile (บันทึกเป็น Draft เท่านั้น)',p.login||'');if(login===null)return;
-  const mfa=prompt('MFA Profile',p.mfa||'');if(mfa===null)return;
-  const session=prompt('Session Profile',p.session||'');if(session===null)return;
+  const login=await ITDialog.prompt('Login Profile',p.login||'',{title:'Authentication Policy · Draft',placeholder:'ระบุ Login Profile'});if(login===null)return;
+  const mfa=await ITDialog.prompt('MFA Profile',p.mfa||'',{title:'Authentication Policy · Draft',placeholder:'ระบุ MFA Profile'});if(mfa===null)return;
+  const session=await ITDialog.prompt('Session Profile',p.session||'',{title:'Authentication Policy · Draft',placeholder:'ระบุ Session Profile'});if(session===null)return;
   try{await itccRequest('POST',{scopeKey:row.scope_key,changes:{auth_profile:{login,mfa,session,notes:'Draft only; not enforced'}}});toast('บันทึก Authentication Policy Draft แล้ว');await ocControlLoad();}
   catch(err){toast(err.message);}
  }
