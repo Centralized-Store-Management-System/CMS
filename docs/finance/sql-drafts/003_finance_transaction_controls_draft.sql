@@ -142,6 +142,16 @@ create trigger trg_approval_events_immutable
 before update or delete on finance.approval_events
 for each row execute function finance.reject_audit_mutation();
 
+drop trigger if exists trg_audit_events_no_truncate on finance.audit_events;
+create trigger trg_audit_events_no_truncate
+before truncate on finance.audit_events
+for each statement execute function finance.reject_audit_mutation();
+
+drop trigger if exists trg_approval_events_no_truncate on finance.approval_events;
+create trigger trg_approval_events_no_truncate
+before truncate on finance.approval_events
+for each statement execute function finance.reject_audit_mutation();
+
 drop trigger if exists trg_audit_events_immutable on finance.audit_events;
 create trigger trg_audit_events_immutable
 before update or delete on finance.audit_events
