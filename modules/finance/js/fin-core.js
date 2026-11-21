@@ -144,7 +144,7 @@
   const PAGES = {};
   const MODULES = {
     'js/fin-pages-main.js?v=1.0.0': ['dashboard', 'approvals'],
-    'js/fin-pages-docs.js?v=1.1.3': ['income', 'expense', 'document', 'payments'],
+    'js/fin-pages-docs.js?v=1.1.4': ['income', 'expense', 'document', 'payments'],
     'js/fin-pages-acct.js?v=1.0.0': ['journals', 'journal', 'accounts', 'periods'],
     'js/fin-pages-tax.js?v=1.0.0': ['vat', 'wht', 'filings'],
     'js/fin-pages-reports.js?v=1.0.0': ['trial-balance', 'profit-loss', 'balance-sheet', 'ledger', 'aging'],
