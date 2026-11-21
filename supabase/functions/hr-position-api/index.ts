@@ -18,9 +18,10 @@ Deno.serve(async(req)=>{
   const who=await actor(req.headers.get("x-cms-session")||"");
   if(req.method==="GET"){
    const positions=await sql`select * from public.hr_positions order by status desc,name_th`;
+   const departments=await sql`select id,department_code,name,status,organization_id,parent_id from public.org_departments where status='active' order by name`;
    const permissions=await sql`select p.position_id,p.application_key,p.permission_codes,p.branch_scope,p.status,p.version from public.it_position_permissions p`;
    const sync=await sql`select status,count(*)::int as count from public.iam_sync_outbox where aggregate_type='hr_position' group by status`;
-   return reply({ok:true,positions,permissions,sync},200,origin);
+   return reply({ok:true,positions,departments,permissions,sync},200,origin);
   }
   const b=await req.json().catch(()=>({}));
   if(b.action==="save-position"){
@@ -43,6 +44,14 @@ Deno.serve(async(req)=>{
    });
    return reply({ok:true,position:saved},200,origin);
   }
+  if(b.action==="save-department"){
+   if(who.role!=="owner"&&who.role!=="admin")throw new HttpError(403,"เฉพาะ Owner / IT Admin จัดการแผนกได้");
+   const code=String(b.department_code||"").trim().toUpperCase(),name=String(b.name||"").trim();
+   if(!/^[A-Z0-9_-]{2,30}$/.test(code)||!name)throw new HttpError(400,"กรุณาระบุรหัสและชื่อแผนกให้ถูกต้อง");
+   const [row]=await sql`insert into public.org_departments(department_code,name,status) values(${code},${name},'active') on conflict (organization_id,department_code) do update set name=excluded.name,status='active',updated_at=now() returning *`;
+   await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state) values(${who.name},'org.department.saved','department',${row.id},${sql.json(row)})`;
+   return reply({ok:true,department:row},200,origin);
+  }
   if(b.action==="set-permissions"){
    if(who.role!=="owner"&&who.role!=="admin")throw new HttpError(403,"เฉพาะ Owner / IT Admin กำหนดสิทธิ์ได้");
    const positionId=String(b.position_id||"");if(!/^[0-9a-f-]{36}$/i.test(positionId))throw new HttpError(400,"position_id ไม่ถูกต้อง");
@@ -54,5 +63,5 @@ Deno.serve(async(req)=>{
    return reply({ok:true,permission:row},200,origin);
   }
   throw new HttpError(400,"ไม่รู้จัก action");
- }catch(e){const s=e instanceof HttpError?e.status:500;if(s===500)console.error("hr-position-api",e);return reply({ok:false,error:e instanceof Error?e.message:"เกิดข้อผิดพลาด"},s,origin);}
+ }catch(e){const pgCode=(e as {code?:string})?.code;const s=e instanceof HttpError?e.status:pgCode==="23505"?409:500;if(s===500)console.error("hr-position-api",e);const message=s===409?"รหัสนี้มีอยู่แล้ว กรุณาใช้รหัสอื่น":e instanceof Error?e.message:"เกิดข้อผิดพลาด";return reply({ok:false,error:message},s,origin);}
 });
