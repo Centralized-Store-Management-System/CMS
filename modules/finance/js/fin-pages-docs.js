@@ -47,6 +47,7 @@
     if (!F.can('write')) { el.innerHTML = F.errorBox('สิทธิ์ของคุณบันทึกรายการไม่ได้'); return; }
     const [accounts, partners] = await Promise.all([F.accounts(), F.partners()]);
     const vatReg = F.session.company.vatRegistered;
+    const singleOwnerMode = F.session.actor.role === 'owner' && F.session.company.allowSelfApproval;
     const types = (kind === 'income' ? INCOME : EXPENSE).filter(t => t !== 'tax_invoice' || vatReg);
     const acTypes = kind === 'income' ? ['revenue'] : ['expense', 'asset'];
     const accOpts = '<option value="">บัญชีมาตรฐาน</option>' + accounts.filter(a => acTypes.includes(a.account_type)).map(a => `<option value="${esc(a.account_code)}">${esc(a.account_code + ' ' + a.account_name)}</option>`).join('');
@@ -73,7 +74,7 @@
         <button type="button" class="fm-btn fm-btn-sm fm-btn-ghost" id="fmAddLine">＋ เพิ่มบรรทัด</button>
         <div class="fm-totals" id="fmTot"></div>
         <label class="fm-field fm-field-full" style="margin-top:10px"><span>หมายเหตุ</span><textarea name="notes" rows="2" maxlength="2000">${esc(d ? d.notes || '' : '')}</textarea></label>
-        <div class="fm-form-actions"><button type="button" class="fm-btn fm-btn-light" data-go="${d ? '#document/' + d.id : '#' + kind}">ยกเลิก</button><button type="submit" class="fm-btn fm-btn-light" data-mode="draft">บันทึกร่าง</button><button type="submit" class="fm-btn fm-btn-primary" data-mode="submit">บันทึกและส่งอนุมัติ</button></div>
+        <div class="fm-form-actions"><button type="button" class="fm-btn fm-btn-light" data-go="${d ? '#document/' + d.id : '#' + kind}">ยกเลิก</button><button type="submit" class="fm-btn fm-btn-light" data-mode="draft">บันทึกร่าง</button><button type="submit" class="fm-btn fm-btn-primary" data-mode="submit">${singleOwnerMode ? 'บันทึกและลงบัญชี' : 'บันทึกและส่งอนุมัติ'}</button></div>
       </form>`;
     const form = el.querySelector('#fmDoc'), body = el.querySelector('#fmLines');
     if (d && d.partner_id) form.partner_id.value = d.partner_id;
