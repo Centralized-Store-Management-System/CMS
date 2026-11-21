@@ -121,7 +121,7 @@ function ocHome() {
   <div class="oc-cards" style="margin-top:14px">
     <a class="oc-card" href="index.html?from=owner"><b>หลังร้าน (Back Office)</b><span>อนุมัติ ตารางงาน เวลาทำงาน เงินเดือน สต็อก บัญชี ตั้งค่า</span></a>
     <a class="oc-card" href="clock.html"><b>ลงเวลา (Time Clock)</b><span>พนักงานลงเวลา ขอลา ขอ OT แลกกะ</span></a>
-    <a class="oc-card" href="modules/finance/finance.html"><b>Finance & Accounting</b><span>รายรับ รายจ่าย คู่ค้า การชำระเงิน ภาษี และบัญชี</span></a>
+    <a class="oc-card" href="index.html?from=owner#fin"><b>Finance & Accounting</b><span>รายรับ รายจ่าย คู่ค้า การชำระเงิน ภาษี และบัญชี</span></a>
     <a class="oc-card" href="#it" data-oc="it"><b>Super Advance IT</b><span>ตรวจ ซ่อม และเร่งความเร็วทุกระบบอัตโนมัติ</span></a>
   </div>
   ${brs.length ? `<h3 class="h3">แท็บเล็ตประจำสาขา (เปิดค้างไว้ที่ร้าน)</h3><div class="oc-cards">${brs.map(b => `<a class="oc-card" href="clock.html?branch=${encodeURIComponent(b.code)}"><b>${esc(b.name || b.code)}</b><span>clock.html?branch=${esc(b.code)}</span></a>`).join('')}</div>` : ''}`;

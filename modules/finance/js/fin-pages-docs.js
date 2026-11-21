@@ -136,8 +136,7 @@
       const r = await api.get('document', { id: docId });
       const d = r.document, kind = INCOME.includes(d.document_type) ? 'income' : 'expense';
       if (kindArg === 'edit') return docForm(el, kind, r);
-      F.$('#fmCrumb').textContent = d.document_number || 'เอกสาร';
-      document.querySelectorAll('[data-page]').forEach(x => x.classList.toggle('active', x.dataset.page === kind));
+      F.crumb(kind, d.document_number || 'เอกสาร');
       const me = F.session.actor.ref, mineBlocked = d.created_by === me && !(F.session.company.allowSelfApproval && F.session.actor.role === 'owner');
       const paid = r.payments.filter(p => p.status === 'paid').reduce((a, p) => a + Number(p.amount), 0);
       const committed = r.payments.filter(p => ['pending', 'approved', 'paid'].includes(p.status)).reduce((a, p) => a + Number(p.amount), 0);

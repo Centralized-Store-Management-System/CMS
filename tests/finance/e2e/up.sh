@@ -7,6 +7,6 @@ $P -c "drop database if exists fin with (force)" -c "create database fin" && $P 
 $P -d fin -v ON_ERROR_STOP=1 -f /home/claude/fin/supabase/migrations/202611210004_finance_operational_v1.sql >/dev/null 2>&1 || echo "MIGRATION FAILED"
 rm -rf /tmp/fapi/*.ts; cp /home/claude/fin/supabase/functions/finance-api/*.ts /tmp/fapi/
 nohup python3 /tmp/fe2e/mockcms.py >/tmp/fe2e/cms.log 2>&1 &
-cd /tmp/fapi && FINANCE_DB_URL=postgres://postgres@127.0.0.1:5544/fin FINANCE_CMS_URL=http://127.0.0.1:8799/ FINANCE_TEST_ORIGINS=http://localhost:8766 nohup deno run -A index.ts >/tmp/fe2e/api.log 2>&1 &
+cd /tmp/fapi && FINANCE_DB_URL=postgres://postgres@127.0.0.1:5544/fin FINANCE_CMS_URL=http://127.0.0.1:8799/ FINANCE_TEST_ORIGINS=http://localhost:8766,http://localhost:8767 nohup deno run -A index.ts >/tmp/fe2e/api.log 2>&1 &
 for i in $(seq 1 30); do curl -s -o /dev/null localhost:8000 && break; sleep 0.5; done
 curl -s localhost:8000 ; echo

@@ -16,11 +16,14 @@
   - สิทธิ์: owner / approver / accountant / viewer (หน้า "ผู้ใช้") · Maker–Checker: คนสร้างอนุมัติเองไม่ได้ (ยกเว้น owner เปิด `allow_self_approval` สำหรับทดสอบคนเดียว — บันทึก audit แยก)
   - อนุมัติเอกสาร = ลงบัญชีอัตโนมัติ (สมดุล, VAT/WHT เข้า tax_transactions) · จ่าย/รับเงิน pending→approved→paid · งวดบัญชี ปิด/เปิดใหม่ (ต้องใส่เหตุผล) · ยื่น ภ.พ.30 / ภ.ง.ด.3 / 53 · รายงาน TB, P&L, งบดุล, แยกประเภท, อายุหนี้
   - ข้อมูลที่ลงบัญชีแล้วแก้/ลบไม่ได้ (trigger `guard_locked_transition`) — แก้ด้วยการกลับรายการเท่านั้น
-- **หน้าเว็บ:** `modules/finance/finance.html` + `js/fin-*.js` + `css/fin-ui.css` · ลิงก์จากเว็บหลังร้าน `js/finance-link.js` (เมนูขึ้นเฉพาะคนที่ `finance-api?action=session` = 200)
-  - เปิดใช้: จัดการร้าน → เมนู Finance / `modules/finance/finance.html`
-- **ทดสอบ:** API E2E 112/112, UI E2E 37/37 (PC+iPhone), ลิงก์หลังร้าน 6/6 (`tests/finance/e2e/`, รันด้วย Deno+Postgres+mock CMS ในเครื่อง) · Live smoke: ไม่มี token/token ผิด → 401 ข้อความไทย, origin แปลก → 403
+- **หน้าเว็บ (21 พ.ย. 16:5x):** Finance อยู่ **ในหน้าจัดการร้าน (index.html)** ไม่ใช่หน้าแยก — `js/finance-embed.js` (defMod `fin`, กลุ่มเมนู Finance)
+  - แถบซ้าย: เมนูหลัก "Finance & Accounting" กดแล้วเมนูย่อยลงมา (21 รายการ) · มือถือ: "เมนู Finance" พับได้บนสุดของหน้า · เส้นทาง `#fin/<หน้า>`
+  - หน้าย่อยมาจาก `modules/finance/js/fin-*.js` (fin-core มีโหมดฝัง `window.FIN_EMBED`) · CSS `modules/finance/css/fin-embed.css` (สร้างจาก finance.css + fin-ui.css ด้วย `tests/finance/build-embed-css.cjs` ครอบ `.fin-embed` — อย่าแก้ตรง)
+  - พื้นที่แสดงผลคงอยู่เมื่อหน้าหลังร้านวาดใหม่ (live.js) ฟอร์มที่กรอกไม่หาย · `finance.html` เปิดตรง → พาไป `index.html#fin/…` (`?standalone=1` = หน้าแยกไว้ทดสอบ)
+  - แอป Owner หน้าแรกกลับเป็น 2 ปุ่ม (ตัดปุ่ม Finance ที่ GPT เพิ่ม) · การ์ด Finance ใน "ระบบเข้าร้าน" ชี้ `index.html?from=owner#fin`
+- **ทดสอบ:** API E2E 112/112, UI E2E 37/37 (PC+iPhone, หน้าแยก), ฝังในหลังร้าน `embed.py` 29/29 (`tests/finance/e2e/`, รันด้วย Deno+Postgres+mock CMS ในเครื่อง) · Live smoke: ไม่มี token/token ผิด → 401 ข้อความไทย, origin แปลก → 403
 - **เริ่มใช้งานจริง:** บริษัทใน DB ตอนนี้ `environment='uat'` ชื่อ "Café Amazon – CMS Finance Test Workspace" → ตอนเปิดร้าน: หน้า ตั้งค่า > ล้างข้อมูลทดสอบ (`purge_company_transactions`, เฉพาะ uat) → แก้ชื่อบริษัท/เลขภาษี → กด "เริ่มใช้งานจริง" (`go_live`, ย้อนกลับไม่ได้)
-- ค้าง/ข้อควรระวัง: ฟังก์ชันเก่า `supabase/functions/finance` ไม่ได้แตะ (ไม่มีหน้าไหนเรียกแล้ว) · ปุ่ม Finance ในหน้าแรกแอป Owner (GPT เพิ่มไว้) ขัดกฎ "หน้าแรก 2 ปุ่ม" — รอเจ้าของตัดสิน
+- ค้าง/ข้อควรระวัง: ฟังก์ชันเก่า `supabase/functions/finance` ไม่ได้แตะ (ไม่มีหน้าไหนเรียกแล้ว)
 
 ## ทำเสร็จแล้ว (ล่าสุดก่อน)
 1. **ข้อความ Google → Supabase ทุกหน้าจอ** (`js/supa-ui.js`): แทนคำในหน้าจอแบบไม่แก้ไฟล์เดิม — "ชีต" → "ตาราง", "Apps Script" → "เซิร์ฟเวอร์", Drive → ที่เก็บไฟล์, หน้า Settings > Data แสดง Supabase

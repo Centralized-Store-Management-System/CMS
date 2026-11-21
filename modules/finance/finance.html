@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0b6b45">
 <meta name="robots" content="noindex,nofollow">
 <title>Finance · CMS</title>
+<script>/* Finance อยู่ในหน้าหลังร้านแล้ว (เมนู Finance & Accounting) — เปิดหน้านี้ตรงๆ จะพาไปที่นั่น (?standalone=1 = หน้าแยกสำหรับทดสอบ) */
+if (!/[?&]standalone=1/.test(location.search)) location.replace('../../index.html#fin/' + location.hash.replace(/^#/, ''));</script>
 <link rel="stylesheet" href="css/finance.css?v=0.4.0">
 <link rel="stylesheet" href="css/cms-theme-bridge.css?v=0.1.1">
 <link rel="stylesheet" href="css/fin-ui.css?v=1.0.0">
@@ -76,6 +78,6 @@
 </div>
 <div class="fm-backdrop" id="fmBackdrop"></div>
 <script src="js/cms-theme-bridge.js?v=0.1.1" defer></script>
-<script src="js/fin-core.js?v=1.0.0" defer></script>
+<script src="js/fin-core.js?v=1.1.0" defer></script>
 </body>
 </html>

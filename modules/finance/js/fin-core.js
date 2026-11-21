@@ -1,7 +1,13 @@
 /* Finance & Accounting — แกนหน้าเว็บ: เรียก API, Session, จัดรูปแบบตัวเลข/วันที่, หน้าต่าง/ยืนยัน/แจ้งเตือน, ตาราง, เส้นทางหน้า
- * ใช้ CMS Session เดิม (sessionStorage amz.tok หรือ amz.it.tok จากแอป Owner) ส่งใน header x-cms-session — ไม่แตะระบบ Login/PIN ของ CMS */
+ * ใช้ CMS Session เดิม (sessionStorage amz.tok หรือ amz.it.tok จากแอป Owner) ส่งใน header x-cms-session — ไม่แตะระบบ Login/PIN ของ CMS
+ * 2 โหมด: หน้าแยก finance.html (เส้นทาง #income) · ฝังในหน้าหลังร้าน index.html ผ่าน js/finance-embed.js (W.FIN_EMBED, เส้นทาง #fin/income) */
 (function (W) {
   'use strict';
+  const EMB = W.FIN_EMBED || null;                 // { base: 'modules/finance/', prefix: '#fin/' }
+  const PFX = EMB ? EMB.prefix : '#';
+  const toLocal = h => { h = String(h || ''); if (!EMB) return h; if (h.startsWith(PFX)) return '#' + h.slice(PFX.length); return h === PFX.slice(0, -1) ? '#' : h; };
+  const toGlobal = h => (EMB ? PFX + String(h || '').replace(/^#/, '') : h);
+  const inScope = el => !EMB || !!(el && el.closest('.fin-embed'));
   const API_URL = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const $ = (s, el) => (el || document).querySelector(s);
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -63,14 +69,14 @@
 
   // ---------- หน้าต่าง / แจ้งเตือน ----------
   function toast(msg, type) {
-    let box = $('#fmToasts'); if (!box) { box = document.createElement('div'); box.id = 'fmToasts'; box.className = 'fm-toasts'; document.body.appendChild(box); }
+    let box = $('#fmToasts'); if (!box) { box = document.createElement('div'); box.id = 'fmToasts'; box.className = 'fm-toasts'; layer().appendChild(box); }
     const t = document.createElement('div'); t.className = 'fm-toast ' + (type || 'ok'); t.setAttribute('role', 'status'); t.textContent = msg;
     box.appendChild(t); setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, type === 'bad' ? 6000 : 3200);
   }
   function modal(title, html, opt = {}) {
     const wrap = document.createElement('div'); wrap.className = 'fm-overlay';
     wrap.innerHTML = `<div class="fm-dialog${opt.wide ? ' wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><header><h2>${esc(title)}</h2><button type="button" class="fm-x" aria-label="ปิด">×</button></header><div class="fm-dialog-body">${html}</div></div>`;
-    document.body.appendChild(wrap); document.body.classList.add('fm-noscroll');
+    layer().appendChild(wrap); document.body.classList.add('fm-noscroll');
     const close = () => { wrap.remove(); if (!$('.fm-overlay')) document.body.classList.remove('fm-noscroll'); if (opt.onClose) opt.onClose(); };
     wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('.fm-x') || e.target.closest('[data-close]')) close(); });
     const first = wrap.querySelector('input,select,textarea,button:not(.fm-x)'); if (first && !opt.noFocus) setTimeout(() => first.focus(), 30);
@@ -119,7 +125,7 @@
   const PAGES = {};
   const MODULES = {
     'js/fin-pages-main.js?v=1.0.0': ['dashboard', 'approvals'],
-    'js/fin-pages-docs.js?v=1.0.0': ['income', 'expense', 'document', 'payments'],
+    'js/fin-pages-docs.js?v=1.1.0': ['income', 'expense', 'document', 'payments'],
     'js/fin-pages-acct.js?v=1.0.0': ['journals', 'journal', 'accounts', 'periods'],
     'js/fin-pages-tax.js?v=1.0.0': ['vat', 'wht', 'filings'],
     'js/fin-pages-reports.js?v=1.0.0': ['trial-balance', 'profit-loss', 'balance-sheet', 'ledger', 'aging'],
@@ -129,14 +135,15 @@
   function loadFor(key) {
     const file = Object.keys(MODULES).find(f => MODULES[f].includes(key));
     if (!file || PAGES[key]) return Promise.resolve();
-    if (!loaded[file]) loaded[file] = new Promise((ok, no) => { const s = document.createElement('script'); s.src = file; s.onload = ok; s.onerror = () => { delete loaded[file]; no(new Error('โหลดหน้าไม่สำเร็จ ลองใหม่อีกครั้ง')); }; document.head.appendChild(s); });
+    if (!loaded[file]) loaded[file] = new Promise((ok, no) => { const s = document.createElement('script'); s.src = (EMB ? EMB.base : '') + file; s.onload = ok; s.onerror = () => { delete loaded[file]; no(new Error('โหลดหน้าไม่สำเร็จ ลองใหม่อีกครั้ง')); }; document.head.appendChild(s); });
     return loaded[file];
   }
   let current = '';
-  async function go(hash) {
+  async function go(hash, opt0 = {}) {
     const [key0, arg] = String(hash || '').replace(/^#/, '').split('/');
     const key = key0 || 'dashboard';
     const content = $('#fmContent');
+    if (!content) return;
     current = key + (arg ? '/' + arg : '');
     try { await loadFor(key); } catch (e) { content.innerHTML = errorBox(e.message); return; }
     const p = PAGES[key] || PAGES.dashboard;
@@ -144,17 +151,21 @@
     if (p.need && !FIN.can(p.need)) { content.innerHTML = head('FINANCE', p.title) + `<div class="fm-notice"><span>ⓘ</span><div><b>สิทธิ์ไม่พอ</b><small>หน้านี้สำหรับ ${esc(p.need === 'admin' ? 'Owner' : p.need === 'approve' ? 'ผู้อนุมัติ' : 'ผู้บันทึกบัญชี')} เท่านั้น</small></div></div>`; markNav(p.nav || key, p.title); return; }
     markNav(p.nav || key, p.title);
     content.innerHTML = loading();
-    content.scrollTop = 0; W.scrollTo(0, 0);
+    content.scrollTop = 0; if (!EMB || !opt0.keepScroll) W.scrollTo(0, 0);
     try { await p.render(content, arg ? decodeURIComponent(arg) : ''); }
     catch (e) { if (e.status !== 401) content.innerHTML = head('FINANCE', p.title) + errorBox(e.message); }
   }
   function markNav(key, title) {
+    FIN.title = title || '';
+    if (EMB) { if (EMB.onNav) EMB.onNav(key, title); return; }
     document.querySelectorAll('[data-page]').forEach(el => el.classList.toggle('active', el.dataset.page === key));
     const c = $('#fmCrumb'); if (c) c.textContent = title || '';
     document.title = (title ? title + ' · ' : '') + 'Finance · CMS';
     const sb = $('#fmSidebar'); if (sb) sb.classList.remove('open'); const bd = $('#fmBackdrop'); if (bd) bd.classList.remove('show');
   }
-  const nav = (hash) => { if (location.hash === hash) go(hash); else location.hash = hash; };
+  const nav = (hash) => { const g = toGlobal(hash); if (location.hash === g) go(toLocal(g)); else location.hash = g; };
+  // ชั้นสำหรับหน้าต่าง/แจ้งเตือน (โหมดฝัง: อยู่ใต้ .fin-embed เพื่อให้ CSS ที่ครอบไว้ใช้ได้)
+  const layer = () => { if (!EMB) return document.body; let l = $('#finLayer'); if (!l) { l = document.createElement('div'); l.id = 'finLayer'; l.className = 'fin-embed fin-layer'; document.body.appendChild(l); } return l; };
 
   const FIN = W.FIN = {
     api, idem, esc, $, money, baht, d10, thDate, thDateTime, today, thisMonth, monthName, L, badge,
@@ -162,7 +173,9 @@
     session: null,
     page(key, def) { PAGES[key] = def; },
     can(cap) { return !!(FIN.session && FIN.session.capabilities && FIN.session.capabilities[cap]); },
-    reload() { go(location.hash); },
+    reload() { go(toLocal(location.hash), { keepScroll: true }); },
+    embedded: !!EMB, toLocal, toGlobal,
+    crumb: (key, title) => markNav(key, title),
     current: () => current,
     onAuthLost(msg) { renderLogin(msg); },
     // ช่องเลือกบัญชี/คู่ค้า (เก็บไว้ใช้ซ้ำ 60 วิ)
@@ -175,6 +188,7 @@
 
   function renderLogin(msg) {
     const c = $('#fmContent'); if (!c) return;
+    if (EMB) { markNav('', 'เข้าสู่ระบบ'); c.innerHTML = `<div class="fm-notice bad"><span>!</span><div><b>${esc(msg || 'ไม่พบ CMS Session')}</b><small>กดออกจากระบบแล้วเข้าสู่ระบบใหม่ หรือกดลองใหม่</small></div></div><div class="fm-panel fm-center"><button class="fm-btn fm-btn-light" type="button" onclick="location.reload()">ลองใหม่</button></div>`; return; }
     markNav('', 'เข้าสู่ระบบ');
     c.innerHTML = head('FINANCE ACCESS', 'เข้าสู่ระบบ CMS ก่อนใช้งาน Finance', 'Finance ใช้บัญชีเดียวกับระบบหลังร้าน — ไม่ต้องตั้งรหัสใหม่') +
       `<div class="fm-notice"><span>ⓘ</span><div><b>${esc(msg || 'ไม่พบ CMS Session')}</b><small>เข้าสู่ระบบที่ "จัดการร้าน" หรือแอป Owner แล้วกลับมาที่เมนู Finance อีกครั้ง (ใช้แท็บเดิม)</small></div></div>
@@ -191,8 +205,8 @@
     set('#fmUserRole', L.role[me.role] || me.role || '');
     document.querySelectorAll('.fm-avatar').forEach(a => a.textContent = String(me.displayName || 'U').trim().charAt(0).toUpperCase());
     const mode = $('#fmMode'); if (mode) { mode.className = 'fm-mode ' + (co.environment === 'production' ? 'live' : 'uat'); mode.innerHTML = '<i></i>' + (co.environment === 'production' ? 'ใช้งานจริง' : 'ทดสอบ (UAT)'); }
-    document.body.classList.toggle('fm-uat', co.environment !== 'production');
-    document.querySelectorAll('[data-need]').forEach(el => { el.hidden = !FIN.can(el.dataset.need); });
+    if (!EMB) document.body.classList.toggle('fm-uat', co.environment !== 'production');
+    document.querySelectorAll(EMB ? '.fin-embed [data-need]' : '[data-need]').forEach(el => { el.hidden = !FIN.can(el.dataset.need); });
   }
   FIN.refreshSession = async () => { const s = await api.get('session'); applySession(s); return s; };
   FIN.refreshBadges = async () => {
@@ -200,8 +214,22 @@
       const s = await api.get('summary');
       const p = s.pending || {}, n = (p.documents || 0) + (p.payments || 0) + (p.to_pay || 0) + (p.journals || 0) + (p.filings || 0);
       const b = $('#fmApprovalsBadge'); if (b) { b.textContent = n > 99 ? '99+' : n; b.hidden = !n || !FIN.can('approve'); }
+      if (EMB && EMB.onBadge) EMB.onBadge(FIN.can('approve') ? n : 0);
       return s;
     } catch (_) { return null; }
+  };
+
+  // โหมดฝัง: หน้าหลังร้านเรียก FIN.mount(พื้นที่แสดงผล) ทุกครั้งที่เปิดเมนู Finance
+  let sess = null;
+  FIN.mount = async (hash, opt = {}) => {
+    const c = $('#fmContent'); if (!c) return;
+    if (!FIN.session) {
+      c.innerHTML = loading('กำลังตรวจสอบสิทธิ์…');
+      if (!sess) sess = FIN.refreshSession().then(s => { FIN.refreshBadges(); return s; }).catch(e => { sess = null; throw e; });
+      try { await sess; }
+      catch (e) { if (e.status === 401) return; c.innerHTML = `<div class="fm-notice bad"><span>!</span><div><b>${esc(e.message)}</b><small>${e.status === 403 ? 'ให้ Owner เพิ่มสิทธิ์ที่ Finance › ตั้งค่า › ผู้ใช้งาน Finance' : 'ลองใหม่อีกครั้ง'}</small></div></div><div class="fm-panel fm-center"><button class="fm-btn fm-btn-light" type="button" onclick="location.reload()">ลองใหม่</button></div>`; return; }
+    }
+    return go(hash, opt);
   };
 
   async function boot() {
@@ -216,6 +244,11 @@
   }
 
   document.addEventListener('click', e => {
+    if (!inScope(e.target)) return;
+    if (EMB) {   // ลิงก์ภายใน (#journal/…) → #fin/journal/…
+      const a = e.target.closest('a[href^="#"]');
+      if (a && !a.getAttribute('href').startsWith(PFX)) { e.preventDefault(); if (a.closest('.fm-overlay')) { document.querySelectorAll('.fm-overlay').forEach(o => o.remove()); document.body.classList.remove('fm-noscroll'); } nav(a.getAttribute('href')); return; }
+    }
     const t = e.target.closest('.fm-group-toggle');
     if (t) { const g = document.getElementById(t.getAttribute('aria-controls')); const open = t.getAttribute('aria-expanded') === 'true'; t.setAttribute('aria-expanded', String(!open)); g.hidden = open; return; }
     const p = e.target.closest('[data-page]');
@@ -223,7 +256,7 @@
     const g = e.target.closest('[data-go]');
     if (g) { e.preventDefault(); nav(g.dataset.go); }
   });
-  document.addEventListener('DOMContentLoaded', () => {
+  if (!EMB) document.addEventListener('DOMContentLoaded', () => {
     const mb = $('#fmMenuBtn'), sb = $('#fmSidebar'), bd = $('#fmBackdrop');
     if (mb) mb.onclick = () => { sb.classList.add('open'); bd.classList.add('show'); };
     if (bd) bd.onclick = () => { sb.classList.remove('open'); bd.classList.remove('show'); };

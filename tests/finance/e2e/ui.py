@@ -1,7 +1,7 @@
 import json, re, sys
 from playwright.sync_api import sync_playwright
 BASE = 'http://localhost:8767/'
-FIN = BASE + 'modules/finance/finance.html'
+FIN = BASE + 'modules/finance/finance.html?standalone=1'
 REMOTE = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api'
 R = []; ERR = []
 def ok(n, c, x=''):
