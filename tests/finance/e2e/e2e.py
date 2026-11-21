@@ -19,6 +19,22 @@ def call(tok, action=None, body=None, idem=None, **q):
 import urllib.parse
 def post(tok, action, idem=None, **body): return call(tok, action, body, idem)
 def get(tok, action, **q): return call(tok, action, None, None, **q)
+def upload_file(tok, payment_id, category, filename='proof.pdf', mime='application/pdf', data=b'%PDF-1.4 finance test proof'):
+    boundary = '----finance-' + uuid.uuid4().hex
+    parts = []
+    for name, value in [('action', 'file.upload'), ('payment_id', payment_id), ('category', category)]:
+        parts.append(b'--' + boundary.encode() + b'\\r\\n')
+        parts.append(f'Content-Disposition: form-data; name="{name}"\\r\\n\\r\\n{value}\\r\\n'.encode())
+    parts.append(b'--' + boundary.encode() + b'\\r\\n')
+    parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\\r\\n'.encode())
+    parts.append(f'Content-Type: {mime}\\r\\n\\r\\n'.encode())
+    parts.append(data + b'\\r\\n--' + boundary.encode() + b'--\\r\\n')
+    req = urllib.request.Request(API, data=b''.join(parts), method='POST')
+    req.add_header('content-type', f'multipart/form-data; boundary={boundary}')
+    if tok: req.add_header('x-cms-session', tok)
+    try:
+        with urllib.request.urlopen(req) as r: return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as err: return err.code, json.loads(err.read() or b'{}')
 def psql(q): return subprocess.run(['psql', '-h', '127.0.0.1', '-p', '5544', '-U', 'postgres', '-d', 'fin', '-tA', '-c', q], capture_output=True, text=True).stdout.strip()
 def journal_lines(doc_id):
     return psql(f"select string_agg(code||':'||dr||'/'||cr, ' ' order by code) from (select a.account_code code, sum(jl.debit) dr, sum(jl.credit) cr from finance.journal_lines jl join finance.journal_entries je on je.id=jl.journal_entry_id join finance.chart_of_accounts a on a.id=jl.account_id where je.source_document_id='{doc_id}' and je.source_type='document' group by 1) x")
@@ -218,15 +234,18 @@ s, r = get(STF, 'document', id=bill['id']); ok('Staff เปิดเอกส�
 s, r = get(STF, 'payments'); ok('Staff เห็นเฉพาะรายการรับ/จ่ายของตนเอง', s == 200 and all(x['created_by'] == 'u:U6' for x in r['data']['items']), r)
 s, r = get(MGR, 'summary'); ok('Manager ดูภาพรวมตามสิทธิ์ได้', s == 200 and 'kpi' in r['data'], r)
 company_id = psql('select id from finance.companies order by created_at limit 1')
-psql(f"insert into finance.document_files(company_id,payment_id,storage_bucket,object_path,original_name,mime_type,size_bytes,uploaded_by,file_category) values ('{company_id}','{staff_pay}','finance-private-documents','{company_id}/{staff_pay}/proof-test.pdf','proof-test.pdf','application/pdf',123,'u:U6','payment_evidence')")
+s, r = upload_file(STF, staff_pay, 'payment_evidence'); staff_file = r['data']
+ok('Staff แนบหลักฐานการจ่ายจริงผ่าน private Storage', s == 201 and staff_file['payment_id'] == staff_pay and staff_file['file_category'] == 'payment_evidence', r)
 s, r = get(VER, 'verification-queue'); q = [x for x in r['data']['items'] if x['id'] == staff_pay]
 ok('Final Verifier เห็นหลักฐานของรายการจ่ายที่ชำระแล้ว', s == 200 and len(q) == 1 and q[0]['file_count'] == 1 and q[0]['evidence_count'] == 1, q)
+s, r = get(VER, 'file-url', file_id=staff_file['id']); ok('Final Verifier เปิดเอกสารผ่าน signed URL ชั่วคราว', s == 200 and r['data']['url'].startswith('http://127.0.0.1:8760/signed/'), r)
 s, r = post(MGR, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Manager ยืนยันเอกสารขั้นสุดท้ายไม่ได้', s == 403, r)
 s, r = post(STF, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Staff ยืนยันเอกสารขั้นสุดท้ายไม่ได้', s == 403, r)
 s, r = post(VER, 'payment.approve', payment_id=staff_pay); ok('Final Verifier อนุมัติการจ่ายไม่ได้', s == 403, r)
 s, r = post(VER, 'payment.verify-documents', payment_id=staff_pay, confirm_complete=True); ok('Final Verifier ติ๊กยืนยันเอกสารครบถ้วน', s == 200 and r['data']['status'] == 'verified' and r['data']['verified_by'] == 'u:U7', r)
 s, r = get(VER, 'verification-queue'); q = [x for x in r['data']['items'] if x['id'] == staff_pay]
 ok('ระบบบันทึกผู้ตรวจและสถานะ Verified & Completed', s == 200 and len(q) == 1 and q[0]['verification_status'] == 'verified' and q[0]['verified_by'] == 'u:U7', q)
+s, r = upload_file(STF, staff_pay, 'receipt_invoice'); ok('เพิ่มไฟล์หลัง Final Verification แล้วไม่ได้', s == 409, r)
 s, r = get(VER, 'payments'); ok('Final Verifier ไม่สามารถเปิดหน้ารายการรับ/จ่ายทั่วไปได้', s == 403, r)
 
 print('— ล้างข้อมูลทดสอบ / เริ่มใช้งานจริง —')
