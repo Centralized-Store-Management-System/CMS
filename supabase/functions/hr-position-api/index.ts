@@ -31,7 +31,7 @@ Deno.serve(async(req)=>{
     const old=id?(await tx`select * from public.hr_positions where id=${id}::uuid for update`)[0]:null;
     if(id&&!old)throw new HttpError(404,"ไม่พบตำแหน่ง");
     const [row]=id?await tx`update public.hr_positions set position_code=${code},name_th=${name},name_en=${String(b.name_en||"")},department=${String(b.department||"")},level=${String(b.level||"")},description=${String(b.description||"")},status=${b.status==="inactive"?"inactive":"active"},updated_by=${who.name},updated_at=now() where id=${id}::uuid returning *`:await tx`insert into public.hr_positions(position_code,name_th,name_en,department,level,description,created_by,updated_by) values(${code},${name},${String(b.name_en||"")},${String(b.department||"")},${String(b.level||"")},${String(b.description||"")},${who.name},${who.name}) returning *`;
-    await tx`insert into public.hr_position_audit(position_id,action,before_state,after_state,actor) values(${row.id},${id?"update":"create"},${old?tx.json(old):null},${tx.json(row)},${who.name})`;
+    await tx`insert into public.hr_position_audit(position_id,action,before_state,after_state,actor) values(${row.id},${id?"update":"create"},${old?sql.json(old):null},${sql.json(row)},${who.name})`;
     return row;
    });
    return reply({ok:true,position:saved},200,origin);
