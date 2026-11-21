@@ -106,7 +106,14 @@
     form.oninput = calc; form.onchange = calc; calc();
     el.querySelector('#fmAddLine').onclick = () => { addLine({ description: '', quantity: 1, unit_price: '' }); calc(); };
     body.onclick = e => { if (e.target.closest('.del') && body.children.length > 1) { e.target.closest('tr').remove(); calc(); } };
-    el.querySelector('#fmAddP').onclick = () => partnerQuick(kind === 'income' ? 'customer' : 'vendor', p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.display_name; form.partner_id.appendChild(o); form.partner_id.value = p.id; });
+    el.querySelector('#fmAddP').onclick = () => partnerQuick(kind === 'income' ? 'customer' : 'vendor', async p => {
+      const fresh = await F.partners(); partners.splice(0, partners.length, ...fresh);
+      const match = partners.find(x => x.id === p.id);
+      const o = document.createElement('option'); o.value = p.id; o.textContent = (match && match.display_name) || p.display_name;
+      form.partner_id.appendChild(o); form.partner_id.value = p.id;
+      if (match && match.default_wht_rate != null) form.wht_rate.value = String(Number(match.default_wht_rate));
+      calc();
+    });
     const key = F.idem();
     form.onsubmit = async e => {
       e.preventDefault();
@@ -137,11 +144,16 @@
   }
 
   function partnerQuick(type, done) {
-    const m = F.modal('เพิ่มคู่ค้า', `<form id="fmPQ" class="fm-form-grid"><label class="fm-field fm-field-full"><span>ชื่อ *</span><input name="display_name" required maxlength="200"></label>
+    const m = F.modal('เพิ่มคู่ค้า', `<form id="fmPQ" class="fm-form-grid">
+      <label class="fm-field fm-field-full"><span>ชื่อที่แสดง *</span><input name="display_name" required maxlength="200"></label>
+      <label class="fm-field fm-field-full"><span>ชื่อจดทะเบียน</span><input name="legal_name" maxlength="200" placeholder="ชื่อบริษัท/ชื่อนิติบุคคล"></label>
       <label class="fm-field"><span>ประเภท</span><select name="partner_type">${Object.entries(L.partnerType).map(([k, v]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label class="fm-field"><span>เลขผู้เสียภาษี (13 หลัก)</span><input name="tax_id" inputmode="numeric" maxlength="13" pattern="\\d{13}"></label>
-      <label class="fm-field fm-field-full"><span>แบบหัก ณ ที่จ่าย (กรณีเราหักเขา)</span><select name="default_wht_type"><option value="pnd53">ภ.ง.ด.53 — นิติบุคคล</option><option value="pnd3">ภ.ง.ด.3 — บุคคลธรรมดา</option></select></label>
-      <div class="fm-form-actions fm-field-full"><button type="button" class="fm-btn fm-btn-light" data-close>ยกเลิก</button><button class="fm-btn fm-btn-primary">บันทึก</button></div></form>`);
+      <label class="fm-field"><span>เลขสาขา (ถ้ามี)</span><input name="branch_number" maxlength="5" placeholder="00000"></label>
+      <label class="fm-field fm-field-full"><span>ที่อยู่</span><textarea name="address" rows="2" maxlength="500"></textarea></label>
+      <label class="fm-field"><span>แบบหัก ณ ที่จ่าย</span><select name="default_wht_type"><option value="pnd53">ภ.ง.ด.53 — นิติบุคคล</option><option value="pnd3">ภ.ง.ด.3 — บุคคลธรรมดา</option></select></label>
+      <label class="fm-field"><span>อัตราหัก ณ ที่จ่ายเริ่มต้น</span><select name="default_wht_rate"><option value="" selected>ไม่กำหนด</option>${[1,1.5,2,3,5,10].map(v => `<option value="${v}" >${v}%</option>`).join('')}</select></label>
+      <div class="fm-form-actions fm-field-full"><button type="button" class="fm-btn fm-btn-light" data-close>ยกเลิก</button><button class="fm-btn fm-btn-primary">บันทึกคู่ค้า</button></div></form>`);
     const f = m.el.querySelector('#fmPQ');
     f.onsubmit = async e => { e.preventDefault(); const r = await run(f.querySelector('.fm-btn-primary'), () => api.post('partner.save', Object.fromEntries(new FormData(f))), 'เพิ่มคู่ค้าแล้ว'); if (r) { F.bust('partners'); m.close(); done(r); } };
   }
