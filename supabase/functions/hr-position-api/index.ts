@@ -48,7 +48,11 @@ Deno.serve(async(req)=>{
    if(who.role!=="owner"&&who.role!=="admin")throw new HttpError(403,"เฉพาะ Owner / IT Admin จัดการแผนกได้");
    const code=String(b.department_code||"").trim().toUpperCase(),name=String(b.name||"").trim();
    if(!/^[A-Z0-9_-]{2,30}$/.test(code)||!name)throw new HttpError(400,"กรุณาระบุรหัสและชื่อแผนกให้ถูกต้อง");
-   const [row]=await sql`insert into public.org_departments(department_code,name,status) values(${code},${name},'active') on conflict (organization_id,department_code) do update set name=excluded.name,status='active',updated_at=now() returning *`;
+   const row=await sql.begin(async tx=>{
+    const existing=(await tx`select * from public.org_departments where organization_id is null and department_code=${code} for update`)[0];
+    if(existing)return (await tx`update public.org_departments set name=${name},status='active',updated_at=now() where id=${existing.id} returning *`)[0];
+    return (await tx`insert into public.org_departments(department_code,name,status) values(${code},${name},'active') returning *`)[0];
+   });
    await sql`insert into public.iam_audit_log(actor_ref,action_key,target_type,target_id,after_state) values(${who.name},'org.department.saved','department',${row.id},${sql.json(row)})`;
    return reply({ok:true,department:row},200,origin);
   }
