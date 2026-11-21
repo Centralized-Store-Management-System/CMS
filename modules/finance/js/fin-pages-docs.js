@@ -163,6 +163,7 @@
         if (F.can('write') && d.document_type !== 'credit_note' && left > 0.004) acts.push(`<button class="fm-btn fm-btn-primary" data-a="pay">${kind === 'income' ? 'รับเงิน' : 'จ่ายเงิน'}</button>`);
         if (F.can('approve')) acts.push('<button class="fm-btn fm-btn-light" data-a="reverse">กลับรายการ</button>');
       }
+      if (Number(d.wht_total) > 0 && r.payments.some(p => p.status === 'paid')) acts.push('<button class="fm-btn fm-btn-light" data-a="wht-print">พิมพ์หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</button>');
       acts.push('<button class="fm-btn fm-btn-light" onclick="window.print()">พิมพ์</button>');
       el.innerHTML = F.head(L.docType[d.document_type] || 'เอกสาร', d.document_number || 'เอกสาร', badge(d.status) + (d.void_reason ? ' · ' + esc(d.void_reason) : ''), acts.join('')) +
         `<div class="fm-grid2"><section class="fm-panel"><dl class="fm-dl">
@@ -184,6 +185,7 @@
         const b = e.target.closest('[data-a]'); if (!b) return;
         const a = b.dataset.a;
         let ok;
+        if (a === 'wht-print') { await printWhtCertificates(d, r); return; }
         if (a === 'submit') ok = await run(b, () => api.post('document.submit', { document_id: d.id }), 'ส่งอนุมัติแล้ว');
         if (a === 'approve') ok = await run(b, () => api.post('document.approve', { document_id: d.id }), x => 'อนุมัติแล้ว · ลงบัญชี ' + x.journal_number);
         if (a === 'return') { const n = await F.ask('ตีกลับเอกสาร', 'เอกสารจะกลับเป็นฉบับร่าง', { input: true, required: true }); if (n) ok = await run(b, () => api.post('document.return', { document_id: d.id, note: n }), 'ตีกลับแล้ว'); }
@@ -194,6 +196,63 @@
       };
     },
   });
+
+  // หนังสือรับรองการหักภาษี ณ ที่จ่าย: สร้างจากยอดที่จ่ายจริง และข้อมูลบริษัท/คู่ค้า
+  async function printWhtCertificates(d, detail) {
+    const win = window.open('', '_blank');
+    if (!win) { F.toast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up', 'bad'); return; }
+    win.document.write('<p style="font-family:sans-serif;padding:24px">กำลังจัดเตรียมเอกสาร…</p>');
+    try {
+      const [coRes, partners] = await Promise.all([api.get('company'), F.partners()]);
+      const co = coRes.company || {};
+      const partner = partners.find(p => p.id === d.partner_id) || {};
+      const paid = detail.payments.filter(p => p.status === 'paid' && p.payment_type === 'disbursement');
+      if (!paid.length) throw new Error('ยังไม่มีรายการจ่ายเงินจริง');
+      if (!co.tax_id || !partner.tax_id) throw new Error('กรุณากรอกเลขผู้เสียภาษีของบริษัทและคู่ค้าให้ครบก่อนออกหนังสือรับรอง');
+      const addr = x => (x && typeof x === 'object' ? x.text : x) || '—';
+      const branch = x => x.branch_type === 'branch' ? ('สาขา ' + (x.branch_number || '')) : 'สำนักงานใหญ่';
+      const escv = F.esc;
+      const base = Number(d.subtotal), total = Number(d.grand_total) || 0, wht = Number(d.wht_total);
+      const rate = Number(detail.lines[0] && detail.lines[0].wht_rate || (base ? wht / base * 100 : 0));
+      const income = detail.lines.map(x => x.description).filter(Boolean).join(', ') || 'ค่าบริการ';
+      const pages = paid.map((p, i) => {
+        const ratio = total > 0 ? Math.min(1, Number(p.amount) / total) : 0;
+        const taxBase = Math.round(base * ratio * 100) / 100, tax = Math.round(wht * ratio * 100) / 100;
+        const ref = 'WHT-' + d.document_number + '-' + (i + 1);
+        const dateText = F.thDate(p.payment_date);
+        const copy = label => `<article class="cert"><div class="top"><b>หนังสือรับรองการหักภาษี ณ ที่จ่าย</b><strong>50 ทวิ</strong></div><div class="copy">${label}</div>
+          <div class="meta">เลขที่เอกสาร: ${escv(ref)}　วันที่จ่าย: ${dateText}</div>
+          <h3>ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (ผู้จ่ายเงิน)</h3>
+          <div class="row"><span>ชื่อ: ${escv(co.legal_name || '')}</span><span>เลขประจำตัวผู้เสียภาษี: ${escv(co.tax_id)}</span></div>
+          <div>ที่อยู่: ${escv(addr(co.address))}</div><div>สำนักงาน: ${escv(branch(co))}</div>
+          <h3>ผู้ถูกหักภาษี ณ ที่จ่าย (ผู้รับเงิน)</h3>
+          <div class="row"><span>ชื่อ: ${escv(partner.legal_name || partner.display_name || '')}</span><span>เลขประจำตัวผู้เสียภาษี: ${escv(partner.tax_id)}</span></div>
+          <div>ที่อยู่: ${escv(addr(partner.address))}</div><div>สำนักงาน: ${escv(partner.branch_number ? 'สาขา ' + partner.branch_number : 'สำนักงานใหญ่')}</div>
+          <h3>รายละเอียดการจ่ายเงิน</h3>
+          <table><thead><tr><th>ประเภทเงินได้ / รายละเอียด</th><th>วันจ่าย</th><th>จำนวนเงินที่จ่าย</th><th>อัตรา</th><th>ภาษีที่หัก</th></tr></thead>
+          <tbody><tr><td>${escv(income)}</td><td>${dateText}</td><td class="num">${F.money(taxBase)}</td><td class="num">${rate}%</td><td class="num">${F.money(tax)}</td></tr></tbody></table>
+          <div class="sum"><span>รวมเงินได้ที่จ่าย</span><b>${F.money(taxBase)} บาท</b><span>ภาษีที่หักและนำส่ง</span><b>${F.money(tax)} บาท</b></div>
+          <p class="note">อ้างอิงเอกสารรายจ่าย ${escv(d.document_number)} · รายการนี้จัดทำจากข้อมูล CMS โปรดตรวจสอบประเภทเงินได้และข้อมูลตามหลักฐานก่อนลงนาม/ส่งมอบ</p>
+          <div class="sign"><div>ลงชื่อ................................................ผู้จ่ายเงิน<br>วันที่................................................</div><div>ลงชื่อ................................................ผู้รับเงิน<br>วันที่................................................</div></div></article>`;
+        return copy('ฉบับที่ ' + (i + 1) + ' — ' + (i === 0 ? 'ผู้ถูกหักภาษี' : 'ผู้มีหน้าที่หักภาษี')) + copy('สำเนา — เก็บไว้เป็นหลักฐาน');
+      }).join('');
+      win.document.open();
+      win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>หนังสือรับรองหัก ณ ที่จ่าย ${escv(d.document_number)}</title><style>
+        @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,"Tahoma",sans-serif;color:#111;font-size:12px}
+        .cert{page-break-after:always;min-height:260mm;position:relative;padding:2mm}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #111;padding-bottom:10px;font-size:20px}
+        .top strong{font-size:28px}.copy{text-align:right;font-weight:bold;margin:8px 0}.meta{margin:12px 0;color:#333}
+        h3{font-size:13px;background:#eee;padding:7px;margin:14px 0 8px}.row{display:flex;justify-content:space-between;gap:18px;margin:7px 0}
+        table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #555;padding:9px;text-align:left}th{background:#eee}.num{text-align:right;white-space:nowrap}
+        .sum{display:grid;grid-template-columns:1fr auto;gap:8px;margin:18px 0;font-size:14px}.note{margin-top:18px;line-height:1.6}
+        .sign{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:55px;line-height:2.2;text-align:center}
+        @media print{.cert:last-child{page-break-after:auto}}
+      </style></head><body>${pages}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+      win.document.close();
+    } catch (e) {
+      win.document.body.innerHTML = '<p style="font:16px sans-serif;padding:24px;color:#b00">' + escvError(e.message) + '</p>';
+    }
+    function escvError(v) { return String(v || 'เกิดข้อผิดพลาด').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+  }
 
   // ---------- รับ / จ่ายเงิน ----------
   async function payForm(type, doc) {
