@@ -12,7 +12,7 @@ function showPage(key){
  const title=labels[key]||labels.dashboard;
  crumb.textContent=title;
  document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('active',el.dataset.page===key));
- if(key==='dashboard'){location.hash='';closeMenu();return;}
+ if(key==='dashboard'){renderDashboard();return;}
  content.innerHTML='<div class="fm-page-head"><div><div class="fm-eyebrow">FINANCE WORKSPACE</div><h1>'+title+'</h1><p>พื้นที่ทำงานสำหรับ'+title+' เชื่อมโยงข้อมูลด้วยรหัสธุรกรรมเดียว</p></div><span class="fm-preview-tag">PREVIEW ONLY</span></div><div class="fm-notice"><span>ⓘ</span><div><b>โมดูลอยู่ระหว่างพัฒนา</b><small>หน้านี้เป็นโครงสร้างนำทางเท่านั้น ยังไม่มีการอ่านหรือบันทึกข้อมูลจริง</small></div></div><section class="fm-panel" style="min-height:260px;display:grid;place-content:center;text-align:center;gap:9px"><div class="fm-chart-icon" style="margin:auto">▧</div><b style="font-size:14px;color:#385345">เตรียมพื้นที่ '+title+'</b><span style="font-size:11px;color:#87958c">จะเปิดใช้งานหลังตรวจสอบสิทธิ์ ฐานข้อมูล และการทดสอบความปลอดภัย</span><button class="fm-btn fm-btn-light" id="fmBackDash" style="margin:10px auto 0">กลับภาพรวม</button></section><footer class="fm-footer">CMS Finance & Accounting • Isolated module • Build 0.1.0</footer>';
  document.getElementById('fmBackDash').addEventListener('click',()=>{location.hash='';renderDashboard();});
  location.hash=key;closeMenu();
