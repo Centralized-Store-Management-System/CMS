@@ -135,7 +135,7 @@ function openEmp(id, draft) {
 const F_APP = () => [
   { k: 'photo', label: 'รูปถ่าย', type: 'photo' }, { k: 'name', label: 'ชื่อ-นามสกุล', req: 1 },
   ...(myBranches().length > 1 || allBranch() && S.t.branches.length > 1 ? [{ k: 'branch', label: 'สาขาที่สมัคร', type: 'select', options: [...(allBranch() ? [['', 'ยังไม่ระบุ']] : []), ...branchOpts(myBranches())] }] : []),
-  { k: 'phone', label: 'เบอร์โทร', half: 1, type: 'tel' }, { k: 'position', label: 'สมัครตำแหน่ง', half: 1, type: 'select', options: POSITIONS },
+  { k: 'phone', label: 'เบอร์โทร', half: 1, type: 'tel' }, { k: 'position', label: 'สมัครตำแหน่ง', half: 1, type: 'select', options: HR_POSITIONS.filter(p=>p.status==='active').map(p=>p.name_th) },
   { k: 'appliedDate', label: 'วันที่สมัคร', half: 1, type: 'date' }, { k: 'source', label: 'ช่องทาง', half: 1, type: 'select', options: ['หน้าร้าน', 'Facebook', 'JobThai/JobsDB', 'เพื่อนแนะนำ', 'อื่นๆ'] },
   { k: 'status', label: 'สถานะ', half: 1, type: 'select', options: APP_STAT }, { k: 'expectedPay', label: 'ค่าจ้างที่คาดหวัง', half: 1, type: 'number' },
   { k: 'interviewDate', label: 'วันสัมภาษณ์', half: 1, type: 'date' }, { k: 'interviewTime', label: 'เวลาสัมภาษณ์', half: 1, type: 'time' },
