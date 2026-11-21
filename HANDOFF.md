@@ -312,3 +312,12 @@
   1) ส่งอีเมล — ยังไม่ตั้ง `RESEND_API_KEY` · 2) เซิร์ฟเวอร์ Supabase — ส่งออก mail ล้มเพราะคีย์เดียวกัน → **ข้อ 1–2 หายเมื่อเจ้าของตั้ง Resend secret**
   3) "ระบบเกิดข้อผิดพลาด 4 ครั้ง (7 วัน)" — error เก่าสมัย Google (MailApp/liffInfo_ 14–15 พ.ย.) หลุดช่วง 7 วันเองราว 22–23 พ.ย.
   4) "คำสั่งที่ช้า: delta 30 วิ (หน้าเว็บ)" — **ไม่ใช่ระบบช้า**: มือถือจอดับระหว่างรอ เวลาที่วัดได้ = timeout · แก้ `js/it-rum.js?v=4.5.5` ไม่นับคำสั่งที่ระหว่างรอหน้าถูกซ่อน (จอดับ/สลับแอป)
+
+
+## Finance CMS — Manager / Staff + Final Verification (21 พ.ย. 2569 · branch `feat/finance-manager-final-verification`)
+- Workflow: Manager/Staff สร้างคำขอ → Owner อนุมัติ → Manager/Staff จ่ายเงินจริงและบันทึกผล → แนบหลักฐานในระบบ → Final Verifier ตรวจและยืนยันความครบถ้วน
+- เตรียม role codes `manager`, `staff`, `verifier`; ยังไม่มีการมอบสิทธิ์ให้ผู้ใช้รายใดโดยอัตโนมัติ
+- Manager/Staff ได้สิทธิ์สร้างคำขอและบันทึกการจ่ายหลังอนุมัติ แต่ไม่มีสิทธิ์อนุมัติ
+- Final Verifier มีสิทธิ์อ่านรายการและตรวจเอกสารเท่านั้น ไม่มีสิทธิ์อนุมัติหรือแก้ไขยอดเงิน
+- หลักฐานจัดเก็บใน private Storage bucket; การแนบไฟล์ใหม่หลังตรวจแล้วจะถูกป้องกันไม่ให้แก้ประวัติการตรวจ
+- Migration เป็น additive; ยังไม่ apply กับ Supabase และยังไม่ deploy Edge Function ระหว่างพัฒนา PR
