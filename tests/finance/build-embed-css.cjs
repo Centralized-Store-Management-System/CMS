@@ -16,7 +16,7 @@ function scope(sel) {
   return S + ' ' + sel;
 }
 const out = postcss.root();
-for (const f of ['finance.css', 'fin-ui.css']) {
+for (const f of ['finance.css', 'fin-ui.css', 'fin-flow.css']) {
   const root = postcss.parse(fs.readFileSync(path.join(dir, f), 'utf8'), { from: f });
   root.walkRules(rule => {
     if (rule.parent && rule.parent.type === 'atrule' && /keyframes/.test(rule.parent.name)) return;

@@ -171,6 +171,15 @@ export async function approveDocument(body: Record<string, unknown>, u: User, ri
       where d.id = ${id}::uuid and d.company_id = ${u.companyId}::uuid for update of d`;
     if (!doc) fail(404, "ไม่พบเอกสาร");
     if (doc.status !== "pending_review") fail(409, "อนุมัติได้เฉพาะเอกสารที่รออนุมัติ");
+    // Expense request approval only authorizes spending. It must not create a journal entry or tax transaction.
+    if (EXPENSE_DOCS.includes(doc.document_type)) {
+      const self = makerChecker(u, doc.created_by);
+      const [out] = await tx`update finance.documents set status = 'approved', approved_by = ${u.actorRef}, posted_at = null
+        where id = ${id}::uuid returning id, document_number, status, grand_total, approved_by`;
+      await approvalEvent(tx, u, "document", id, "approved", self ? "อนุมัติคำขอเบิก — ยังไม่บันทึกค่าใช้จ่าย" : "อนุมัติคำขอเบิก — อนุญาตให้ดำเนินการจ่ายเงินจริง", rid);
+      await audit(tx, u, self ? "approve_self" : "approve_expense_request", "document", id, out, rid);
+      return { ...out, accounting_posted: false, next_step: "expense_clearance" };
+    }
     const self = makerChecker(u, doc.created_by);
     const dd = doc.document_date instanceof Date ? doc.document_date.toISOString().slice(0, 10) : String(doc.document_date);
     const lines = await tx`select * from finance.document_lines where document_id = ${id}::uuid order by line_no`;
@@ -242,7 +251,7 @@ export async function reverseDocument(body: Record<string, unknown>, u: User, ri
     if (paid.n) fail(409, "เอกสารนี้มีรายการรับ/จ่ายเงินแล้ว — ยกเลิกหรือกลับรายการชำระเงินก่อน หรือออกใบลดหนี้แทน");
     const [filed] = await tx`select count(*)::int n from finance.tax_transactions where document_id = ${id}::uuid and status = 'filed'`;
     if (filed.n) fail(409, "ภาษีของเอกสารนี้ถูกยื่นแบบแล้ว — ใช้ใบลดหนี้/เพิ่มหนี้ในงวดถัดไปแทน");
-    const [je] = await tx`select id from finance.journal_entries where source_document_id = ${id}::uuid and source_type = 'document' and status = 'posted'`;
+    const [je] = await tx`select id from finance.journal_entries where source_document_id = ${id}::uuid and source_type in ('document', 'expense_clearance') and status = 'posted'`;
     const d = body.reversal_date ? date(body.reversal_date, "วันที่กลับรายการ") : (doc.document_date instanceof Date ? doc.document_date.toISOString().slice(0, 10) : String(doc.document_date));
     const rev = je ? await reverseEntry(tx, u, je.id, d, reason) : null;
     await tx`update finance.tax_transactions set status = 'adjusted' where document_id = ${id}::uuid`;

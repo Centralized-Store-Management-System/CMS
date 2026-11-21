@@ -26,6 +26,10 @@ def open_ctx(p, b, tok, mobile=False, path='index.html'):
     pg.goto(BASE + path)
     return c, pg
 
+def sub(pg, key):   # เมนูย่อยอยู่ในกลุ่มที่พับได้ → เปิดกลุ่มก่อนกด
+    pg.evaluate(f"(()=>{{const a=document.querySelector('#finSubnav a[data-fin-page=\"{key}\"]'); const d=a&&a.closest('details'); if(d) d.open=true;}})()")
+    pg.click(f'#finSubnav a[data-fin-page="{key}"]')
+
 def wait_fin(pg, head=None):
     pg.wait_for_selector('#fmContent .fm-page-head', timeout=20000)
     pg.wait_for_function("!document.querySelector('#fmContent .fm-loading')", timeout=20000)
@@ -46,7 +50,7 @@ with sync_playwright() as p:
     subs = pg.locator('#finSubnav a').count()
     ok(f'เมนูย่อยลงมาใต้เมนูหลัก ({subs} รายการ)', pg.locator('#nav a[href="#fin"] + #finSubnav').count() == 1 and subs >= 18)
     ok('เมนูย่อย "ภาพรวม" ถูกเลือก', pg.locator('#finSubnav a[aria-current="page"]').inner_text().startswith('ภาพรวม'))
-    pg.click('#finSubnav a[data-fin-page="income"]'); wait_fin(pg, 'รายรับ')
+    sub(pg, 'income'); wait_fin(pg, 'รายรับ')
     ok('กดเมนูย่อย รายรับ → #fin/income แสดงในหน้าเดิม', pg.evaluate('location.hash') == '#fin/income' and pg.locator('#finSubnav a[aria-current="page"]').inner_text().startswith('รายรับ'))
     ok('คำอธิบายหัวหน้าบอกหน้าปัจจุบัน + โหมด', 'รายรับ' in pg.inner_text('.mhead h1 small') and ('UAT' in pg.inner_text('.mhead h1 small') or 'ใช้งานจริง' in pg.inner_text('.mhead h1 small')))
     pg.click('#nav a[href="#fin"]'); pg.wait_for_timeout(200)
@@ -54,7 +58,7 @@ with sync_playwright() as p:
     pg.click('#nav a[href="#fin"]'); pg.wait_for_timeout(200)
     ok('กดอีกครั้ง → ขยายเมนูย่อย', pg.locator('#finSubnav').count() == 1)
     # ลิงก์/ปุ่มภายในหน้า Finance ต้องอยู่ใต้ #fin/
-    pg.click('#finSubnav a[data-fin-page="dashboard"]'); wait_fin(pg, 'ภาพรวม')
+    sub(pg, 'dashboard'); wait_fin(pg, 'ภาพรวม')
     btn = pg.locator('#fmContent [data-go="#income/new"]')
     if btn.count():
         btn.first.click(); pg.wait_for_selector('#fmContent form, #fmContent .fm-form-grid', timeout=15000)
@@ -90,9 +94,9 @@ with sync_playwright() as p:
     ok('มือถือ: เปิด #fin แสดง Finance ในหน้าหลังร้าน', pg.locator('main#view #fmContent').count() == 1)
     ok('มือถือ: มีเมนู Finance บนสุดของหน้า (ย่ออยู่)', pg.locator('.fin-mnav').is_visible() and not pg.locator('.fin-mnav a').first.is_visible())
     pg.click('.fin-mnav summary'); pg.wait_for_timeout(150)
-    ok('มือถือ: แตะ "เมนู Finance" → เมนูย่อยลงมา', pg.locator('.fin-mnav a[data-fin-page="trial-balance"]').is_visible())
-    pg.click('.fin-mnav a[data-fin-page="trial-balance"]'); wait_fin(pg, 'งบทดลอง')
-    ok('มือถือ: เลือกเมนูย่อย → เปิดหน้า แล้วเมนูหุบ', pg.evaluate('location.hash') == '#fin/trial-balance' and not pg.locator('.fin-mnav a').first.is_visible())
+    ok('มือถือ: แตะ "เมนู Finance" → เมนูย่อยลงมา', pg.locator('.fin-mnav a[data-fin-page="expflow"]').is_visible())
+    pg.click('.fin-mnav a[data-fin-page="expflow"]'); wait_fin(pg, 'เบิก–เคลียร์')
+    ok('มือถือ: เลือกเมนูย่อย → เปิดหน้า แล้วเมนูหุบ', pg.evaluate('location.hash') == '#fin/expflow' and not pg.locator('.fin-mnav a').first.is_visible())
     over = pg.evaluate("document.documentElement.scrollWidth - innerWidth")
     ok('มือถือ: ไม่ล้นจอ', over <= 1, over)
     ok('มือถือ: แถบล่างยังอยู่ (Menu)', pg.locator('#bottom a[href="#menu"]').is_visible())

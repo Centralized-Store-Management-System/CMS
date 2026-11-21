@@ -10,13 +10,15 @@ import * as T from "./tax.ts";
 import * as R from "./reports.ts";
 import * as A from "./admin.ts";
 import * as V from "./verification.ts";
+import * as C from "./expense-clearances.ts";
+import * as EF from "./expense-flow.ts";
 
 const ORIGINS = new Set([
   "https://centralized-store-management.github.io",
   "https://centralized-store-management-system.github.io",
   ...String(Deno.env.get("FINANCE_TEST_ORIGINS") || "").split(",").map(s => s.trim()).filter(Boolean),
 ]);
-const VERSION = "1.1.0";
+const VERSION = "1.3.0";
 
 type Reader = (url: URL, u: User) => Promise<unknown>;
 type Writer = (body: Record<string, unknown>, u: User, rid: string, idem: string) => Promise<unknown>;
@@ -27,6 +29,8 @@ const READ: Record<string, Reader> = {
   documents: D.listDocuments, document: D.getDocument,
   payments: P.listPayments, "open-documents": P.openDocuments,
   "verification-queue": V.verificationQueue, "payment-files": V.listPaymentFiles, "file-url": V.fileUrl,
+  "expense-flow": EF.listFlow, "expense-flow-item": EF.getFlowItem,
+  "expense-clearances": C.listClearances, "expense-clearance-files": C.listClearanceFiles, "expense-clearance-file-url": C.clearanceFileUrl,
   journals: J.listJournals, journal: J.getJournal, periods: J.listPeriods,
   "tax-report": T.taxReport, filings: T.listFilings,
   summary: R.summary, "trial-balance": R.trialBalance, "profit-loss": R.profitLoss, "balance-sheet": R.balanceSheet, ledger: R.ledger, aging: R.aging,
@@ -38,6 +42,8 @@ const WRITE: Record<string, Writer> = {
   "document.void": D.voidDocument, "document.approve": D.approveDocument, "document.reverse": D.reverseDocument,
   "payment.create": P.createPayment, "payment.approve": P.approvePayment, "payment.reject": P.rejectPayment, "payment.cancel": P.cancelPayment, "payment.mark-paid": P.markPaid,
   "payment.verify-documents": V.verifyPaymentDocuments,
+  "expense-clearance.submit": C.submitClearance, "expense-clearance.approve": C.approveClearance, "expense-clearance.return": C.returnClearance, "expense-clearance.verify": C.verifyClearance,
+  "expense-clearance.verifier-return": C.verifierReturnClearance, "expense-file.delete": EF.deleteFile,
   "journal.create": J.createJournal, "journal.submit": J.submitJournal, "journal.post": J.postJournal, "journal.reject": J.rejectJournal, "journal.delete": J.deleteDraftJournal, "journal.reverse": J.reverseJournal,
   "period.create-year": J.createPeriods, "period.close": J.closePeriod, "period.reopen": J.reopenPeriod,
   "tax.prepare": T.prepareFiling, "tax.submit-review": T.submitFilingReview, "tax.return": T.returnFiling, "tax.approve": T.approveFiling, "tax.mark-submitted": T.markFiled, "tax.mark-paid": T.markFilingPaid,
@@ -72,9 +78,9 @@ Deno.serve(async (req: Request) => {
         capabilities: capabilities(user),
       } }, 200, origin);
       const limitedReads: Record<string, string[]> = {
-        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url"],
-        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url"],
-        verifier: ["verification-queue", "payment-files", "file-url"],
+        manager: ["summary", "accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item"],
+        staff: ["accounts", "partners", "documents", "document", "payments", "open-documents", "verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item"],
+        verifier: ["verification-queue", "payment-files", "file-url", "expense-clearances", "expense-clearance-files", "expense-clearance-file-url", "expense-flow", "expense-flow-item"],
       };
       const allowedReads = limitedReads[user.role];
       if (allowedReads && !allowedReads.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ดูข้อมูลส่วนนี้");
@@ -89,9 +95,10 @@ Deno.serve(async (req: Request) => {
       if (declaredLength > 20 * 1024 * 1024 + 256 * 1024) throw new HttpError(413, "ไฟล์ต้องมีขนาดไม่เกิน 20 MB");
       const form = await req.formData();
       const uploadAction = text(form.get("action"), 40);
-      if (uploadAction !== "file.upload") throw new HttpError(404, "ไม่พบ Finance API action");
+      if (!["file.upload", "expense-clearance.file.upload", "expense-request.file.upload"].includes(uploadAction)) throw new HttpError(404, "ไม่พบ Finance API action");
       if (!["owner", "manager", "staff", "approver", "accountant"].includes(user.role)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์แนบเอกสาร");
-      const data = await V.uploadPaymentFile(form, user, rid);
+      const data = uploadAction === "expense-clearance.file.upload" ? await C.uploadClearanceFile(form, user, rid)
+        : uploadAction === "expense-request.file.upload" ? await EF.uploadRequestFile(form, user, rid) : await V.uploadPaymentFile(form, user, rid);
       return json({ ok: true, data }, 201, origin);
     }
     const raw = await req.text();
@@ -101,9 +108,9 @@ Deno.serve(async (req: Request) => {
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "รูปแบบข้อมูลไม่ถูกต้อง");
     const action = text(body.action, 40);
     const limitedWrites: Record<string, string[]> = {
-      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel"],
-      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel"],
-      verifier: ["payment.verify-documents"],
+      manager: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit", "expense-file.delete"],
+      staff: ["document.create", "document.update", "document.submit", "document.void", "payment.create", "payment.mark-paid", "payment.cancel", "expense-clearance.submit", "expense-file.delete"],
+      verifier: ["payment.verify-documents", "expense-clearance.verify", "expense-clearance.verifier-return"],
     };
     const allowedWrites = limitedWrites[user.role];
     if (allowedWrites && !allowedWrites.includes(action)) throw new HttpError(403, "บทบาทนี้ไม่มีสิทธิ์ทำรายการนี้");
