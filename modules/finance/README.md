@@ -21,7 +21,14 @@
 - `services/` — API adapters, lazy loaded
 - `tests/` — isolated unit and integration tests
 
-## Shared CMS experience\n- Finance เป็น independent entry point ภายใน CMS platform; หน้าจอและเมนู Finance แยกภายใน workspace ของโมดูล\n- ใช้ theme contract เดียวกับ CMS ผ่าน `cms-theme-bridge.js` โดยอ่าน `amz.theme` และ `amz.mytheme` จาก same-origin localStorage\n- สีหลัก, accent, background, font, heading font, logo, light/dark mode, scale, radius และ density ถูกส่งต่อไปยัง Finance-only CSS overrides\n- ไม่โหลด `js/theme.js`, `css/app.css` หรือ CMS runtime เข้ามาใน Finance จึงไม่ผูก dependency กับระบบเดิม\n- Theme Bridge ทำงานเฉพาะเมื่อเปิดหน้า Finance; ไม่มี polling, API, Realtime หรือ network request เพิ่มในหน้าระบบเดิม\n\n## Access model
+## Shared CMS experience\n- Finance เป็น independent entry point ภายใน CMS platform; หน้าจอและเมนู Finance แยกภายใน workspace ของโมดูล\n- ใช้ theme contract เดียวกับ CMS ผ่าน `cms-theme-bridge.js` โดยอ่าน `amz.theme` และ `amz.mytheme` จาก same-origin localStorage\n- สีหลัก, accent, background, font, heading font, logo, light/dark mode, scale, radius และ density ถูกส่งต่อไปยัง Finance-only CSS overrides\n- ไม่โหลด `js/theme.js`, `css/app.css` หรือ CMS runtime เข้ามาใน Finance จึงไม่ผูก dependency กับระบบเดิม\n- Theme Bridge ทำงานเฉพาะเมื่อเปิดหน้า Finance; ไม่มี polling, API, Realtime หรือ network request เพิ่มในหน้าระบบเดิม\n\n## Verified CMS authentication contract (read-only integration design)
+- Existing CMS session is custom and validated server-side through `backoffice?action=bootstrap&t=<session>`; it is not safe to assume Supabase Auth JWT.
+- Existing HR Documents Edge Function validates `boot.me.role`, `boot.me.perms`, and `boot.me.scope` from that bootstrap response.
+- Finance authorization will accept `me.role === 'owner'` or the existing `me.perms` array containing `acct`; this is a Finance-specific permission gate and does not create a global CMS role.
+- A stable actor reference must be confirmed from `me.id`, `me.username`, or `me.code` before enabling audit writes. Do not invent or silently map an identity.
+- The current preview has no session integration and remains unlinked from Owner until a Finance API adapter, session expiry handling, and authorization tests are complete.
+
+## Access model
 - Owner
 - Accounting
 
