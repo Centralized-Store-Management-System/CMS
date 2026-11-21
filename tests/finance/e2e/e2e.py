@@ -147,12 +147,12 @@ s, r = post(APR, 'payment.approve', payment_id=pay); ok('อนุมัติ�
 s, r = post(APR, 'payment.mark-paid', payment_id=pay); ok('บันทึกรับเงินจริง → ลงบัญชี', s == 200 and r['data']['status'] == 'paid' and r['data']['journal_number'], r)
 ok('สมุดรายวันรับเงิน: Dr ธนาคาร 5,000 / Cr ลูกหนี้ 5,000', psql(f"select string_agg(a.account_code||':'||jl.debit||'/'||jl.credit,' ' order by a.account_code) from finance.journal_lines jl join finance.journal_entries je on je.id=jl.journal_entry_id join finance.chart_of_accounts a on a.id=jl.account_id where je.source_payment_id='{pay}'") == '1010:5000.00/0.00 1100:0.00/5000.00')
 s, r = get(ACC, 'open-documents', kind='income'); o = {x['id']: float(x['outstanding']) for x in r['data']['items']}; ok('ยอดคงค้างใบกำกับ = 5,700', o.get(inv['id']) == 5700, o)
-s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', document_id=bill['id']); bp = r['data']['id']
+s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', offset_account_id=acc['5200']); bp = r['data']['id']
 s, r = post(APR, 'payment.reject', payment_id=bp, note='รอใบเสร็จ'); ok('ปฏิเสธการจ่าย', s == 200 and r['data']['status'] == 'rejected', r)
 s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', document_id=bill['id']); bp2 = r['data']['id']
-s, r = post(ACC, 'payment.cancel', payment_id=bp2, note='ผิด'); ok('ยกเลิกรายการที่รออนุมัติ', s == 200 and r['data']['status'] == 'cancelled', r)
+s, r = post(ACC, 'payment.cancel', payment_id=bp2, note='ผิด'); ok('ยกเลิกรายการที่อนุมัติแล้วแต่ยังไม่จ่าย', s == 200 and r['data']['status'] == 'cancelled', r)
 s, r = post(ACC, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '13', amount=5200, method='bank_transfer', document_id=bill['id']); bp3 = r['data']['id']
-post(APR, 'payment.approve', payment_id=bp3); s, r = post(APR, 'payment.mark-paid', payment_id=bp3); ok('จ่ายบิลครบ', s == 200, r)
+s, r = post(APR, 'payment.mark-paid', payment_id=bp3); ok('จ่ายบิลที่ Owner/Approver อนุมัติในเอกสารแล้วได้โดยไม่อนุมัติซ้ำ', s == 200, r)
 s, r = post(ACC, 'payment.create', idem=k(), payment_type='receipt', payment_date=D + '14', amount=50000, method='bank_transfer', offset_account_id=acc['3000'], note='เจ้าของนำเงินเข้า'); cap = r['data']['id']
 post(APR, 'payment.approve', payment_id=cap); s, r = post(APR, 'payment.mark-paid', payment_id=cap); ok('รับเงินไม่มีเอกสาร (บัญชีคู่ = ทุน)', s == 200, r)
 s, r = post(APR, 'document.reverse', document_id=bill['id'], reason='x'); ok('กลับรายการเอกสารที่จ่ายแล้วไม่ได้', s == 409, r)
@@ -225,11 +225,11 @@ s, r = post(MGR, 'document.approve', document_id=staff_doc['id']); ok('Manager �
 s, r = post(STF, 'document.approve', document_id=staff_doc['id']); ok('Staff อนุมัติเอกสารไม่ได้', s == 403, r)
 s, r = post(OWN, 'document.approve', document_id=staff_doc['id']); ok('Owner อนุมัติคำขอ Staff', s == 200 and staff_doc['id'] == r['data']['id'], r)
 s, r = post(STF, 'payment.create', idem=k(), payment_type='disbursement', payment_date=D + '23', amount=500, method='bank_transfer', document_id=staff_doc['id'])
-staff_pay = r['data']['id']; ok('Staff สร้างคำขอจ่ายเงินได้', s == 201 and r['data']['status'] == 'pending', r)
+staff_pay = r['data']['id']; ok('Staff สร้างคำขอจ่ายเงินที่ได้รับอนุมัติตามเอกสารที่ Owner อนุมัติแล้ว', s == 201 and r['data']['status'] == 'approved' and r['data']['approved_by'] == 'u:U0', r)
 s, r = post(MGR, 'payment.approve', payment_id=staff_pay); ok('Manager อนุมัติการจ่ายไม่ได้', s == 403, r)
 s, r = post(STF, 'payment.approve', payment_id=staff_pay); ok('Staff อนุมัติการจ่ายไม่ได้', s == 403, r)
-s, r = post(OWN, 'payment.approve', payment_id=staff_pay); ok('Owner อนุมัติการจ่าย', s == 200 and r['data']['status'] == 'approved', r)
-s, r = post(STF, 'payment.mark-paid', payment_id=staff_pay); ok('Staff บันทึกว่าจ่ายเงินจริงหลัง Owner อนุมัติ', s == 200 and r['data']['status'] == 'paid', r)
+s, r = post(OWN, 'payment.approve', payment_id=staff_pay); ok('ไม่ต้องขอ Owner อนุมัติการจ่ายซ้ำเมื่ออนุมัติเอกสารรายจ่ายแล้ว', s == 409, r)
+s, r = post(STF, 'payment.mark-paid', payment_id=staff_pay); ok('Staff บันทึกว่าจ่ายเงินจริงได้ทันทีหลัง Owner อนุมัติเอกสาร', s == 200 and r['data']['status'] == 'paid', r)
 s, r = get(STF, 'document', id=bill['id']); ok('Staff เปิดเอกสารของผู้ใช้อื่นไม่ได้', s == 404, r)
 s, r = get(STF, 'payments'); ok('Staff เห็นเฉพาะรายการรับ/จ่ายของตนเอง', s == 200 and all(x['created_by'] == 'u:U6' for x in r['data']['items']), r)
 s, r = get(MGR, 'summary'); ok('Manager ดูภาพรวมตามสิทธิ์ได้', s == 200 and 'kpi' in r['data'], r)
