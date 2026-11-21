@@ -310,6 +310,36 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
   return doc;
 }
 
+async function submitDocument(body: Record<string, unknown>, user: { companyId: string; actorRef: string }, requestId: string) {
+  const id=asText(body.document_id,36);
+  if(!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400,"รหัสเอกสารไม่ถูกต้อง");
+  const [doc]=await db!.begin(async tx=>{
+    const [row]=await tx`select id,status,created_by from finance.documents where id=${id}::uuid and company_id=${user.companyId}::uuid for update`;
+    if(!row) throw new HttpError(404,"ไม่พบเอกสาร");
+    if(row.status!=="draft") throw new HttpError(409,"ส่งตรวจสอบได้เฉพาะเอกสาร Draft");
+    const [updated]=await tx`update finance.documents set status='pending_review' where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,document_type,document_number,status,grand_total,created_by`;
+    await tx`insert into finance.approval_events (company_id,entity_type,entity_id,action,actor_ref,note,request_id) values (${user.companyId}::uuid,'document',${id}::uuid,'submitted',${user.actorRef},${asText(body.note,500)||null},${requestId})`;
+    await tx`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'submit_review','document',${id},${tx.json(updated)},${requestId})`;
+    return [updated];
+  });
+  return doc;
+}
+async function approveDocument(body: Record<string, unknown>, user: { companyId: string; actorRef: string; role: string }, requestId: string) {
+  requireOwner(user);
+  const id=asText(body.document_id,36);
+  if(!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400,"รหัสเอกสารไม่ถูกต้อง");
+  const [doc]=await db!.begin(async tx=>{
+    const [row]=await tx`select id,status,created_by from finance.documents where id=${id}::uuid and company_id=${user.companyId}::uuid for update`;
+    if(!row) throw new HttpError(404,"ไม่พบเอกสาร");
+    if(row.created_by===user.actorRef) throw new HttpError(403,"ผู้สร้างเอกสารไม่สามารถอนุมัติเอกสารของตนเองได้");
+    if(row.status!=="pending_review") throw new HttpError(409,"เอกสารไม่ได้อยู่ในสถานะรออนุมัติ");
+    const [updated]=await tx`update finance.documents set status='approved',approved_by=${user.actorRef} where id=${id}::uuid and company_id=${user.companyId}::uuid returning id,document_type,document_number,status,grand_total,approved_by`;
+    await tx`insert into finance.approval_events (company_id,entity_type,entity_id,action,actor_ref,note,request_id) values (${user.companyId}::uuid,'document',${id}::uuid,'approved',${user.actorRef},${asText(body.note,500)||null},${requestId})`;
+    await tx`insert into finance.audit_events (company_id,actor_ref,action,entity_type,entity_id,after_data,request_id) values (${user.companyId}::uuid,${user.actorRef},'approve','document',${id},${tx.json(updated)},${requestId})`;
+    return [updated];
+  });
+  return doc;
+}
 async function createPayment(body: Record<string, unknown>, user: { companyId: string; actorRef: string }, requestId: string, idempotencyKey: string) {
   if (!idempotencyKey || idempotencyKey.length < 8) throw new HttpError(400, "ต้องมี Idempotency Key เพื่อป้องกันการบันทึกซ้ำ");
   const type = asText(body.payment_type, 20);
@@ -423,6 +453,14 @@ Deno.serve(async (req: Request) => {
     if (action === "document.create") {
       const document = await createDocument(body, user, requestId, idempotencyKey);
       return json({ ok: true, data: document }, 201, origin);
+    }
+    if (action === "document.submit") {
+      const document = await submitDocument(body, user, requestId);
+      return json({ ok: true, data: document }, 200, origin);
+    }
+    if (action === "document.approve") {
+      const document = await approveDocument(body, user, requestId);
+      return json({ ok: true, data: document }, 200, origin);
     }
     if (action === "payment.create") {
       const payment = await createPayment(body, user, requestId, idempotencyKey);
