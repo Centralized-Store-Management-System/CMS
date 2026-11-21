@@ -205,6 +205,7 @@ async function createDocument(body: Record<string, unknown>, user: { companyId: 
   const grand = round2(subtotal + vat - wht);
   const [doc] = await db!.begin(async tx => {
     if (idempotencyKey) {
+      await tx.`select pg_advisory_xact_lock(hashtextextended(${user.companyId + ":" + idempotencyKey}, 0))`;
       const [existing] = await tx.`select id, document_number, status, subtotal, vat_total, wht_total, grand_total from finance.documents where company_id = ${user.companyId}::uuid and idempotency_key = ${idempotencyKey} limit 1`;
       if (existing) return [existing];
     }
