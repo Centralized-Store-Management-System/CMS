@@ -115,8 +115,8 @@ export async function uploadPaymentFile(form: FormData, u: User, rid: string) {
   try {
     return await sql.begin(async (tx: Tx) => {
       const [row] = await tx`insert into finance.document_files
-        (company_id, document_id, payment_id, storage_bucket, object_path, original_name, mime_type, size_bytes, uploaded_by, file_category)
-        values (${u.companyId}::uuid, ${p.document_id}::uuid, ${paymentId}::uuid, ${BUCKET}, ${path}, ${file.name.slice(0, 255)}, ${file.type}, ${file.size}, ${u.actorRef}, ${category})
+        (company_id, payment_id, storage_bucket, object_path, original_name, mime_type, size_bytes, uploaded_by, file_category)
+        values (${u.companyId}::uuid, ${paymentId}::uuid, ${BUCKET}, ${path}, ${file.name.slice(0, 255)}, ${file.type}, ${file.size}, ${u.actorRef}, ${category})
         returning id, payment_id, file_category, original_name, mime_type, size_bytes, created_at`;
       await audit(tx, u, "upload_payment_document", "payment", paymentId, row, rid);
       return row;
