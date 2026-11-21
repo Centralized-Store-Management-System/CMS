@@ -63,7 +63,7 @@ A failed Finance feature must not block or degrade any existing CMS workflow. An
 ## Phase 4A — Preview acceptance
 - [ ] Verify mobile/tablet/desktop layout in browser.
 - [ ] Verify navigation and lazy-load behavior with browser network trace (Finance closed = zero Finance requests).
-- [ ] Validate transaction calculations against accountant-approved test cases, including VAT exempt/0%, WHT, rounding and credit notes.
+- [x] Add a shared pure calculation engine and unit-test cases for VAT 7%, WHT 3%, zero VAT, per-line rounding and invalid inputs.\n- [ ] Validate tax policy and rounding expectations with the accountant; credit-note accounting remains pending.
 - [ ] Confirm forms remain non-persistent until staging schema/API and actor identity are approved.
 
 ## Staging blockers (must close before user acceptance test)
@@ -81,3 +81,5 @@ A failed Finance feature must not block or degrade any existing CMS workflow. An
 - Added company-scoped role mapping, partner/account/document list and create endpoints, audit inserts, idempotency lock, and date/amount validation.
 - Connected partner, chart-of-accounts, revenue and expense UI source to the API adapter. Runtime activation still requires a verified CMS host token provider and a non-production database.
 - No SQL draft has been executed; no database, storage bucket, or production data has been changed.
+
+- [x] Run direct JavaScript calculation checks for VAT 7%, WHT 3%, zero VAT, per-line rounding and invalid input rejection (2026-11-21).
