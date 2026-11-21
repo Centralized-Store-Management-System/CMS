@@ -79,3 +79,7 @@ Branch: `feat/iam-runtime-authorization-foundation`
 - Position-role bindings are not resolved by this evaluator because canonical employee↔principal links and effective-dated employee assignments are not yet authoritative.
 - No existing module has been changed to call this endpoint. It is not yet an enforcement boundary until each protected backend integrates it and fails closed.
 - UAT authenticated positive/negative matrix remains pending; deployment status alone is not a security test.
+
+
+- Added covering indexes for the HR/IAM foreign keys flagged by Supabase Performance Advisor; applied the additive index migration to UAT. The advisor's unindexed-FK count decreased from 53 to 48; remaining findings are outside this HR/IAM migration.
+- Supabase Security Advisor reports RLS-enabled/no-policy informational findings for the IAM/HR tables. Direct SELECT privilege checks confirmed `anon` and `authenticated` have no SELECT privilege on these tables, while `service_role` does. This is consistent with the current server-only access model; do not add client policies without a reviewed authorization design.
