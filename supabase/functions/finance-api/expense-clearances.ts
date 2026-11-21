@@ -1,7 +1,7 @@
 // Expense request clearance — one canonical expense document, no duplicate expense document.
 import { approvalEvent, audit, date, db, fail, money, oneOf, opt, text, Tx, uuid } from "./util.ts";
 import { makerChecker, need, User } from "./auth.ts";
-import { EXPENSE_DOCS, postEntry, sysAccount, accountByCode, Line } from "./posting.ts";
+import { EXPENSE_DOCS, postEntry, sysAccount, accountByCode, accountById, Line } from "./posting.ts";
 import { num, round2 } from "./util.ts";
 
 const METHODS = ["cash","bank_transfer","credit_card","cheque","other"] as const;
@@ -39,6 +39,12 @@ export async function submitClearance(body: Record<string,unknown>,u:User,rid:st
   const paymentAccountId=body.payment_account_id?uuid(body.payment_account_id,"บัญชีที่จ่าย"):null;
   const paidOn=date(body.payment_date,"วันที่จ่ายเงินจริง");
   const method=oneOf(body.payment_method,METHODS,"ช่องทางจ่าย");
+  if(["credit_card","other"].includes(method)&&!paymentAccountId)
+    fail(400,"กรุณาเลือกบัญชีคู่รายการสำหรับบัตรเครดิตหรือช่องทางอื่น");
+  if(paymentAccountId){
+    const account=await db().begin(async(tx:Tx)=>accountById(tx,u,paymentAccountId,method==="credit_card"?["liability"]:method==="other"?["asset","liability"]:["asset"]));
+    if(!account) fail(400,"บัญชีที่เลือกไม่ถูกต้อง");
+  }
   return await db().begin(async(tx:Tx)=>{
     const [doc]=await tx`select id,document_type,document_number,status,created_by,grand_total from finance.documents
       where id=${documentId}::uuid and company_id=${u.companyId}::uuid for update`;
@@ -144,9 +150,12 @@ export async function verifyClearance(body:Record<string,unknown>,u:User,rid:str
       jl.push({account_id:acc,debit:round2(num(l.line_total)+(claimVat?0:num(l.vat_amount))),credit:0,description:l.description});
     }
     if(claimVat) jl.push({account_id:await sysAccount(tx,u,"vat_input"),debit:num(c.vat_total),credit:0,description:desc});
-    const cashKey=c.payment_method==="bank_transfer"?"bank":c.payment_method==="cash"?"cash":null;
-    if(!cashKey) fail(409,"ช่องทางจ่ายนี้ยังไม่ได้กำหนดบัญชีคู่รายการ กรุณาใช้เงินสดหรือโอนธนาคาร หรือกำหนดผังบัญชีก่อน");
-    jl.push({account_id:await sysAccount(tx,u,cashKey),debit:0,credit:actual,description:desc});
+    const defaultKey=c.payment_method==="bank_transfer"?"bank":c.payment_method==="cash"?"cash":null;
+    const settlementAccount=c.payment_account_id
+      ? String((await accountById(tx,u,String(c.payment_account_id),c.payment_method==="credit_card"?["liability"]:["asset","liability"])).id)
+      : defaultKey?await sysAccount(tx,u,defaultKey):null;
+    if(!settlementAccount) fail(409,"尚未設定此付款方式的會計科目，請先選擇有效的付款帳戶");
+    jl.push({account_id:settlementAccount,debit:0,credit:actual,description:desc});
     if(num(c.wht_total)>0) jl.push({account_id:await sysAccount(tx,u,"wht_payable"),debit:0,credit:num(c.wht_total),description:desc});
     const je=await postEntry(tx,u,{date:date(c.payment_date,"วันที่จ่ายเงินจริง"),description:"เคลียร์ค่าใช้จ่าย "+desc,source_type:"expense_clearance",source_document_id:c.doc_id,created_by:c.created_by,lines:jl});
     const tp=String(c.payment_date).slice(0,7),sub=num(c.subtotal),vat=num(c.vat_total),wht=num(c.wht_total);
