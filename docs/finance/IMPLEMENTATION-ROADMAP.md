@@ -21,12 +21,12 @@
 - [ ] No changes to current login, PIN or session flow.
 
 ## Phase 3 — Data foundation
-- [ ] Finance-only schema and migration set.
+- [x] Draft Finance-only schema foundation (001) and master-data/control tables (002); not applied.\n- [ ] Review SQL, configure private API exposure/connection and apply only in isolated staging after approval.
 - [x] Build isolated master-data UI for company/tax profile, partners and chart of accounts (local validation only).
 - [ ] Deploy reviewed Finance schema, then connect forms to authenticated persistence API.
 - [ ] Categories and document numbering service.
 - [ ] Private document storage.
-- [ ] Audit and approval events.
+- [x] Draft approval events and audit event tables.\n- [ ] Add automated audit immutability and role-based tests.
 
 ## Phase 4 — Workflows
 - [ ] Revenue and receipts.
