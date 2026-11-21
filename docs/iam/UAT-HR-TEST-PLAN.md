@@ -45,3 +45,15 @@ Feature branch: `feat/hr-position-id-sync-phase1`
 - New IAM tables are not directly exposed to anon/authenticated roles; backend service access only.
 - No changes to Finance workflows, production authentication, LINE onboarding or Email registration are part of this UAT slice.
 - An Outbox item marked Pending is queued only. Do not treat it as synchronized across applications until a per-application consumer acknowledges delivery.
+
+
+## E. HR ↔ Users position reference regression (Phase 2)
+
+1. In UAT, edit a test employee and assign an active Position Master record.
+2. Save and verify employee `positionId`, `positionCode`, and legacy `position` label.
+3. Verify the linked Users record receives the same three fields without changing username, PIN, LINE linkage, branch scope, or status.
+4. Change only the employee position; verify existing legacy `perms` on the user are not cleared.
+5. Change the employee legacy role; verify existing role-specific legacy `perms` are cleared as before.
+6. Edit the linked Users record's position reference and verify the employee's three position fields update.
+7. Repeat with an employee who has no linked Users record; verify the HR save succeeds and no unrelated user is changed.
+8. Confirm a failed DB write does not trigger the local mirror update (the wrapper mirrors only after the original upsert resolves).
