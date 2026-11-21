@@ -12,6 +12,7 @@
   const VERSION_URL = new URL('deploy-version.json', document.baseURI).href;
   const KEY = 'cms.deploy.current.v1';
   const $ = (s, r) => (r || document).querySelector(s);
+  D.version = currentVersion();
 
   function currentVersion() {
     try { return localStorage.getItem(KEY) || document.documentElement.dataset.build || ''; }
