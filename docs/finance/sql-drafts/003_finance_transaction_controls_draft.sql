@@ -89,7 +89,7 @@ for each row execute function finance.guard_posted_record();
 -- Child lines cannot be changed after their parent has been posted.
 create or replace function finance.guard_posted_child_line()
 returns trigger language plpgsql set search_path = pg_catalog, finance
-as $
+as $$
 declare parent_status text; parent_id uuid;
 begin
   parent_id := case when tg_op = 'DELETE' then old.document_id else new.document_id end;
@@ -100,7 +100,7 @@ begin
   end if;
   if tg_op = 'DELETE' then return old; end if;
   return new;
-end $;
+end $$;
 
 drop trigger if exists trg_document_lines_guard_parent on finance.document_lines;
 create trigger trg_document_lines_guard_parent
@@ -109,7 +109,7 @@ for each row execute function finance.guard_posted_child_line();
 
 create or replace function finance.guard_posted_journal_line()
 returns trigger language plpgsql set search_path = pg_catalog, finance
-as $
+as $$
 declare parent_status text; parent_id uuid;
 begin
   parent_id := case when tg_op = 'DELETE' then old.journal_entry_id else new.journal_entry_id end;
@@ -120,7 +120,7 @@ begin
   end if;
   if tg_op = 'DELETE' then return old; end if;
   return new;
-end $;
+end $$;
 
 drop trigger if exists trg_journal_lines_guard_parent on finance.journal_lines;
 create trigger trg_journal_lines_guard_parent
@@ -131,11 +131,11 @@ for each row execute function finance.guard_posted_journal_line();
 -- Audit history is append-only even for service_role application code.
 create or replace function finance.reject_audit_mutation()
 returns trigger language plpgsql set search_path = pg_catalog, finance
-as $
+as $$
 begin
   raise exception 'Finance audit events are append-only'
     using errcode = '55000';
-end $;
+end $$;
 
 drop trigger if exists trg_approval_events_immutable on finance.approval_events;
 create trigger trg_approval_events_immutable
