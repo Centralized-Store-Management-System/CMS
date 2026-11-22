@@ -68,10 +68,10 @@ function itnGraph(data) {
     });
     if(d.key==='it'){
       const codeNodes=[
-        ['Super Advance IT','owner.html#it','js/owner.js · js/it-ai.js'],
-        ['IT Control Center','owner.html#control','js/it-control-center.js'],
-        ['AI Intelligence Network','owner.html#network','js/it-network.js'],
-        ['IT Monitor','owner.html#ai','it-monitor Edge Function']
+        ['Super Advance IT','owner.html#it','js/owner.js · js/it-ai.js','js/owner.js'],
+        ['IT Control Center','owner.html#control','js/it-control-center.js · Edge Function','js/it-control-center.js'],
+        ['AI Intelligence Network','owner.html#network','js/it-network.js · Edge Function','js/it-network.js'],
+        ['IT Monitor','owner.html#ai','js/it-ai.js · it-monitor Edge Function','js/it-ai.js']
       ];
       codeNodes.forEach((c,j)=>{
         const ax=cx-105, ay=510+j*96;
@@ -80,11 +80,28 @@ function itnGraph(data) {
       });
     }
   });
-  edges.push(itnEdge(270,930,660,930,'verified','Actual FK paths'));
-  edges.push(itnEdge(660,930,1090,930,'verified','Actual FK paths'));
   nodes.push(itnNode(80,890,380,82,'ORG / HR DATA','org_departments · hr_positions · staff','data','org-hr','ok'));
   nodes.push(itnNode(470,890,380,82,'IAM REGISTRY','iam_applications · roles · grants','data','iam','ok'));
   nodes.push(itnNode(900,890,380,82,'ORDER / LINE DATA','orders · items · customers · branches','data','orders','ok'));
+  // Draw cross-domain database links only when an actual foreign key connects the table groups.
+  const tableGroup = table => {
+    if (['staff','hr_positions','org_departments','org_organizations'].includes(table)) return 'org-hr';
+    if (['iam_principals','iam_principal_role_grants','iam_permissions','iam_role_permissions','iam_position_role_bindings','iam_applications','iam_roles'].includes(table)) return 'iam';
+    if (['orders','order_items','customers','branches','order_status_history','line_channels'].includes(table)) return 'orders';
+    return null;
+  };
+  const groupCenters = {'org-hr':270,'iam':660,'orders':1090};
+  const pairs = new Map();
+  (data.relationships||[]).forEach(r => {
+    const a=tableGroup(r.source_table), b=tableGroup(r.target_table);
+    if (!a || !b || a===b) return;
+    const key=[a,b].sort().join('|');
+    pairs.set(key,(pairs.get(key)||0)+1);
+  });
+  pairs.forEach((count,key)=>{
+    const [a,b]=key.split('|');
+    edges.push(itnEdge(groupCenters[a],972,groupCenters[b],972,'verified',count+' actual FK'));
+  });
   return '<svg class="itn-svg" viewBox="0 0 1680 1010" role="img" aria-label="PJD WIN system topology">'+edges.join('')+nodes.join('')+'</svg>';
 }
 
@@ -110,6 +127,21 @@ function itnPersonDetails(s) {
     '<h3>Application Access ใน IAM</h3>'+
     (apps.length?apps.map(a=>'<div class="itn-detail-row"><b>'+itnEsc(a.display_name)+' · '+itnEsc(a.role_key||'-')+'</b><span>'+itnEsc(a.status)+'</span></div>').join(''):'<div class="itn-note warn">ไม่พบ Active IAM Grant สำหรับพนักงาน/ตำแหน่งนี้ จึงไม่คาดเดาสิทธิ์จาก CMS Role</div>')+
     '<div class="itn-note">CMS Role และ Application Permission เป็นข้อมูลคนละส่วน · หน้านี้ไม่แก้ไขสิทธิ์การใช้งาน</div>';
+}
+function itnCodeDetails(route) {
+  const items=[
+    {label:'Super Advance IT',route:'owner.html#it',files:['js/owner.js','js/it-ai.js','js/it-ops.js'],description:'Owner IT Monitoring, AI diagnosis and IT Operations queue.'},
+    {label:'IT Control Center',route:'owner.html#control',files:['js/it-control-center.js','supabase/functions/it-control-center/index.ts'],description:'Existing Owner-only Theme / scope control plane.'},
+    {label:'AI Intelligence Network',route:'owner.html#network',files:['js/it-network.js','supabase/functions/it-intelligence-network/index.ts'],description:'Interactive read-only organization, IAM and database topology.'},
+    {label:'IT Monitor',route:'owner.html#ai',files:['js/it-ai.js','supabase/functions/it-monitor/index.ts'],description:'Live monitor findings, system diagnostics and incident history.'}
+  ];
+  const item=items.find(x=>x.route===route);
+  if(!item)return '<div class="itn-note warn">ไม่พบเส้นทาง Source Code</div>';
+  return '<div class="itn-kicker">SOURCE CODE / REAL OWNER ROUTE</div><h2>'+itnEsc(item.label)+'</h2>'+
+    '<p>'+itnEsc(item.description)+'</p>'+
+    '<div class="itn-detail-row"><b>Owner route</b><a href="'+itnEsc(item.route)+'">เปิดหน้า '+itnEsc(item.label)+'</a></div>'+
+    item.files.map(path=>'<div class="itn-detail-row"><b>'+itnEsc(path)+'</b><a href="https://github.com/Centralized-Store-Management-System/CMS/blob/main/'+path+'" target="_blank" rel="noopener">ดู Source Code</a></div>').join('')+
+    '<div class="itn-note good">ไฟล์และ route ถูกระบุจาก repository จริงของ CMS</div>';
 }
 function itnAppDetails(app) {
   const info=ITN_APP_INFO[app.application_key]||{},href=info.route||'';
@@ -207,16 +239,10 @@ function itnBind() {
     if(kind==='owner'||kind==='ai')detail.innerHTML=itnDefaultDetails(ITN.data);
     if(kind==='domain'){const d=ITN.data.domains.find(x=>x.key===id);if(d)detail.innerHTML=itnDomainDetails(d);}
     if(kind==='app'){const app=ITN.data.applications.find(x=>x.application_key===id);if(app)detail.innerHTML=itnAppDetails(app);}
+    if(kind==='code')detail.innerHTML=itnCodeDetails(id);
     if(kind==='data')detail.innerHTML=itnDataDetails(id);
   });
   root.addEventListener('keydown',e=>{
     if((e.key==='Enter'||e.key===' ')&&e.target.closest('[data-itn-kind]')){e.preventDefault();e.target.closest('[data-itn-kind]').dispatchEvent(new MouseEvent('click',{bubbles:true}));}
   });
 }
-document.addEventListener('click',e=>{
-  const person=e.target.closest('[data-itn-person]');
-  if(!person||!ITN.data)return;
-  const s=ITN.data.staff.find(x=>x.id===person.dataset.itnPerson);
-  const detail=document.getElementById('itn-detail');
-  if(s&&detail)detail.innerHTML=itnPersonDetails(s);
-});
