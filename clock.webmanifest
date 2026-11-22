@@ -1,7 +1,7 @@
 {
   "id": "./clock.html",
-  "name": "ลงเวลา · Time Clock",
-  "short_name": "ลงเวลา",
+  "name": "Café Amazon — App Staff",
+  "short_name": "App Staff",
   "description": "ลงเวลาเข้า-ออกงาน ขอลา ขอ OT แลกกะ",
   "lang": "th",
   "start_url": "./clock.html?src=app",
@@ -11,8 +11,21 @@
   "background_color": "#f3f7f4",
   "theme_color": "#07583f",
   "icons": [
-    { "src": "icons/clock-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/clock-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/clock-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/clock-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/clock-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/clock-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
