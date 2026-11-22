@@ -220,6 +220,22 @@
       return at < 0 ? h : h.slice(0, at) + tag + h.slice(at);
     };
   }
+  // ฟอร์มพนักงาน: Role ตามตำแหน่งที่เลือก
+  function lockRole(sh) {
+    const ps = sh.querySelector('[data-k="position"]'), rs = sh.querySelector('[data-k="role"]');
+    if (!ps || !rs || rs.value === 'owner') return;
+    const p = HR_POSITIONS.find(x => x.name_th === ps.value), t = p && tmpl(p.id);
+    const r = t && t.role && EMP_ROLES.includes(t.role) ? t.role : '';
+    const help = rs.closest('.field') && rs.closest('.field').querySelector('.help');
+    if (r) {
+      if (![...rs.options].some(x => x.value === r)) rs.add(new Option(ROLE_TH[r] || r, r));
+      rs.value = r; rs.disabled = true;
+      if (help) help.textContent = 'ตามตำแหน่ง ' + p.name_th + ' (แก้ที่ HR › Positions)';
+    } else {
+      rs.disabled = false;
+      if (help) help.textContent = p ? 'ตำแหน่งนี้ยังไม่ได้ตั้ง Role — เลือกเองได้' : 'เลือกตำแหน่งแล้ว Role จะตั้งให้เอง';
+    }
+  }
   // ฟอร์มพนักงาน / ผู้ใช้: บอกว่า Role และสิทธิ์มาจากตำแหน่ง
   if (typeof openForm === 'function') {
     const of0 = openForm;
@@ -228,6 +244,13 @@
         const ks = (o.fields || []).map(f => f.k);
         if (ks.includes('position') && ks.includes('payType')) {
           o.topHTML = (o.topHTML || '') + '<p class="note">Role และสิทธิ์ใช้งานเป็นไปตามตำแหน่ง (ตั้งที่ HR › Positions) — เลือกตำแหน่งแล้วบัญชีผู้ใช้ที่ผูกจะปรับตามเอง</p>';
+          // ช่องตำแหน่งมาก่อน Role · ตำแหน่งที่ตั้ง Role ไว้ → Role ตั้งให้เองและล็อก (เลือกเองได้เฉพาะตำแหน่งที่ยังไม่ตั้ง)
+          const fi = o.fields.findIndex(f => f.k === 'position'), ri = o.fields.findIndex(f => f.k === 'role');
+          if (ri >= 0 && fi > ri) { const [f] = o.fields.splice(fi, 1); o.fields.splice(ri, 0, f); }
+          const rf = o.fields.find(f => f.k === 'role');
+          if (rf) rf.help = 'ตั้งตามตำแหน่งให้อัตโนมัติ';
+          const live0 = o.live;
+          o.live = sh => { if (live0) live0(sh); lockRole(sh); };
         } else if (ks.includes('uname') && ks.includes('perms')) {
           const e = o.data && o.data.empId && empById(o.data.empId), p = e && posOfEmp(e), t = p && tmpl(p.id);
           o.topHTML = (o.topHTML || '') + (t && t.set
