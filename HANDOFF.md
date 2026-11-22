@@ -19,6 +19,18 @@
 - `otpSend` / `otpVerify` (อีเมล) ถูกปิด ตอบข้อความให้ใช้ LINE · ไม่ต้องตั้ง `RESEND_API_KEY` อีกต่อไป
 - ต้นฉบับ `.gs` ยังอยู่นอก repo (repo นี้ Public) — อย่า commit `.gs` ลงที่นี่ · แก้ logic ฝั่งเซิร์ฟเวอร์ต้องขอซอร์สจากเจ้าของ/repo private แล้วเข้ารหัส `gas.enc` ใหม่
 
+## ส่งต่อให้ AI ตัวถัดไป (22 พ.ย. 2569 · Claude) — อ่านก่อนเริ่ม
+- เริ่มทุกครั้ง: `git pull --rebase` → อ่าน `AGENTS.md` + ไฟล์นี้ → ทำงานบน branch ใหม่ → เปิด PR ให้เจ้าของกด merge (merge main ผ่าน API ไม่ได้) → รายงาน commit SHA + รายการไฟล์ที่เปลี่ยน
+- เปิด PR จาก Claude Code: `gh pr create` ใช้ไม่ได้ (GraphQL ถูกบล็อก) ให้ใช้ `gh api repos/Centralized-Store-Management-System/CMS/pulls -f title=… -f head=… -f base=main -F body=@ไฟล์`
+- **ช่องว่างที่ต้องระวัง**: ซอร์ส `.gs` ฝั่งเซิร์ฟเวอร์ไม่อยู่ใน repo (Public) — ต้นฉบับอยู่กับเจ้าของ/repo private `CMS-server-src` (ถ้ามี) ก่อนแก้ logic เซิร์ฟเวอร์ต้องขอซอร์สล่าสุด แล้วเข้ารหัส `server/gas.enc` ใหม่ (AES-256-GCM: base64 ของ IV 12 ไบต์ + tag 16 ไบต์ + ข้อมูลที่ gzip) กุญแจ `CODE_KEY` อยู่ใน `backoffice.kv` ห้ามใส่ใน repo/log · ต้องถอดกลับมาเทียบกับซอร์สก่อนส่ง PR
+- ทดสอบฝั่งเซิร์ฟเวอร์ได้โดยไม่แตะระบบจริง: ใช้ `compileGas` + `createRuntime` จาก `server/runtime.js` กับ store จำลองในหน่วยความจำ (เซ็ตค่า `BOOK_core`/`BOOK_hr` ในprops, ชีตมี 2 แถวหัว: ป้ายชื่อ + คีย์ ข้อมูลเริ่มแถว 3)
+- ตรวจหน้าจอ: PC 1440 · iPad 820 · iPhone 390 ทั้งหน้าหลังร้าน (`index.html`) และหน้าลงเวลา (`clock.html`) · บางหน้าจอแสดงสิทธิ์/เมนูไม่เหมือนกันตาม Role
+- **สถานะ PR เก่า (ตรวจ 22 พ.ย. 2569 — ยังไม่ได้ merge/ปิดอะไร รอเจ้าของตัดสินใจ)**
+  - #19 Finance ความปลอดภัยเคลียร์ค่าใช้จ่าย (draft): branch ล้าหลัง main มาก แต่ merge ได้สะอาด · ส่วนยอดจ่าย/บัญชีคู่รายการเข้า main แล้วทาง commit อื่น · ที่ยังไม่เข้า = Manager เห็น/เคลียร์ได้เฉพาะสาขาตัวเอง + migration เปิด RLS (`20261121200000`) · ข้อความ UI ของ PR มีภาษาจีนหนึ่งบรรทัด (ต้องแก้เป็นไทย) · ควร rebase แล้วทดสอบก่อน
+  - #5 เครื่องมือ deploy/PWA อัปเดต: ซ้ำกับ `js/app-update.js` + `sw.js` ที่อยู่ใน main แล้ว และแก้ `sw.js` หนัก → น่าจะปิด
+  - #1 (draft) Theme International: แก้ `index.html`/`clock.html`/`theme.js` ตรงๆ ขัดกติกา Theme แยกตาม Scope ผ่าน IT Control Center → น่าจะปิดหรือทำใหม่เป็นไฟล์ Theme ของตัวเอง
+  - #3 telemetry Login/PIN และ #4 IT dashboard แบบแท็บ: ยังไม่ได้ตรวจเนื้อหา แก้ไฟล์ที่ main แก้ต่อไปแล้ว (`it-rum.js`, `it-ops.js`, `app-lock.js`) ต้อง rebase ก่อน
+
 ## HR — ตำแหน่งงาน = แม่แบบสิทธิ์ (22 พ.ย. 2569 · Claude) — ต่อจากงาน GPT `ba83cce`/`0280330`
 - **แนวคิด:** ตำแหน่ง (HR › Positions) กำหนด Role ของบัญชี + สิทธิ์เมนู + บทบาท Finance → เลือกตำแหน่งให้พนักงาน (HR › Employees) แล้ว Role พนักงาน / บัญชีผู้ใช้ที่ผูก (`empId`) / `finance.user_roles` ปรับตามเอง · แก้สิทธิ์ตำแหน่ง → ทุกคนในตำแหน่งเปลี่ยนตาม · ระบบออเดอร์ซิงก์ต่อจากสิทธิ์ `orders`/`catalog` (order-link)
 - **หน้าเว็บ:** `js/hr-position-perms.js` (ไฟล์ใหม่ wrap `hrLoadPositions`/`openPosition`/`DB.upsertMany`/`userRow`/`openForm`) · หน้า Positions ภาษาไทย + ป้าย Role/สิทธิ์/Finance/จำนวนคน + รายชื่อพนักงานในตำแหน่ง · หน้า Users มีป้ายตำแหน่ง
