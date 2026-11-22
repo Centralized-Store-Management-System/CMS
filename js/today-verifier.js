@@ -35,11 +35,14 @@
   const KINDS = [['ใบลา', 'ใบลา'], ['คำขอ OT', 'OT'], ['แก้เวลา', 'แก้เวลา'], ['สต็อก', 'สต็อก']];
   const rows = D => { try { return (window.ApproveHistory && window.ApproveHistory.items(D)) || []; } catch (e) { return []; } };
   const pending = () => { try { return typeof approvals === 'function' ? approvals() : { total: 0 }; } catch (e) { return { total: 0 }; } };
+  const WI = () => window.WorkInbox || null;
+  const finTodo = () => (WI() ? WI().finTodo() : 0);          // งานเบิก–เคลียร์ที่รอคนนี้ (โมดูล Finance)
+  const waiting = () => (pending().total || 0) + finTodo();   // งานค้างรวมทั้งสองระบบ ให้ตรงกับกระดิ่ง
 
   function view() {
     const T0 = today(), D = day || T0, L = rows(D), me = S.me;
     const ok = L.filter(x => x.status === 'อนุมัติ').length, no = L.length - ok;
-    const P = pending(), hr = new Date().getHours();
+    const P = pending(), W = waiting(), hr = new Date().getHours();
     const nOf = key => L.filter(x => x.kind === key || (key === 'สต็อก' && x.kind === 'ปรับสต็อก') || (key === 'คำขอ OT' && x.kind === 'OT')).length;
     const isToday = D === T0;
     const hero = `<section class="tv-hero">
@@ -47,14 +50,19 @@
       <span class="tv-badge">${esc(ROLE_NAME[me.role] || 'Final Verifier')}</span>
       <h2>${hr < 12 ? 'สวัสดีตอนเช้า' : hr < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'}, ${esc(me.name)}</h2>
       <p>${thDate(T0, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${allBranch() ? 'ดูแลทุกสาขา' : esc(branchName(S.branch) || '')}</p>
-      <span class="tv-big"><b>${isToday ? ok + no : ok + no}</b><span>รายการที่คุณตรวจแล้ว${isToday ? 'วันนี้' : 'วันที่ ' + thDate(D, { day: 'numeric', month: 'short' })}${P.total ? ` · ค้างอีก ${P.total} รายการ` : ' · ไม่มีค้าง'}</span></span>
+      <span class="tv-big"><b>${isToday ? ok + no : ok + no}</b><span>รายการที่คุณตรวจแล้ว${isToday ? 'วันนี้' : 'วันที่ ' + thDate(D, { day: 'numeric', month: 'short' })}${W ? ` · ค้างอีก ${W} รายการ` : ' · ไม่มีค้าง'}</span></span>
     </section>`;
     const tiles = `<div class="tv-tiles">
       <div class="tv-tile"><small>อนุมัติ</small><b>${ok}</b></div>
       <div class="tv-tile"><small>ไม่อนุมัติ</small><b>${no}</b></div>
       <div class="tv-tile"><small>ใบลา · OT · แก้เวลา</small><b>${nOf('ใบลา') + nOf('คำขอ OT') + nOf('แก้เวลา')}</b></div>
-      <a class="tv-tile wait" href="#approve"><small>รออนุมัติตอนนี้</small><b>${P.total || 0}</b></a>
+      <a class="tv-tile wait" href="${finTodo() && !(P.total || 0) ? '#fin/expflow' : '#approve'}"><small>รออนุมัติตอนนี้</small><b>${W}</b></a>
     </div>`;
+    const fi = WI() ? WI().finItems() : [];
+    const money = n => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fin = fi.length || finTodo() ? `<h3 class="h3">เบิก–เคลียร์ค่าใช้จ่าย ที่รอคุณตรวจ <span class="chip">${finTodo() || fi.length}</span></h3><div class="group">${
+      fi.slice(0, 6).map(it => `<a class="row" href="#fin/expflow/${esc(it.id)}"><span class="main"><span class="t">${esc(it.title || 'คำขอเบิก')}</span><span class="s">${esc(it.document_number || '')}${it.created_by_name ? ' · ผู้เบิก ' + esc(it.created_by_name) : ''}</span></span><span class="chip">${esc(money(it.amount))}</span></a>`).join('')
+      || `<a class="row" href="#fin/expflow"><span class="main"><span class="t">มีงานรอตรวจ ${finTodo()} รายการ</span><span class="s">เปิดหน้า Finance เพื่อดูรายละเอียด</span></span></a>`}</div>` : '';
     const tasks = typeof myTasks === 'function' ? myTasks() : [];
     const todo = tasks.length ? `<h3 class="h3">งานที่รอคุณ</h3><div class="group">${tasks.join('')}</div>` : '';
     const list = `<div class="h2 tv-bar" id="tvh">สิ่งที่ตรวจไปแล้ว <span class="chip">${L.length}</span><span class="grow"></span>
@@ -67,7 +75,7 @@
       const e = empById(x.r.empId) || {};
       return `<div class="row static">${x.r.empId ? avatar(e) : ''}<span class="main"><span class="t">${x.r.empId ? esc(shortName(e)) + ' · ' : ''}${esc(x.title)}</span><span class="s">${esc(x.kind)}${x.sub ? ' · ' + esc(x.sub) : ''}${x.by ? ' · โดย ' + esc(x.by) : ''}</span></span><span class="chip ${x.status === 'อนุมัติ' ? 'ok' : 'bad'}">${esc(x.status)}</span></div>`;
     }).join('') : `<div class="row static"><span class="main"><span class="t">ยังไม่ได้ตรวจอะไรใน${isToday ? 'วันนี้' : 'วันนั้น'}</span><span class="s">${P.total ? 'มี ' + P.total + ' รายการรออยู่ที่หน้า Approvals' : 'ไม่มีรายการค้าง'}</span></span></div>`}</div>`;
-    return hero + tiles + todo + list;
+    return hero + tiles + fin + todo + list;
   }
 
   const m = MODS.find(x => x.key === 'today');
@@ -76,7 +84,7 @@
     m.view = function () { return (S.me && S.me.role === ROLE) ? view() : v0.apply(this, arguments); };
     m.summary = function () {
       if (!(S.me && S.me.role === ROLE)) return s0 ? s0.apply(this, arguments) : '';
-      const n = rows(today()).length, p = pending().total || 0;
+      const n = rows(today()).length, p = waiting();
       return `ตรวจแล้ววันนี้ ${n}` + (p ? ` · ค้าง ${p}` : '');
     };
   }
