@@ -11,13 +11,16 @@
   function section() {
     const list = (typeof HR_POSITIONS !== 'undefined' ? HR_POSITIONS : []).filter(p => p.status !== 'inactive');
     if (!P.ready()) return '<h3 class="h3">สิทธิ์ตามตำแหน่ง (รวม Finance)</h3><p class="note">กำลังโหลดข้อมูลตำแหน่ง… ถ้าไม่ขึ้น ให้เปิด HR › Positions หนึ่งครั้งแล้วกลับมา</p>';
+    const off = new Set(String((S.settings && S.settings.noSchedPos) || '').split(',').map(x => x.trim()).filter(Boolean));
     const rows = list.map(p => {
       const t = P.tmpl(p.id);
-      return `<tr><td>${esc(p.name_th)}</td><td>${t.role ? esc(P.ROLE_TH[t.role] || t.role) : '<span class="muted">คง Role เดิม</span>'}</td><td>${t.finance ? esc(finTxt(t.finance)) : '<span class="muted">ไม่ใช้ Finance</span>'}</td><td>${t.perms.length ? t.perms.length + ' เมนู' : '<span class="muted">ตามค่าเริ่มต้นของ Role</span>'}</td><td><button class="btn" data-a="posEdit:${esc(p.id)}">แก้ไข</button></td></tr>`;
+      return `<tr><td>${esc(p.name_th)}</td><td>${t.role ? esc(P.ROLE_TH[t.role] || t.role) : '<span class="muted">คง Role เดิม</span>'}</td><td>${t.finance ? esc(finTxt(t.finance)) : '<span class="muted">ไม่ใช้ Finance</span>'}</td><td>${t.perms.length ? t.perms.length + ' เมนู' : '<span class="muted">ตามค่าเริ่มต้นของ Role</span>'}</td><td><input type="checkbox" data-sched="${esc(p.id)}"${off.has(p.id) ? '' : ' checked'} aria-label="จัดตารางงาน: ${esc(p.name_th)}"></td><td><button class="btn" data-a="posEdit:${esc(p.id)}">แก้ไข</button></td></tr>`;
     }).join('');
     return `<h3 class="h3">สิทธิ์ตามตำแหน่ง (รวม Finance)</h3>
       <p class="note" style="margin-top:0">Role ของพนักงานและบัญชีผู้ใช้ตั้งตามตำแหน่ง · บทบาท Finance (ผู้อนุมัติ / ผู้ตรวจสุดท้าย / บัญชี) ตั้งที่ตำแหน่งเช่นกัน กด "แก้ไข" เพื่อเปลี่ยน ทุกคนในตำแหน่งนั้นเปลี่ยนตาม</p>
-      <div class="group"><table class="perm"><thead><tr><th>ตำแหน่ง</th><th>Role หลังร้าน</th><th>บทบาท Finance</th><th>สิทธิ์เมนู</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">ยังไม่มีตำแหน่ง</td></tr>'}</tbody></table></div>`;
+      <div class="group"><table class="perm"><thead><tr><th>ตำแหน่ง</th><th>Role หลังร้าน</th><th>บทบาท Finance</th><th>สิทธิ์เมนู</th><th>จัดตารางงาน</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6">ยังไม่มีตำแหน่ง</td></tr>'}</tbody></table></div>
+      <p class="note">"จัดตารางงาน" ติ๊กไว้ = ตำแหน่งนี้ขึ้นในตารางงาน (เฉพาะ Role Manager / Staff) · เอาติ๊กออก = ไม่ต้องจัดตาราง (คนที่มีกะอยู่แล้วยังแสดง)</p>
+      <div class="actions"><button class="btn primary" data-a="posSaveSched">บันทึกตำแหน่งที่จัดตารางงาน</button></div>`;
   }
 
   const ms = modBy('set'), sub = ms && ms.subs && ms.subs.find(s => s.key === 'perms');
@@ -26,6 +29,17 @@
     sub.view = function () { let h = ''; try { h = section(); } catch (_) { /* ส่วนเสริมไม่ให้หน้าหลักพัง */ } return v0.apply(this, arguments) + h; };
     ms.acts = ms.acts || {};
     ms.acts.posEdit = id => { if (typeof openPosition === 'function') openPosition(id); };
+    // Owner เท่านั้น (หน้า Settings เป็นของ Owner อยู่แล้ว) — เก็บเฉพาะตำแหน่งที่ "ไม่ติ๊ก"
+    ms.acts.posSaveSched = async (a, b) => {
+      try {
+        const off = [...document.querySelectorAll('[data-sched]')].filter(c => !c.checked).map(c => c.dataset.sched);
+        S.settings.noSchedPos = off.join(',');
+        await busy(b, () => DB.saveSettings());
+        toast(off.length ? 'บันทึกแล้ว · ' + off.length + ' ตำแหน่งไม่ขึ้นในตารางงาน' : 'บันทึกแล้ว · ทุกตำแหน่งขึ้นในตารางงาน');
+        App.render();
+      } catch (x) { toast(x.message); }
+    };
+    Object.assign(ACT, { posEdit: ms.acts.posEdit, posSaveSched: ms.acts.posSaveSched });   // ACT ถูกคัดลอกตอน defMod แล้ว ต้องใส่เองด้วย
   }
 
   // ฟอร์มพนักงาน: แสดงบทบาท Finance ใต้ช่อง Role
