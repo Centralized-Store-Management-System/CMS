@@ -6,7 +6,7 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.3.2', BASE = 'modules/finance/';
+  const V = '1.3.3', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
@@ -127,7 +127,18 @@
   NAV_ORDER.splice(0, NAV_ORDER.length, ...GROUPS.flatMap(g => g[1]));
 
   // ---------- แถบซ้าย: เมนูย่อยใต้ Finance ----------
+  // มือถือ: เมนูบนสุดวาดครั้งแรกก่อนรู้บทบาท (session ยังไม่มา) → รายการไม่ตรงกับ PC/iPad · วาดใหม่ทุกครั้งที่รู้สิทธิ์/ย้ายหน้า/ตัวเลขเปลี่ยน
+  function mnav() {
+    const nav = document.querySelector('.fin-mnav > nav');
+    if (!nav) return;
+    const kept = [...nav.querySelectorAll('.fin-mnav-group[open] > summary')].map(s => s.textContent);
+    const html = subLinks('fin-mnav');
+    if (nav.dataset.h === html && !kept.length) return;
+    nav.innerHTML = html; nav.dataset.h = html;
+    nav.querySelectorAll('.fin-mnav-group > summary').forEach(s => { if (kept.includes(s.textContent)) s.parentElement.open = true; });
+  }
   function decorate() {
+    mnav();
     const a = document.querySelector('#nav a[href="#fin"]');
     if (!a) return;
     let box = document.getElementById('finSubnav');

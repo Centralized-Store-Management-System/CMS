@@ -111,6 +111,9 @@ with sync_playwright() as p:
     ok('มือถือ: มีเมนู Finance บนสุดของหน้า (ย่ออยู่)', pg.locator('.fin-mnav').is_visible() and not pg.locator('.fin-mnav a').first.is_visible())
     pg.click('.fin-mnav summary'); pg.wait_for_timeout(150)
     ok('มือถือ: แตะ "เมนู Finance" → เมนูย่อยลงมา', pg.locator('.fin-mnav a[data-fin-page="expflow"]').is_visible())
+    mob = pg.evaluate("[...document.querySelectorAll('.fin-mnav a[data-fin-page]')].map(a=>a.dataset.finPage)")
+    ok('มือถือ: เมนูครบเท่า PC/iPad (Owner เห็น รออนุมัติ / ผู้ใช้งาน / ตั้งค่าระบบ)', all(k in mob for k in ['approvals', 'users', 'audit', 'settings']), mob)
+    ok('มือถือ: มีกลุ่ม "อนุมัติและตรวจสอบ"', pg.locator('.fin-mnav-group > summary', has_text='อนุมัติและตรวจสอบ').count() == 1)
     arrow = "getComputedStyle(document.querySelector('.fin-mnav-group > summary'), '::after').transform"
     shut = pg.evaluate(arrow)
     pg.click('.fin-mnav-group > summary'); pg.wait_for_timeout(150)
@@ -124,6 +127,15 @@ with sync_playwright() as p:
     ok('มือถือ: ไม่ล้นจอ', over <= 1, over)
     ok('มือถือ: แถบล่างยังอยู่ (Menu)', pg.locator('#bottom a[href="#menu"]').is_visible())
     c.close()
+    # ---------- Manager: เมนูมือถือ = PC/iPad (ต้องรัน e2e.py ก่อน — สร้างผู้ใช้ Finance บทบาท manager) ----------
+    lists = []
+    for mobile in (False, True):
+        c, pg = open_ctx(p, b, 'tok_mgr_12345', mobile=mobile, path='index.html#fin/expflow')
+        wait_fin(pg, 'เบิก–เคลียร์'); pg.wait_for_timeout(300)
+        sel = '.fin-mnav a[data-fin-page]' if mobile else '#finSubnav a[data-fin-page]'
+        lists.append(pg.evaluate(f"[...document.querySelectorAll('{sel}')].map(a=>a.dataset.finPage)"))
+        c.close()
+    ok('Manager: เมนูมือถือ ตรงกับ PC/iPad (ไม่มี ภาษี/บัญชี/รายงาน/ตั้งค่า)', lists[0] == lists[1] and 'vat' not in lists[1], lists)
     # ---------- ไม่มีสิทธิ์ Finance ----------
     c, pg = open_ctx(p, b, 'tok_nobody_12')
     pg.wait_for_selector('#nav', timeout=20000); pg.wait_for_timeout(1500)
