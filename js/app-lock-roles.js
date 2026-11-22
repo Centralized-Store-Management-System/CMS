@@ -9,12 +9,29 @@
   const esc2 = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const off = () => new Set(String((S.settings && S.settings.appLockOff) || '').split(',').map(x => x.trim()).filter(Boolean));
 
+  /* หน้าตาของรายการนี้ใช้คลาสของตัวเอง ไม่ยืม .days (ช่องวันในตารางงาน)
+   * .days ตั้งไว้สำหรับตัวอักษรสั้นๆ และตอนติ๊กจะบังคับตัวหนังสือเป็นสีขาว
+   * พอ Theme บางชุดเปลี่ยนพื้นหลังตอนติ๊กเป็นสีอ่อน ตัวหนังสือขาวบนพื้นอ่อนจึงอ่านไม่ออก
+   * ที่นี่ไม่บังคับสีตัวอักษรเลย ใช้สีของ Theme ตามปกติ — และไม่แก้ CSS ที่ใช้ร่วม (กติกาใน AGENTS.md) */
+  if (!document.getElementById('alr-css')) {
+    const st = document.createElement('style');
+    st.id = 'alr-css';
+    st.textContent = [
+      '.alr{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:8px}',
+      '.alr label{display:flex;align-items:center;gap:10px;min-height:46px;padding:10px 12px;border:1px solid var(--line,#e4ece7);border-radius:12px;background:var(--card,#fff);cursor:pointer;font-size:14.5px;line-height:1.3}',
+      '.alr label:has(input:checked){border-color:var(--mc,#1E4D38);box-shadow:inset 0 0 0 1px var(--mc,#1E4D38)}',
+      '.alr input{flex:none;width:18px;height:18px;margin:0;accent-color:var(--mc,#1E4D38)}',
+      '.alr span{flex:1;min-width:0}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
   function section() {
     const O = off(), roles = PERM_ROLES.slice();
     const n = (S.t.devices || []).filter(d => d.status === 'active').length;
     return `<h3 class="h3">รหัสปลดล็อกแอป (มือถือ / iPad)</h3>
       <p class="note" style="margin-top:0">ติ๊กไว้ = ระดับนั้นตั้งรหัสปลดล็อก 6 หลักผูกกับเครื่องได้ เปิดแอปครั้งต่อไปไม่ต้องพิมพ์ชื่อผู้ใช้ + PIN · เอาติ๊กออก = ต้องเข้าด้วยชื่อผู้ใช้ + PIN ทุกครั้ง และเครื่องที่ผูกไว้ของระดับนั้นจะถูกยกเลิก${n ? ` · ตอนนี้ผูกไว้ ${n} เครื่อง` : ''}</p>
-      <div class="group pad"><div class="days">${roles.map(r => `<label><input type="checkbox" data-alr="${esc2(r)}"${O.has(r) ? '' : ' checked'}><span>${esc2(ROLE_NAME[r] || r)}</span></label>`).join('')}</div></div>
+      <div class="group pad"><div class="alr">${roles.map(r => `<label><input type="checkbox" data-alr="${esc2(r)}"${O.has(r) ? '' : ' checked'}><span>${esc2(ROLE_NAME[r] || r)}</span></label>`).join('')}</div></div>
       <div class="actions"><button class="btn primary" data-a="saveAppLock">บันทึกรหัสปลดล็อกแอป</button></div>`;
   }
 
