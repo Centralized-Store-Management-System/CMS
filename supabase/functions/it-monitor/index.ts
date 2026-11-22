@@ -98,7 +98,7 @@ async function runMonitor() {
     if (ssoFailures > 0) add("warning","ORDER_SSO_FAILURES","พบการเข้า Order SSO ไม่สำเร็จ",ssoFailures+" ครั้งใน 24 ชั่วโมง","ตรวจ ORDER_SSO_LOG และสิทธิ์บัญชี");
     if (Number(data.stale_orders) > 0) add("warning","STALE_ORDERS","พบออเดอร์ค้างนาน",Number(data.stale_orders)+" ออเดอร์ค้างเกิน 90 นาที","ตรวจหน้า Live Orders และสถานะออเดอร์");
     if (!data.hr_private_bucket_ready) add("info","HR_BUCKET_NOT_INITIALIZED","พื้นที่เอกสาร HR ยังไม่ถูกสร้าง","จะสร้าง Private Bucket เมื่อมีการอัปโหลดเอกสาร HR ครั้งแรก","ไม่ต้องดำเนินการจนกว่าจะเริ่มใช้งานเอกสาร HR");
-    if (supa.mail === false) add("info","MAIL_NOT_CONFIGURED","ยังไม่ได้ตั้งค่าระบบอีเมล","ไม่พบการตั้งค่า Resend ในเซิร์ฟเวอร์","ตั้งค่า RESEND_API_KEY และ MAIL_FROM เมื่อพร้อมใช้งาน");
+    // ระบบไม่ใช้อีเมลแล้ว (รหัสเปิดใช้งานจาก Owner/HR + ลืม PIN ทาง LINE — 61_LineReset.gs) จึงไม่เตือนเรื่อง Resend อีก
     if (!findings.length) add("info","ALL_CLEAR","ไม่พบความผิดปกติจากการตรวจพื้นฐาน","Cron, Supabase heartbeat, Order heartbeat และ outbox ปกติ","ติดตามรอบตรวจอัตโนมัติต่อเนื่อง");
     const critical = findings.filter(x=>x.level==="critical").length;
     const warning = findings.filter(x=>x.level==="warning").length;
