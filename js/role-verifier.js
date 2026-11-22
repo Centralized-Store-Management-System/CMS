@@ -9,7 +9,7 @@
 
   ROLE_NAME[R] = TH;
   if (typeof UPREFIX === 'object') UPREFIX[R] = 'fv_';
-  if (typeof DEFAULT_PERMS === 'object') DEFAULT_PERMS[R] = ['approve_time', 'approve_stock', 'time', 'schedule_view'];
+  if (typeof DEFAULT_PERMS === 'object') DEFAULT_PERMS[R] = ['approve_time', 'approve_stock', 'schedule_view'];
   if (PERM_ROLES.indexOf(R) < 0) PERM_ROLES.push(R);          // คอลัมน์ในตารางสิทธิ์ (ต่อท้าย Staff)
 
   // บันทึกสิทธิ์: ของเดิมมีแค่ 4 ระดับตายตัว → สร้างจาก PERM_ROLES แทน จะได้ไม่ตกระดับใหม่
