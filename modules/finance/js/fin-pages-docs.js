@@ -288,13 +288,15 @@
           <div class="sum"><span>รวมเงินได้ที่จ่าย</span><b>${F.money(taxBase)} บาท</b><span>ภาษีที่หักและนำส่ง</span><b>${F.money(tax)} บาท</b></div>
           <p class="note">อ้างอิงเอกสารรายจ่าย ${escv(d.document_number)} · รายการนี้จัดทำจากข้อมูล CMS โปรดตรวจสอบประเภทเงินได้และข้อมูลตามหลักฐานก่อนลงนาม/ส่งมอบ</p>
           <div class="sign"><div>ลงชื่อ................................................ผู้จ่ายเงิน<br>วันที่................................................</div><div>ลงชื่อ................................................ผู้รับเงิน<br>วันที่................................................</div></div></article>`;
-        return copy('ฉบับที่ ' + (i + 1) + ' — ' + (i === 0 ? 'ผู้ถูกหักภาษี' : 'ผู้มีหน้าที่หักภาษี')) + copy('สำเนา — เก็บไว้เป็นหลักฐาน');
+        // 50 ทวิ ออกเป็น 2 ฉบับต่อรายการเสมอ: ต้นฉบับให้ผู้ถูกหักภาษีใช้แนบแบบแสดงรายการ · สำเนาเก็บเป็นหลักฐาน
+        return copy('<b>ต้นฉบับ</b> (ฉบับที่ 1) — สำหรับผู้ถูกหักภาษี ณ ที่จ่าย ใช้แนบพร้อมกับแบบแสดงรายการภาษี')
+          + copy('<b>สำเนา</b> (ฉบับที่ 2) — สำหรับผู้ถูกหักภาษี ณ ที่จ่าย เก็บไว้เป็นหลักฐาน');
       }).join('');
       win.document.open();
       win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>หนังสือรับรองหัก ณ ที่จ่าย ${escv(d.document_number)}</title><style>
         @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,"Tahoma",sans-serif;color:#111;font-size:12px}
         .cert{page-break-after:always;min-height:260mm;position:relative;padding:2mm}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #111;padding-bottom:10px;font-size:20px}
-        .top strong{font-size:28px}.copy{text-align:right;font-weight:bold;margin:8px 0}.meta{margin:12px 0;color:#333}
+        .top strong{font-size:28px}.copy{text-align:right;font-weight:bold;margin:8px 0}.copy b{display:inline-block;border:1.5px solid #111;border-radius:4px;padding:1px 9px;margin-right:6px;font-size:15px}.meta{margin:12px 0;color:#333}
         h3{font-size:13px;background:#eee;padding:7px;margin:14px 0 8px}.row{display:flex;justify-content:space-between;gap:18px;margin:7px 0}
         table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #555;padding:9px;text-align:left}th{background:#eee}.num{text-align:right;white-space:nowrap}
         .sum{display:grid;grid-template-columns:1fr auto;gap:8px;margin:18px 0;font-size:14px}.note{margin-top:18px;line-height:1.6}
