@@ -1,88 +1,35 @@
 import React, { useState } from "react";
-import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView, View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { apiCall } from "./src/services/api";
-import { saveToken, clearToken } from "./src/services/session";
 
-type OwnerSession = { token?: string; role?: string; name?: string; roleName?: string };
-
-export default function App() {
-  const [code, setCode] = useState("");
-  const [pin, setPin] = useState("");
-  const [owner, setOwner] = useState<OwnerSession | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  async function signIn() {
-    if (!code.trim() || !pin.trim()) { setError("กรุณากรอกชื่อผู้ใช้และ PIN"); return; }
-    setBusy(true); setError("");
-    try {
-      const result = await apiCall<OwnerSession>("login", { code: code.trim(), pin: pin.trim(), from: "Personal Native App" });
-      if (!result.token || result.role !== "owner") {
-        if (result.token) await apiCall("logout", { t: result.token }).catch(() => undefined);
-        throw new Error("บัญชีนี้ไม่มีสิทธิ์ Owner หรือระบบต้องการการยืนยันตัวตนเพิ่มเติม");
-      }
-      await saveToken(result.token);
-      setOwner(result);
-      setPin("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "เข้าสู่ระบบไม่สำเร็จ");
-    } finally { setBusy(false); }
-  }
-
-  async function signOut() {
-    setBusy(true);
-    try { if (owner?.token) await apiCall("logout", { t: owner.token }).catch(() => undefined); }
-    finally { await clearToken(); setOwner(null); setBusy(false); }
-  }
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar style="light" />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={styles.container}>
-          <View style={styles.brandMark}><Text style={styles.mark}>B</Text></View>
-          <Text style={styles.eyebrow}>PERSONAL BUSINESS CONTROL</Text>
-          <Text style={styles.title}>{owner ? "ยินดีต้อนรับ" : "Business Control"}</Text>
-          <Text style={styles.subtitle}>{owner ? "เชื่อมต่อบัญชี Owner แล้ว" : "ศูนย์ควบคุมระบบธุรกิจส่วนตัว"}</Text>
-          {owner ? (
-            <View style={styles.panel}>
-              <Text style={styles.label}>OWNER SESSION</Text>
-              <Text style={styles.ownerName}>{owner.name || "Owner"}</Text>
-              <Text style={styles.muted}>ระบบกำลังเตรียมเชื่อมต่อโมดูลธุรกิจ</Text>
-              <Pressable style={styles.button} onPress={signOut} disabled={busy}>
-                {busy ? <ActivityIndicator color="#08251A" /> : <Text style={styles.buttonText}>ออกจากระบบ</Text>}
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.panel}>
-              <Text style={styles.label}>OWNER SIGN IN</Text>
-              <TextInput value={code} onChangeText={setCode} placeholder="ชื่อผู้ใช้" placeholderTextColor="#789187" autoCapitalize="none" style={styles.input} />
-              <TextInput value={pin} onChangeText={setPin} placeholder="PIN" placeholderTextColor="#789187" secureTextEntry keyboardType="number-pad" style={styles.input} />
-              {!!error && <Text style={styles.error}>{error}</Text>}
-              <Pressable style={[styles.button, busy && styles.disabled]} onPress={signIn} disabled={busy}>
-                {busy ? <ActivityIndicator color="#08251A" /> : <Text style={styles.buttonText}>เข้าสู่ระบบ</Text>}
-              </Pressable>
-              <Text style={styles.note}>ใช้สิทธิ์ Owner และระบบยืนยันตัวตนเดิมของ CMS</Text>
-            </View>
-          )}
-          <Text style={styles.footer}>PRIVATE APP • MULTI-DEVICE • SECURE SESSION</Text>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+const green="#B7F36B", ink="#081B14", card="#10291F", muted="#91A99C";
+const modules=[
+ {id:"orders",icon:"◫",name:"คำสั่งซื้อ",desc:"ติดตามออเดอร์และสถานะ",tag:"ORDERS"},
+ {id:"finance",icon:"฿",name:"การเงินและบัญชี",desc:"รายรับ รายจ่าย การชำระเงิน",tag:"FINANCE"},
+ {id:"hr",icon:"♙",name:"บุคลากร",desc:"พนักงาน ตำแหน่ง และสิทธิ์",tag:"HUMAN RESOURCES"},
+ {id:"inventory",icon:"▦",name:"สินค้าและสต็อก",desc:"สินค้า คงเหลือ และการเคลื่อนไหว",tag:"INVENTORY"},
+ {id:"branches",icon:"⌖",name:"สาขาและการดำเนินงาน",desc:"ภาพรวมและผลการดำเนินงาน",tag:"OPERATIONS"},
+ {id:"reports",icon:"▤",name:"รายงานและวิเคราะห์",desc:"Dashboard และตัวชี้วัด",tag:"ANALYTICS"}
+];
+export default function App(){
+ const [tab,setTab]=useState("home"); const [selected,setSelected]=useState<string|null>(null);
+ const [preview,setPreview]=useState(false);
+ const go=(id:string)=>{setSelected(id);setTab("module");};
+ const active=modules.find(m=>m.id===selected);
+ return <SafeAreaView style={s.safe}><StatusBar style="light"/>{!preview?
+ <View style={s.welcome}><View style={s.logo}><Text style={s.logoText}>P</Text></View><Text style={s.eyebrow}>PERSONAL BUSINESS CONTROL</Text><Text style={s.title}>One App.{ "\n" }All Business.</Text><Text style={s.sub}>ศูนย์ควบคุมธุรกิจส่วนตัว{ "\n" }จัดการทุกระบบได้จากที่เดียว</Text><Pressable style={s.primary} onPress={()=>setPreview(true)}><Text style={s.primaryText}>เข้าสู่ตัวอย่างแอป</Text></Pressable><Text style={s.hint}>PREVIEW MODE · ยังไม่เชื่อมต่อข้อมูลจริง</Text></View>:
+ <><View style={s.top}><View><Text style={s.eyebrow}>PERSONAL BUSINESS CONTROL</Text><Text style={s.topTitle}>My Business</Text></View><View style={s.avatar}><Text style={s.avatarText}>P</Text></View></View>
+ <ScrollView contentContainerStyle={s.content}>
+ {tab==="home"&&<><View style={s.greeting}><Text style={s.greet}>สวัสดี 👋</Text><Text style={s.muted}>ภาพรวมธุรกิจของคุณ</Text></View>
+ <View style={s.hero}><Text style={s.heroLabel}>BUSINESS OVERVIEW</Text><Text style={s.heroValue}>฿ 1,284,500</Text><Text style={s.heroNote}>ยอดรายการตัวอย่าง · เดือนพฤศจิกายน 2026</Text><View style={s.heroRow}><View><Text style={s.heroSmall}>รายรับ</Text><Text style={s.heroMetric}>฿ 1.52M</Text></View><View><Text style={s.heroSmall}>รายจ่าย</Text><Text style={s.heroMetric}>฿ 235K</Text></View><View><Text style={s.heroSmall}>รอตรวจสอบ</Text><Text style={s.heroMetric}>08 รายการ</Text></View></View></View>
+ <View style={s.sectionHead}><Text style={s.section}>ระบบทั้งหมด</Text><Text style={s.muted}>ALL MODULES</Text></View><View style={s.grid}>{modules.map(m=><Pressable key={m.id} style={s.module} onPress={()=>go(m.id)}><Text style={s.moduleIcon}>{m.icon}</Text><Text style={s.moduleName}>{m.name}</Text><Text style={s.moduleDesc}>{m.desc}</Text><Text style={s.arrow}>↗</Text></Pressable>)}</View>
+ <View style={s.sectionHead}><Text style={s.section}>รายการที่ต้องดำเนินการ</Text><Text style={s.badge}>08</Text></View><View style={s.listRow}><View style={s.dot}/><View style={{flex:1}}><Text style={s.rowTitle}>รายการรออนุมัติ</Text><Text style={s.muted}>มี 5 รายการที่รอการตรวจสอบ</Text></View><Text style={s.chev}>›</Text></View><View style={s.listRow}><View style={[s.dot,{backgroundColor:"#E9B75A"}]}/><View style={{flex:1}}><Text style={s.rowTitle}>รายการรอตรวจสอบขั้นสุดท้าย</Text><Text style={s.muted}>มี 3 รายการที่รอ Final Verification</Text></View><Text style={s.chev}>›</Text></View></>}
+ {tab==="modules"&&<><Text style={s.section}>ระบบทั้งหมด</Text><View style={s.grid}>{modules.map(m=><Pressable key={m.id} style={s.module} onPress={()=>go(m.id)}><Text style={s.moduleIcon}>{m.icon}</Text><Text style={s.moduleName}>{m.name}</Text><Text style={s.moduleDesc}>{m.desc}</Text></Pressable>)}</View></>}
+ {tab==="activity"&&<><Text style={s.section}>กิจกรรมล่าสุด</Text>{["อนุมัติรายการค่าใช้จ่าย","เพิ่มพนักงานใหม่","บันทึกรายรับประจำวัน","ตรวจสอบคำสั่งซื้อ"].map((v,i)=><View key={v} style={s.listRow}><View style={s.dot}/><View style={{flex:1}}><Text style={s.rowTitle}>{v}</Text><Text style={s.muted}>{i+1} ชั่วโมงที่ผ่านมา · ตัวอย่าง</Text></View></View>)}</>}
+ {tab==="profile"&&<><Text style={s.section}>บัญชีของฉัน</Text><View style={s.panel}><Text style={s.moduleName}>Owner Account</Text><Text style={s.muted}>Personal Business Control</Text><Text style={s.muted}>สถานะ: Preview Mode</Text></View><Pressable style={s.secondary} onPress={()=>setPreview(false)}><Text style={s.secondaryText}>กลับหน้าต้อนรับ</Text></Pressable></>}
+ {tab==="module"&&<><Pressable onPress={()=>setTab("home")}><Text style={s.back}>‹ กลับหน้าหลัก</Text></Pressable><View style={s.panel}><Text style={s.moduleIcon}>{active?.icon}</Text><Text style={s.titleSmall}>{active?.name}</Text><Text style={s.muted}>{active?.desc}</Text><View style={s.coming}><Text style={s.comingTitle}>เตรียมเชื่อมต่อระบบ</Text><Text style={s.muted}>หน้านี้เป็นตัวอย่างหน้าตาแอปและโครงสร้างเมนู ข้อมูลจริงและสิทธิ์การใช้งานจะเชื่อมกับระบบต้นฉบับในขั้นตอนถัดไป</Text></View></View></>}
+ <Text style={s.disclaimer}>ข้อมูลและตัวเลขทั้งหมดในหน้าตัวอย่างเป็นข้อมูลจำลอง</Text></ScrollView>
+ <View style={s.nav}>{[["home","⌂","หน้าหลัก"],["modules","▦","ระบบ"],["activity","◷","กิจกรรม"],["profile","◉","บัญชี"]].map(([id,ic,label])=><Pressable key={id} style={s.navItem} onPress={()=>{setTab(id);setSelected(null)}}><Text style={[s.navIcon,tab===id&&s.navOn]}>{ic}</Text><Text style={[s.navLabel,tab===id&&s.navOn]}>{label}</Text></Pressable>)}</View>
+ </>}</SafeAreaView>
 }
-
-const styles = StyleSheet.create({
-  safe:{flex:1,backgroundColor:"#071A14"},flex:{flex:1},container:{flex:1,justifyContent:"center",padding:26},
-  brandMark:{width:54,height:54,borderRadius:18,backgroundColor:"#B5F36B",alignItems:"center",justifyContent:"center",marginBottom:24},
-  mark:{fontSize:30,fontWeight:"900",color:"#08251A"},eyebrow:{color:"#B5F36B",fontSize:11,fontWeight:"800",letterSpacing:2},
-  title:{color:"#F5FFF8",fontSize:32,fontWeight:"800",marginTop:8},subtitle:{color:"#9CB6A9",fontSize:14,marginTop:7,marginBottom:30},
-  panel:{backgroundColor:"#102B21",borderColor:"#244638",borderWidth:1,borderRadius:24,padding:22},
-  label:{color:"#B5F36B",fontSize:11,fontWeight:"800",letterSpacing:1.5,marginBottom:18},
-  input:{height:54,borderWidth:1,borderColor:"#315646",borderRadius:13,paddingHorizontal:15,color:"#F5FFF8",fontSize:16,marginBottom:12,backgroundColor:"#0B211A"},
-  button:{height:54,borderRadius:14,backgroundColor:"#B5F36B",alignItems:"center",justifyContent:"center",marginTop:8},
-  buttonText:{color:"#08251A",fontSize:15,fontWeight:"800"},disabled:{opacity:.6},error:{color:"#FF9B9B",fontSize:13,marginBottom:8},
-  note:{color:"#789187",fontSize:11,textAlign:"center",marginTop:16},ownerName:{color:"#F5FFF8",fontSize:24,fontWeight:"800"},
-  muted:{color:"#9CB6A9",fontSize:13,marginTop:7,marginBottom:18},footer:{color:"#587467",fontSize:9,textAlign:"center",letterSpacing:1.5,marginTop:32},
-});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:ink},welcome:{flex:1,justifyContent:"center",padding:30},logo:{width:62,height:62,borderRadius:20,backgroundColor:green,alignItems:"center",justifyContent:"center",marginBottom:30},logoText:{fontSize:36,fontWeight:"900",color:ink},eyebrow:{fontSize:10,letterSpacing:2,color:green,fontWeight:"800"},title:{fontSize:42,lineHeight:48,fontWeight:"900",color:"#F3F8F4",marginTop:14},sub:{fontSize:16,lineHeight:25,color:muted,marginTop:18,marginBottom:34},primary:{backgroundColor:green,borderRadius:16,padding:18,alignItems:"center"},primaryText:{color:ink,fontWeight:"900",fontSize:16},hint:{color:"#688276",fontSize:10,textAlign:"center",marginTop:20,letterSpacing:1},top:{paddingHorizontal:22,paddingTop:14,paddingBottom:16,flexDirection:"row",justifyContent:"space-between",alignItems:"center"},topTitle:{fontSize:25,fontWeight:"900",color:"#F3F8F4",marginTop:4},avatar:{width:42,height:42,borderRadius:15,backgroundColor:green,alignItems:"center",justifyContent:"center"},avatarText:{fontSize:20,fontWeight:"900",color:ink},content:{paddingHorizontal:20,paddingBottom:28},greeting:{marginTop:10,marginBottom:16},greet:{fontSize:23,fontWeight:"800",color:"#F3F8F4"},muted:{fontSize:12,color:muted,lineHeight:19},hero:{backgroundColor:"#183A2A",borderRadius:22,padding:20,borderWidth:1,borderColor:"#31533E"},heroLabel:{fontSize:10,letterSpacing:1.5,color:green,fontWeight:"800"},heroValue:{fontSize:32,fontWeight:"900",color:"#F3F8F4",marginTop:10},heroNote:{fontSize:11,color:muted,marginTop:4},heroRow:{flexDirection:"row",justifyContent:"space-between",borderTopWidth:1,borderTopColor:"#365644",marginTop:18,paddingTop:14},heroSmall:{fontSize:10,color:muted},heroMetric:{fontSize:14,color:"#F3F8F4",fontWeight:"800",marginTop:5},sectionHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginTop:25,marginBottom:12},section:{fontSize:17,color:"#F3F8F4",fontWeight:"800"},grid:{flexDirection:"row",flexWrap:"wrap",gap:10},module:{width:"48%",minHeight:132,backgroundColor:card,borderRadius:17,padding:14,borderWidth:1,borderColor:"#244536"},moduleIcon:{fontSize:24,color:green,marginBottom:10},moduleName:{fontSize:13,color:"#F3F8F4",fontWeight:"800"},moduleDesc:{fontSize:10,color:muted,marginTop:5,lineHeight:15},arrow:{position:"absolute",right:12,top:12,color:green},badge:{color:ink,backgroundColor:green,borderRadius:10,overflow:"hidden",paddingHorizontal:8,paddingVertical:3,fontWeight:"900"},listRow:{flexDirection:"row",alignItems:"center",backgroundColor:card,padding:14,borderRadius:14,marginBottom:8,gap:12},dot:{width:9,height:9,borderRadius:5,backgroundColor:green},rowTitle:{fontSize:13,color:"#F3F8F4",fontWeight:"700",marginBottom:3},chev:{fontSize:24,color:muted},nav:{height:72,backgroundColor:"#0D241A",borderTopWidth:1,borderTopColor:"#203C2D",flexDirection:"row",justifyContent:"space-around",alignItems:"center"},navItem:{alignItems:"center",gap:3,flex:1},navIcon:{fontSize:21,color:"#789386"},navLabel:{fontSize:10,color:"#789386"},navOn:{color:green},disclaimer:{fontSize:10,color:"#647C70",textAlign:"center",marginTop:22,marginBottom:8},panel:{backgroundColor:card,borderRadius:20,padding:20,marginTop:16,borderWidth:1,borderColor:"#244536"},titleSmall:{fontSize:25,color:"#F3F8F4",fontWeight:"900",marginVertical:8},coming:{marginTop:24,padding:16,backgroundColor:"#183A2A",borderRadius:14},comingTitle:{color:green,fontSize:14,fontWeight:"800",marginBottom:8},back:{color:green,fontSize:15,fontWeight:"700",marginTop:10},secondary:{padding:16,borderWidth:1,borderColor:"#476452",borderRadius:14,alignItems:"center",marginTop:18},secondaryText:{color:green,fontWeight:"800"}});
