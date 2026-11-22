@@ -19,6 +19,11 @@
   - แก้ 403 ของ Manager ที่มีสิทธิ์ `hr` · `save-template` (เก็บใน `it_position_permissions` app `cms` = `role:<r>`+สิทธิ์, app `finance` = `role:<r>`) · `sync-finance` (แตะเฉพาะแถว `granted_by='position:<code>'` — สิทธิ์ที่ Owner ตั้งเองใน Finance คงไว้; ไม่ปรับของตัวเอง)
   - กติกา: HR ให้สิทธิ์ได้ไม่เกินที่ตัวเองมี (คงของเดิมได้) · Role Admin = Owner/Admin · Finance ผู้อนุมัติ/ผู้ตรวจ/บัญชี = Owner เท่านั้น (HR ซิงก์บทบาทระดับนี้ไม่ได้)
 - **ทดสอบ:** `tests/hr/` API 23/23 · UI 19/19 (PC / iPad / iPhone, Owner / HR / Manager+HR)
+- **ฟอร์มพนักงาน (v1.0.1):** ช่องตำแหน่งอยู่ก่อน Role · ตำแหน่งที่ตั้ง Role ไว้ → Role ตั้งให้เองและล็อก · ตำแหน่งที่ยังไม่ตั้ง → เลือก Role เองได้ (มีข้อความบอก) · UI 23/23
+- **งานถัดไป (สำหรับ AI ที่รับต่อ):**
+  1. หลัง PR #33 merge: ลองจริงด้วยบัญชี Owner และ HR — ตั้งสิทธิ์ตำแหน่งที่ HR › Positions แล้วดูว่าบัญชีผู้ใช้/Finance ปรับตาม (ดู `finance.user_roles` ที่ `granted_by like 'position:%'`, ตาราง `it_position_permissions`)
+  2. PR เก่าที่ยังเปิด (#19 ซ้ำกับงานที่ merge แล้ว, #5 #4 #3 #1) — ตรวจแล้วเสนอเจ้าของปิด/merge
+  3. ถ้าแก้ `supabase/functions/*/index.ts` ต้อง push แล้ว deploy ใหม่ให้ชี้ SHA ใหม่ (ดูวิธีด้านบน) · ห้ามแตะ `server/gas.enc`, schema/Storage `backoffice`
 
 ## Finance — เบิก–เคลียร์ค่าใช้จ่าย ครบตามแผนภาพ (21 พ.ย. 2569 · Claude) — ใช้งานจริงแล้ว
 - **Live:** Edge Function `finance-api` **v10 = โค้ดใน repo** (VERSION 1.3.0) · migration `finance_expense_flow_complete` apply แล้ว (สำเนา `supabase/migrations/20261121235000_finance_expense_flow_complete.sql`) — รวม PR #18/#19 ของ GPT
