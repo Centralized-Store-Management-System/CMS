@@ -385,3 +385,9 @@
 - E2E เพิ่มกรณี Manager/Staff/Verifier, multipart upload และ mock private Storage; **ยังไม่ได้ยืนยันผลรันชุด E2E ในรอบนี้ และยังต้องเพิ่มกรณีทดสอบ SoD actor ซ้ำโดยตรง**
 - Migration `202611210006_finance_manager_final_verification.sql` เป็น additive; **ยังไม่ apply กับ Supabase และยังไม่ deploy Edge Function** · ห้ามนำขึ้น Production ก่อนรัน migration + E2E + UAT และตรวจ regression ของ CMS login/Finance roles
 - Commits ล่าสุดที่รับเข้าประวัติ: `033ecb3` (SoD final verifier), `dd6a68b` (ส่งต่อ Owner approval ไปยัง disbursement ที่ผูกกับเอกสาร), `59d53b5` (เพิ่ม E2E ตรวจการอนุมัติ Owner ก่อนจ่าย)
+
+## สิทธิ์ตามตำแหน่ง (รวม Finance) ที่ Settings › Permissions
+- `js/perms-positions.js` (ใหม่, โหลดหลัง `hr-position-perms.js`): ตารางตำแหน่ง → Role หลังร้าน · บทบาท Finance · จำนวนเมนู · ปุ่มแก้ไข (เปิดฟอร์มตำแหน่งเดิม)
+- ฟอร์มพนักงาน: ใต้ช่อง Role แสดงบทบาท Finance ตามตำแหน่ง (อ่านอย่างเดียว) — Role ในฟอร์มคือสิทธิ์หลังร้าน (Staff/Manager/HR/Owner) บทบาท Finance (ผู้อนุมัติ/ผู้ตรวจสุดท้าย/บัญชี) ตั้งที่ตำแหน่งเท่านั้น
+- `hr-position-perms.js` เปิด `window.PosPerms` (อ่านอย่างเดียว) ให้ไฟล์ใหม่ใช้
+- ตัวเลือก Owner ในฟอร์มพนักงานแสดงเฉพาะ Owner อยู่แล้ว (`ROLE_OPTS` ใน mod-hr.js); ยังไม่ได้ตรวจว่าเซิร์ฟเวอร์กันซ้ำ
