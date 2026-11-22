@@ -18,7 +18,7 @@
       <div class="pc-field"><label for="pc-code">ชื่อผู้ใช้</label><input id="pc-code" name="username" autocomplete="username" autocapitalize="none" required></div>
       <div class="pc-field"><label for="pc-pin">PIN</label><input id="pc-pin" name="password" type="password" inputmode="numeric" autocomplete="current-password" required></div>
       <p class="pc-error" id="pc-error" role="alert">${h(message)}</p>
-      <div class="pc-actions"><button class="pc-btn" id="pc-submit" type="submit">เข้าสู่ระบบ</button></div>
+      <div class="pc-actions"><button class="pc-btn" id="pc-submit" type="submit">เข้าสู่ระบบ</button></div><button class="pc-btn secondary" data-pwa="1" type="button" hidden style="width:100%;margin-top:10px">ติดตั้งแอปบนอุปกรณ์นี้</button>
       <p class="pc-note">แอปนี้ไม่สร้างบัญชีหรือสิทธิ์ใหม่ หากบัญชีไม่ใช่ Owner ระบบจะไม่อนุญาตให้เข้าใช้งาน</p>
     </form></section>`;
     document.getElementById('pc-login').addEventListener('submit', login);
@@ -50,7 +50,7 @@
     ['⚙','System Control','การตั้งค่าและควบคุมระบบที่บัญชี Owner มีสิทธิ์','owner.html#control']
   ];
   function renderHome(name) {
-    root.innerHTML = `<header class="pc-top"><div class="pc-top-brand"><span class="pc-mark">BC</span><span><strong>Business Control</strong><small>Personal Business Command Center</small></span></div><button class="pc-out" id="pc-logout">ออกจากระบบ</button></header>
+    root.innerHTML = `<header class="pc-top"><div class="pc-top-brand"><span class="pc-mark">BC</span><span><strong>Business Control</strong><small>Personal Business Command Center</small></span></div><div style="display:flex;gap:8px;align-items:center"><button class="pc-out" data-pwa="1" type="button" hidden>ติดตั้งแอป</button><button class="pc-out" id="pc-logout">ออกจากระบบ</button></div></header>
       <section class="pc-hero"><div class="pc-kicker">PERSONAL EXECUTIVE ACCESS</div><h1>สวัสดี, ${h(name)}</h1><p>ศูนย์ควบคุมส่วนตัวสำหรับเข้าถึงระบบธุรกิจจากจุดเดียว ข้อมูลและสิทธิ์ยังคงยึดระบบต้นฉบับ</p><div class="pc-hero-foot"><i class="pc-dot"></i> Owner session active <span>·</span> ${new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'})}</div></section>
       <div class="pc-section-head"><h2>Business Modules</h2><span>เลือกโมดูลเพื่อเปิดระบบต้นฉบับ</span></div>
       <section class="pc-grid">${modules.map(([ic,title,desc,url])=>`<a class="pc-module" href="${url}"><span class="pc-ic">${ic}</span><span><strong>${title}</strong><small>${desc}</small></span><span class="pc-arrow">›</span></a>`).join('')}</section>
