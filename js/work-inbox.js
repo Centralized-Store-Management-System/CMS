@@ -35,8 +35,19 @@
   window.WorkInbox = {
     total, finTodo: () => F.todo || 0, finItems: () => F.items.slice(),
     /** โหลดใหม่แล้ววาดจอ — เรียกหลังทำ Action เช่นอนุมัติ */
-    refresh: async (force = true) => { await finFetch(force); paint(); if (typeof App !== 'undefined' && App.render) App.render(); }
+    refresh: async (force = true) => { await finFetch(force); drawn = F.todo; paint(); if (typeof App !== 'undefined' && App.render) App.render(); }
   };
+
+  /* หน้าอื่น (เช่น Today ของ Final Verifier) อ่านตัวเลขนี้ตอนวาดหน้า แต่คำตอบจาก finance-api มาทีหลัง
+   * → ถ้าได้ตัวเลขใหม่ ต้องวาดหน้าใหม่ด้วย ไม่งั้นกระดิ่งขึ้น 1 แต่ในหน้ายังเป็น 0
+   * วาดเฉพาะตอนตัวเลขเปลี่ยนจริง (drawn) — วาดหน้าใหม่ไม่ทำให้ยิงเซิร์ฟเวอร์ซ้ำ จึงไม่วนลูป */
+  let drawn = 0;   // เริ่มที่ 0 เท่ากับที่หน้าแรกวาดไว้ — ยังไม่มีงานการเงินก็ไม่ต้องวาดใหม่
+  function afterFin() {
+    paint();
+    if (F.todo === drawn) return;
+    drawn = F.todo;
+    if (typeof App !== 'undefined' && App.render) App.render();
+  }
 
   // ---------- กระดิ่งบนแถบหัว ----------
   const st = document.createElement('style');
@@ -71,8 +82,9 @@
     if (!tools || document.getElementById('wi-bell')) return paint();
     if (!S.me) return;
     tools.insertAdjacentHTML('afterbegin', `<button type="button" id="wi-bell" class="none" title="งานที่รอคุณ">${BELL}<b></b></button>`);
+    shown = -1;   // ปุ่มใหม่ยังไม่มีเลข (หน้าวาดใหม่ = ปุ่มเดิมหาย) ต้องเขียนเลขลงไปเสมอ ไม่งั้นเลขหายทั้งที่ยังมีงานค้าง
     paint();
-    finFetch().then(paint);
+    finFetch().then(afterFin);
   }
 
   function open() {
@@ -99,8 +111,8 @@
     sh.querySelectorAll('[data-wi-go]').forEach(a => a.addEventListener('click', () => closeSheet()));
   }
 
-  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#wi-bell')) { e.preventDefault(); finFetch().then(() => { paint(); open(); }); } });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) finFetch().then(paint); });
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#wi-bell')) { e.preventDefault(); finFetch().then(() => { afterFin(); open(); }); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) finFetch().then(afterFin); });
   let queued = 0;
   const tick = () => { if (queued) return; queued = requestAnimationFrame(() => { queued = 0; put(); }); };   // รวมหลายการเปลี่ยนหน้าจอเป็นรอบเดียว
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', tick) : tick();
