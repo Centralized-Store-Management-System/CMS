@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
-  "name": "Café Amazon — App Office",
-  "short_name": "App Office",
+  "name": "Time - Workforce",
+  "short_name": "Workforce",
   "description": "ระบบหลังร้าน: อนุมัติ ตารางงาน เวลาทำงาน เงินเดือน สต็อก บัญชี",
   "lang": "th",
   "start_url": "./index.html?src=app",

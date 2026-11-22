@@ -471,7 +471,7 @@
 | หน้า | manifest | ชื่อเต็ม (กล่องติดตั้ง) | ชื่อบนหน้าจอโฮม |
 |---|---|---|---|
 | `owner.html` | `owner.webmanifest` | Café Amazon — App Owner | **App Owner** |
-| `index.html` | `manifest.webmanifest` | Café Amazon — App Office | **App Office** |
+| `index.html` | `manifest.webmanifest` | Time - Workforce | **Workforce** |
 | `clock.html` | `clock.webmanifest` | Café Amazon — App Staff | **App Staff** |
 - ตั้งไว้ 3 ที่ให้ตรงกันเสมอ: `name` / `short_name` ใน manifest, `<meta name="apple-mobile-web-app-title">` และ `<title>` (iOS ใช้ title เป็นชื่อสำรอง)
 - `short_name` ต้องไม่เกิน 12 ตัวอักษร ไม่งั้น Android ตัดท้ายเป็น …
