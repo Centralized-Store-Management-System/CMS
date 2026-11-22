@@ -6,7 +6,7 @@
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof GROUPS === 'undefined' || typeof App !== 'object') return;
-  const V = '1.3.1', BASE = 'modules/finance/';
+  const V = '1.3.2', BASE = 'modules/finance/';
   const API = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/finance-api';
   const KEY = 'amz.fin.access', PERM = '__fin';
   if (typeof IC === 'object') IC.fin = '<path d="M4 19.5h16M6 16.5v-6M10 16.5v-9M14 16.5v-4M18 16.5v-7"/><path d="M5 7.5l4-3 4 2.5 6-3"/>';
@@ -79,7 +79,7 @@
       onNav(key, title) {
         ST.page = key || ST.page; ST.title = title || ''; decorate();
         const s = document.querySelector('.mhead[data-header="fin"] h1 small'); if (s) s.textContent = desc();
-        const m = document.querySelector('.fin-mnav summary span'); if (m) m.textContent = ST.title;
+        const m = document.querySelector('.fin-mnav>summary span'); if (m) m.textContent = ST.title;
         document.querySelectorAll('.fin-mnav a[data-fin-page]').forEach(x => { if (x.dataset.finPage === ST.page) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
       },
       onBadge(n) { ST.pending = n || 0; decorate(); },
@@ -108,7 +108,12 @@
   function view() {
     ST.page = pageOf();
     queueMicrotask(attach);
-    return `<div class="fin-embed fin-host"><details class="fin-mnav"><summary>เมนู Finance<span>${esc(ST.title || '')}</span></summary><nav aria-label="เมนู Finance">${subLinks('fin-mnav')}</nav></details><div id="finSlot"></div></div>`;
+    // มือถือ: หน้าหลังร้านวาดใหม่เมื่อข้อมูลเปลี่ยน → คงเมนูที่กาง/กลุ่มที่เปิดไว้ (ไม่หุบเองระหว่างใช้งาน)
+    const old = document.querySelector('.fin-mnav');
+    const keep = old ? [...old.querySelectorAll('.fin-mnav-group[open] > summary')].map(x => x.textContent) : [];
+    let menu = subLinks('fin-mnav');
+    keep.forEach(t => { menu = menu.replace(`<details class="fin-mnav-group"><summary>${esc(t)}</summary>`, `<details class="fin-mnav-group" open><summary>${esc(t)}</summary>`); });
+    return `<div class="fin-embed fin-host"><details class="fin-mnav"${old && old.open ? ' open' : ''}><summary>เมนู Finance<span>${esc(ST.title || '')}</span></summary><nav aria-label="เมนู Finance">${menu}</nav></details><div id="finSlot"></div></div>`;
   }
 
   defMod({
@@ -193,12 +198,12 @@
     '.side .nav .fin-subnav a[aria-current="page"]{background:color-mix(in srgb,currentColor 16%,transparent);font-weight:700}',
     '.fin-subnav-n,.fin-mnav-n{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}',
     '.fin-mnav{margin:0 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}',
-    '.fin-mnav summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;font-weight:600;cursor:pointer}',
-    '.fin-mnav summary::-webkit-details-marker{display:none}',
-    '.fin-mnav summary span{margin-left:auto;color:var(--muted);font-weight:500;font-size:13px}',
-    '.fin-mnav summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 2px 3px 0}',
-    '.fin-mnav[open] summary::after{transform:rotate(-135deg);margin:3px 2px 0 0}',
-    '.fin-mnav nav{display:flex;flex-direction:column;padding:0 8px 10px;border-top:1px solid var(--line)}',
+    '.fin-mnav>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;font-weight:600;cursor:pointer}',
+    '.fin-mnav>summary::-webkit-details-marker{display:none}',
+    '.fin-mnav>summary span{margin-left:auto;color:var(--muted);font-weight:500;font-size:13px}',
+    '.fin-mnav>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 2px 3px 0}',
+    '.fin-mnav[open]>summary::after{transform:rotate(-135deg);margin:3px 2px 0 0}',
+    '.fin-mnav>nav{display:flex;flex-direction:column;padding:0 8px 10px;border-top:1px solid var(--line)}',
     '.fin-mnav-h{margin:10px 8px 2px;font-size:11.5px;color:var(--muted)}',
     '.fin-mnav a{display:flex;align-items:center;padding:10px 10px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:14.5px}',
     '.fin-mnav a[aria-current="page"]{background:color-mix(in srgb,var(--m-acct) 12%,var(--surface));color:var(--m-acct);font-weight:600}',
