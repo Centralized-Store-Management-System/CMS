@@ -57,6 +57,10 @@ function navItem(m, cur, bottom) {
   if (bottom) return `<a href="#${m.key}" data-mod="${m.mod}"${cur === m.key ? ' aria-current="page"' : ''}>${icon(m.icon)}<span>${esc(m.short || m.label)}</span>${dot}</a>`;
   return `<a href="#${m.key}" data-mod="${m.mod}"${cur === m.key ? ' aria-current="page"' : ''}><span class="ic">${icon(m.icon)}</span>${esc(m.label)}${dot}</a>`;
 }
+/* My Workspace (Time Clock / ตารางของฉัน): เฉพาะคนที่ต้องลงเวลาเอง
+ * Role ที่ไม่ต้องลงเวลา ตั้งที่ settings.noClockRoles (คั่นด้วย , · ค่าเริ่มต้น Final Verifier) */
+const noClockRoles = () => new Set(String(S.settings && S.settings.noClockRoles != null ? S.settings.noClockRoles : 'verifier').split(',').map(x => x.trim()).filter(Boolean));
+const myWorkspace = () => !!(S.me && S.me.empId) && !noClockRoles().has(S.me.role);
 function renderNav(cur) {
   const vis = visibleMods();
   $('#sb-shop').textContent = (S.branch ? branchName(S.branch) : multiBranch() ? 'All branches' : 'Back Office') + (S.demo ? ' (Demo)' : '');   // ชื่อร้านอยู่บรรทัดบนแล้ว แสดงแค่สาขา
@@ -68,12 +72,12 @@ function renderNav(cur) {
     const items = keys.map(modBy).filter(allowed);
     if (!items.length) return '';
     return (g ? `<h4>${g}</h4>` : '') + items.map(m => navItem(m, cur)).join('');
-  }).join('') + (S.me.empId ? `<h4>My Workspace</h4><a href="${esc(clockLink())}" data-mod="time"><span class="ic">${icon('clock')}</span>Time Clock · ตารางของฉัน · ขอลา</a>` : '');
+  }).join('') + (myWorkspace() ? `<h4>My Workspace</h4><a href="${esc(clockLink())}" data-mod="time"><span class="ic">${icon('clock')}</span>Time Clock · ตารางของฉัน · ขอลา</a>` : '');
   $('#userbox').innerHTML = `<button class="userbtn" data-a="myAccount" title="บัญชีของฉัน">${avatar({ nickname: S.me.name })}<span class="main"><span class="t">${esc(S.me.name)}</span><span class="s">${esc(ROLE_NAME[S.me.role] || '')}${S.me.branch ? ' · ' + esc(branchName(S.me.branch)) : ''}</span></span></button><span class="mini"><button class="btn sm" data-a="refresh" title="โหลดข้อมูลล่าสุด">Refresh</button><button class="btn sm" data-a="logout">Sign out</button></span>`;
   const pri = ['today', 'approve', 'sched', 'time', 'stock', 'acct', 'hr', 'pay', 'dash'];
   const bottom = pri.map(k => vis.find(m => m.key === k)).filter(Boolean).slice(0, 4);
   let bh = bottom.map(m => navItem({ ...m, short: SHORT[m.key] }, cur, true)).join('');
-  if (bottom.length < 4 && S.me.empId) bh += `<a href="${esc(clockLink())}" data-mod="time">${icon('clock')}<span>Clock</span></a>`;
+  if (bottom.length < 4 && myWorkspace()) bh += `<a href="${esc(clockLink())}" data-mod="time">${icon('clock')}<span>Clock</span></a>`;
   bh += `<a href="#menu" data-mod="menu"${cur === 'menu' ? ' aria-current="page"' : ''}>${icon('menu')}<span>Menu</span></a>`;
   $('#bottom').innerHTML = bh;
 }
@@ -85,7 +89,7 @@ function viewMenu() {
     return `<h3 class="h3">${g || 'Overview'}</h3><div class="tiles">${items.map(m => { let s = ''; try { s = m.summary ? m.summary() : m.desc; } catch (e) { s = m.desc; } return `<a class="tile" href="#${m.key}" data-mod="${m.mod}"><span class="mi">${icon(m.icon)}</span><span><b>${esc(m.label)}</b><span>${s}</span></span></a>`; }).join('')}</div>`;
   }).join('');
   if (!vis.length) h += '<p class="note">บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้ระบบหลังร้าน ติดต่อ Owner หรือ Admin</p>';
-  if (S.me.empId) h += `<h3 class="h3">My Workspace</h3><div class="tiles"><a class="tile" href="${esc(clockLink())}" data-mod="time"><span class="mi">${icon('clock')}</span><span><b>Time Clock</b><span>เข้า-ออกงาน ตารางของฉัน ขอลา แจ้งลืมลงเวลา</span></span></a></div>`;
+  if (myWorkspace()) h += `<h3 class="h3">My Workspace</h3><div class="tiles"><a class="tile" href="${esc(clockLink())}" data-mod="time"><span class="mi">${icon('clock')}</span><span><b>Time Clock</b><span>เข้า-ออกงาน ตารางของฉัน ขอลา แจ้งลืมลงเวลา</span></span></a></div>`;
   h += `<h3 class="h3">My Account</h3><div class="group"><div class="row">${avatar({ nickname: S.me.name })}<button class="rowmain" data-a="myAccount"><span class="main"><span class="t">${esc(S.me.name)} <span class="muted">${esc(S.me.code || '')}</span></span><span class="s">${esc(ROLE_NAME[S.me.role] || '')}${S.me.branch ? ' · ' + esc(branchName(S.me.branch)) : ''}, ดูแล${allBranch() ? 'ทุกสาขา' : myBranches().map(b => esc(b.name)).join(', ')}${S.demo ? ', Demo mode' : ''}</span></span></button><span class="mini"><button class="btn sm" data-a="refresh">Refresh</button><button class="btn sm" data-a="logout">Sign out</button></span></div></div>`;
   return h;
 }

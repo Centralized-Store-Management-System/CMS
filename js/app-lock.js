@@ -6,7 +6,7 @@
  * ทดสอบบนคอม: เปิดหน้าเว็บต่อท้าย ?app=1 */
 'use strict';
 (function () {
-  const KEY = 'amz.dev', ASK = 'amz.devAsk', LOCK_AFTER = 60e3, ITER = 120000, ROLES = { staff: 1, manager: 1 };
+  const KEY = 'amz.dev', ASK = 'amz.devAsk', LOCK_AFTER = 60e3, ITER = 120000;   // ระดับไหนตั้งรหัสได้ ให้เซิร์ฟเวอร์ตอบ (devReg check) ที่เดียว ไม่เก็บรายชื่อซ้ำตรงนี้
   try { if (/[?&]app=1/.test(location.search)) sessionStorage.setItem('amz.appmode', '1'); } catch (e) { /* */ }
   const forced = (() => { try { return sessionStorage.getItem('amz.appmode') === '1'; } catch (e) { return false; } })();
   const isApp = forced || (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
@@ -216,7 +216,7 @@
   setInterval(async () => {
     if (asked || dev() || !S.token || document.getElementById('applock') || document.querySelector('.sheet') || later()) return;
     if (clockPage) { if (C.step !== 'me' || C.via === 'line' || C.liff) return; }
-    else if (!S.me || !ROLES[S.me.role] || !S.me.uid) return;
+    else if (!S.me || !S.me.uid) return;
     asked = true;
     try { if (!(await API.call('devReg', { t: S.token, check: 1 })).allowed) return; }
     catch (e) { if (typeof toast === 'function') toast(/ไม่รู้จักคำสั่ง/.test(e.message || '') ? 'ตั้งรหัสปลดล็อกแอปไม่ได้: ระบบหลังบ้านยังไม่อัปเดต (Deploy เป็น New version)' : 'ตั้งรหัสปลดล็อกแอปไม่ได้: ' + (e.message || '')); return; }
