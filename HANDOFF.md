@@ -19,6 +19,20 @@
 - `otpSend` / `otpVerify` (อีเมล) ถูกปิด ตอบข้อความให้ใช้ LINE · ไม่ต้องตั้ง `RESEND_API_KEY` อีกต่อไป
 - ต้นฉบับ `.gs` ยังอยู่นอก repo (repo นี้ Public) — อย่า commit `.gs` ลงที่นี่ · แก้ logic ฝั่งเซิร์ฟเวอร์ต้องขอซอร์สจากเจ้าของ/repo private แล้วเข้ารหัส `gas.enc` ใหม่
 
+## ส่งต่อให้ AI ตัวถัดไป (22 พ.ย. 2569 · Claude) — อ่านก่อนเริ่ม
+- เริ่มทุกครั้ง: `git pull --rebase` → อ่าน `AGENTS.md` + ไฟล์นี้ → ทำงานบน branch ใหม่ → เปิด PR ให้เจ้าของกด merge (merge main ผ่าน API ไม่ได้) → รายงาน commit SHA + รายการไฟล์ที่เปลี่ยน
+- เปิด PR จาก Claude Code: `gh pr create` ใช้ไม่ได้ (GraphQL ถูกบล็อก) ให้ใช้ `gh api repos/Centralized-Store-Management-System/CMS/pulls -f title=… -f head=… -f base=main -F body=@ไฟล์`
+- **ซอร์สฝั่งเซิร์ฟเวอร์**: `server/gas.enc` ก็คือซอร์ส `.gs` ทั้งหมดที่เข้ารหัสไว้ — ไม่ต้องมี repo private ก็กู้ได้ ถ้ามีสิทธิ์อ่านกุญแจ `CODE_KEY` (อยู่ใน `backoffice.kv` ns `props` ห้ามใส่ใน repo/log/แชต) ใช้ `tools/gas-crypt.mjs`:
+  `CODE_KEY=… node tools/gas-crypt.mjs decrypt server/gas.enc <ที่นอก repo>/all.gs` → แก้ → `… encrypt <ที่นอก repo>/all.gs server/gas.enc` (ถอดกลับเทียบ + ตรวจ syntax ให้เอง) แล้วส่ง PR · **ห้าม commit ซอร์สที่ถอดแล้วลง repo นี้ (Public)** · ซอร์สในไฟล์เดียวต่อกัน คั่นด้วย `// ===== ชื่อไฟล์.gs =====` (ไฟล์ละบรรทัดเดียว บีบแล้ว) · เพิ่มฟีเจอร์ = เพิ่มไฟล์ใหม่ก่อน `zz_overrides.gs`
+- ทดสอบฝั่งเซิร์ฟเวอร์ได้โดยไม่แตะระบบจริง: ใช้ `compileGas` + `createRuntime` จาก `server/runtime.js` กับ store จำลองในหน่วยความจำ (เซ็ตค่า `BOOK_core`/`BOOK_hr` ในprops, ชีตมี 2 แถวหัว: ป้ายชื่อ + คีย์ ข้อมูลเริ่มแถว 3)
+- ตรวจหน้าจอ: PC 1440 · iPad 820 · iPhone 390 ทั้งหน้าหลังร้าน (`index.html`) และหน้าลงเวลา (`clock.html`) · บางหน้าจอแสดงสิทธิ์/เมนูไม่เหมือนกันตาม Role
+- **สถานะ PR เก่า (ตรวจ 22 พ.ย. 2569 — ยังไม่ได้ merge/ปิดอะไร รอเจ้าของตัดสินใจ)**
+  - #19 Finance ความปลอดภัยเคลียร์ค่าใช้จ่าย (draft): branch ล้าหลัง main มาก แต่ merge ได้สะอาด · ส่วนยอดจ่าย/บัญชีคู่รายการเข้า main แล้วทาง commit อื่น · ที่ยังไม่เข้า = Manager เห็น/เคลียร์ได้เฉพาะสาขาตัวเอง + migration เปิด RLS (`20261121200000`) · ข้อความ UI ของ PR มีภาษาจีนหนึ่งบรรทัด (ต้องแก้เป็นไทย) · ควร rebase แล้วทดสอบก่อน
+  - #5 เครื่องมือ deploy/PWA อัปเดต: ซ้ำกับ `js/app-update.js` + `sw.js` ที่อยู่ใน main แล้ว และแก้ `sw.js` หนัก → น่าจะปิด
+  - #1 (draft) Theme International: แก้ `index.html`/`clock.html`/`theme.js` ตรงๆ ขัดกติกา Theme แยกตาม Scope ผ่าน IT Control Center → น่าจะปิดหรือทำใหม่เป็นไฟล์ Theme ของตัวเอง
+  - #3 telemetry Login/PIN (วัดเวลา PIN/หน้าแรก ไม่เก็บ PIN/token/ชื่อผู้ใช้): เนื้อหาใช้ได้ แต่ชน main ที่ `js/it-rum.js` → ต้อง rebase แล้วทดสอบแอปพนักงาน/Owner ว่าไม่ช้าลง
+  - #4 IT dashboard แบบแท็บ + กระดิ่งแจ้งเตือน: ชน main แค่บรรทัดเวอร์ชันใน `owner.html` (แก้ง่าย) · ข้อควรระวัง: ป้าย "ปกติ/ผิดปกติ" ตัดสินจากการค้นข้อความด้วย regex (เช่นคำว่า warning, ไม่พบ) อาจแสดงสีผิดกับสถานะจริง → ควรให้ Owner ดูของจริงก่อน merge
+
 ## HR — ตำแหน่งงาน = แม่แบบสิทธิ์ (22 พ.ย. 2569 · Claude) — ต่อจากงาน GPT `ba83cce`/`0280330`
 - **แนวคิด:** ตำแหน่ง (HR › Positions) กำหนด Role ของบัญชี + สิทธิ์เมนู + บทบาท Finance → เลือกตำแหน่งให้พนักงาน (HR › Employees) แล้ว Role พนักงาน / บัญชีผู้ใช้ที่ผูก (`empId`) / `finance.user_roles` ปรับตามเอง · แก้สิทธิ์ตำแหน่ง → ทุกคนในตำแหน่งเปลี่ยนตาม · ระบบออเดอร์ซิงก์ต่อจากสิทธิ์ `orders`/`catalog` (order-link)
 - **หน้าเว็บ:** `js/hr-position-perms.js` (ไฟล์ใหม่ wrap `hrLoadPositions`/`openPosition`/`DB.upsertMany`/`userRow`/`openForm`) · หน้า Positions ภาษาไทย + ป้าย Role/สิทธิ์/Finance/จำนวนคน + รายชื่อพนักงานในตำแหน่ง · หน้า Users มีป้ายตำแหน่ง
