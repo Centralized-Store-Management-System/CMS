@@ -8,22 +8,31 @@
 (function () {
   if (typeof S !== 'object' || typeof API !== 'object') return;
   const FIN_API = (typeof AMZ_API === 'string' ? AMZ_API : '').replace(/\/[^/]+$/, '/finance-api');
-  const FRESH = 60e3;
-  const F = { at: 0, items: [], todo: 0, off: false, busy: null };   // off = บัญชีนี้ไม่มีสิทธิ์ Finance
+  const FRESH = 60e3, RETRY = 6e3, BEAT = 12e4;   // จำคำตอบ 60 วิ · ถามใหม่ใน 6 วิ ถ้าครั้งนี้ไม่สำเร็จ · เช็คเองทุก 2 นาที
+  const F = { at: 0, items: [], todo: 0, off: false, busy: null, err: 0, un: 0, tries: 0 };   // off = บัญชีนี้ไม่มีสิทธิ์ Finance · un = เจอ 401 กี่ครั้ง
   const esc2 = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
+  /* ถามงานการเงิน — ครั้งแรกตอนเปิดแอปมักพลาดได้ (เซิร์ฟเวอร์เพิ่งตื่น / เน็ตยังไม่นิ่ง / session เพิ่งต่อ)
+   * ของเดิมพลาดแล้วจำว่า "ถามไปแล้ว" ยาว 60 วิ และไม่มีใครถามซ้ำอีกเลยทั้งรอบการใช้งาน → เปิดครั้งแรกเห็น 0 ตลอด
+   * ตอนนี้: ไม่สำเร็จ = ถามใหม่ใน 6 วิ · 401 (session ยังไม่พร้อม) ลองได้ 3 ครั้งก่อนเลิก · 403 เท่านั้นที่แปลว่าไม่มีสิทธิ์จริง */
   async function finFetch(force) {
     if (F.off || !FIN_API || !S.token || S.demo) return F;
     if (!force && Date.now() - F.at < FRESH) return F;
     if (F.busy) return F.busy;
     F.busy = (async () => {
+      F.err = 0;
       try {
         const r = await fetch(FIN_API + '?action=expense-flow&tab=todo', { headers: { 'x-cms-session': S.token, accept: 'application/json' }, cache: 'no-store' });
         const j = await r.json().catch(() => ({}));
-        if (r.status === 401 || r.status === 403) { F.off = true; F.items = []; F.todo = 0; }
-        else if (r.ok && j.ok && j.data) { F.items = (j.data.items || []).filter(x => x.my_action); F.todo = Number((j.data.counts || {}).todo || F.items.length) || 0; }
-      } catch (_) { /* เน็ตสะดุด: ใช้ค่าเดิมไปก่อน ไม่ต้องรบกวนผู้ใช้ */ }
-      F.at = Date.now(); F.busy = null;
+        if (r.status === 403) { F.off = true; F.items = []; F.todo = 0; }                     // ไม่มีสิทธิ์ Finance จริง: เลิกถาม
+        else if (r.status === 401) { F.err = 1; if (++F.un >= 3) { F.off = true; F.items = []; F.todo = 0; } }
+        else if (r.ok && j.ok && j.data) { F.un = 0; F.items = (j.data.items || []).filter(x => x.my_action); F.todo = Number((j.data.counts || {}).todo || F.items.length) || 0; }
+        else F.err = 1;                                                                        // 5xx หรือคำตอบผิดรูป: ลองใหม่
+      } catch (_) { F.err = 1; /* เน็ตสะดุด: ใช้ค่าเดิมไปก่อน ไม่ต้องรบกวนผู้ใช้ */ }
+      F.at = Date.now() - (F.err && !F.off ? FRESH - RETRY : 0);   // ไม่สำเร็จ = ถือว่าเก่าแล้วใน 6 วิ
+      F.busy = null;
+      if (!F.err) F.tries = 0;
+      else if (!F.off && F.tries < 5) setTimeout(() => finFetch(true).then(afterFin), RETRY * ++F.tries);   // ถามเองซ้ำ 6, 12, 18, 24, 30 วิ แล้วหยุด (เหลือรอบเช็คทุก 2 นาที)
       return F;
     })();
     return F.busy;
@@ -79,7 +88,11 @@
   }
   function put() {
     const tools = document.querySelector('.topbar .tools');
-    if (!tools || document.getElementById('wi-bell')) return paint();
+    if (!tools || document.getElementById('wi-bell')) {
+      paint();
+      if (tools) finFetch().then(afterFin);   // ถามใหม่เฉพาะตอนค่าเก่าเกิน (ในช่วงที่ยังสด จะคืนค่าที่จำไว้ ไม่ยิงเซิร์ฟเวอร์)
+      return;
+    }
     if (!S.me) return;
     tools.insertAdjacentHTML('afterbegin', `<button type="button" id="wi-bell" class="none" title="งานที่รอคุณ">${BELL}<b></b></button>`);
     shown = -1;   // ปุ่มใหม่ยังไม่มีเลข (หน้าวาดใหม่ = ปุ่มเดิมหาย) ต้องเขียนเลขลงไปเสมอ ไม่งั้นเลขหายทั้งที่ยังมีงานค้าง
@@ -113,6 +126,7 @@
 
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#wi-bell')) { e.preventDefault(); finFetch().then(() => { afterFin(); open(); }); } });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) finFetch().then(afterFin); });
+  setInterval(() => { if (!document.hidden && S.me && S.token) finFetch().then(afterFin); }, BEAT);   // เปิดแอปค้างไว้ก็เห็นงานใหม่เอง
   let queued = 0;
   const tick = () => { if (queued) return; queued = requestAnimationFrame(() => { queued = 0; put(); }); };   // รวมหลายการเปลี่ยนหน้าจอเป็นรอบเดียว
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', tick) : tick();
