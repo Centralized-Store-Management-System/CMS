@@ -26,8 +26,8 @@
     return { set: !!cms && !!(role || perms.length), role, perms, finance: (((fin && fin.permission_codes) || []).find(x => x.startsWith('role:')) || '').slice(5) };
   };
   const posOfEmp = e => e ? HR_POSITIONS.find(p => (e.positionId && p.id === e.positionId) || (e.positionCode && p.position_code === e.positionCode) || (!e.positionId && !e.positionCode && e.position && p.name_th === e.position)) : null;
-  const EMP_ROLES = ['staff', 'manager', 'hr'];
-  const ROLE_TH = { admin: 'Admin', hr: 'HR', manager: 'Manager', staff: 'Staff' };
+  const EMP_ROLES = ['staff', 'manager', 'hr', 'verifier'];   // Role ที่ตำแหน่งตั้งให้พนักงานได้ (ไม่รวม owner/admin)
+  const ROLE_TH = { admin: 'Admin', hr: 'HR', manager: 'Manager', staff: 'Staff', verifier: 'Final Verifier' };
   const FIN_TH = { approver: 'ผู้อนุมัติ', manager: 'Manager', staff: 'Staff', verifier: 'ผู้ตรวจสุดท้าย', accountant: 'บัญชี', viewer: 'ดูอย่างเดียว' };
   const permName = k => ((S.permList || []).find(p => p[0] === k) || [k, k])[1];
   const sortJoin = a => a.slice().sort().join(',');
@@ -167,7 +167,7 @@
     const t = id ? tmpl(id) : { set: false, role: 'staff', perms: [], finance: '' };
     const own = S.me.role === 'owner', adm = S.me.role === 'admin', mine = S.me.perms || [];
     const permOpts = (S.permList || []).filter(x => !x[2] && (own || adm || mine.includes(x[0]) || t.perms.includes(x[0]))).map(x => [x[0], x[1]]);
-    const roleOpts = [['', 'ไม่กำหนด (คง Role เดิมของแต่ละคน)'], ['staff', 'Staff — พนักงาน'], ['manager', 'Manager — บริหารสาขา'], ['hr', 'HR — บุคคล เงินเดือน'], ...(own || adm || t.role === 'admin' ? [['admin', 'Admin — ดูแลระบบ ผู้ใช้']] : [])];
+    const roleOpts = [['', 'ไม่กำหนด (คง Role เดิมของแต่ละคน)'], ['staff', 'Staff — พนักงาน'], ['manager', 'Manager — บริหารสาขา'], ['hr', 'HR — บุคคล เงินเดือน'], ['verifier', 'Final Verifier — ผู้ตรวจสอบขั้นสุดท้าย (เห็นทุกสาขา)'], ...(own || adm || t.role === 'admin' ? [['admin', 'Admin — ดูแลระบบ ผู้ใช้']] : [])];
     const high = ['approver', 'verifier', 'accountant'];
     const finOpts = [['', 'ไม่ใช้ Finance'], ['staff', 'Staff — สร้างคำขอเบิก'], ['manager', 'Manager — สาขาที่ดูแล'], ['viewer', 'ดูอย่างเดียว'], ...high.filter(r => own || t.finance === r).map(r => [r, FIN_TH[r] + (own ? '' : ' (Owner ตั้งไว้)')])];
     const ms = id ? members(p) : [];

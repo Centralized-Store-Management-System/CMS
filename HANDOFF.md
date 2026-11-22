@@ -405,3 +405,11 @@
 - ทดสอบเพิ่ม: `tests/line-reg.test.mjs` (25 ข้อ) ใน CMS-server-src
 - แก้ตาราง "สิทธิ์ตามตำแหน่ง" ค้างที่ "กำลังโหลด": หน้า Settings › Permissions สั่ง `hrLoadPositions()` เองแล้ว (เดิมต้องเปิด HR › Positions ก่อน) · ไม่ใช้ `PosPerms.ready()` ซึ่งบังคับว่าต้องมีตำแหน่งที่ตั้งสิทธิ์แล้วอย่างน้อย 1 รายการ · โหลดไม่สำเร็จมีปุ่ม "ลองใหม่"
 - ตรวจการลบแล้ว: ลบพนักงาน → `afterRemoveLink_` (46_ITLinks.gs) ลบบัญชีผู้ใช้ที่ผูกไว้ให้ด้วย · ลบพนักงานที่มีประวัติเวลา/เงินเดือนไม่ได้ (ให้เปลี่ยนเป็น "ลาออก" ซึ่งปิดบัญชีให้เอง) · "ลบถาวร" (45_ITPurge.gs) ลบ PIN/LINE/Authenticator และตัด session
+
+## Role ใหม่: Final Verifier (verifier) + สิทธิ์เมนูตามตำแหน่งในหน้า Permissions
+- เซิร์ฟเวอร์ `63_RoleVerifier.gs`: `ROLES.verifier`, `ROLE_PREFIX.verifier='fv_'`, `DEFAULT_PERMS.verifier=['approve_time','approve_stock','time','schedule_view']`, `ORDER_ROLE.verifier='manager'` (Line-Order), `HR_PREFIXES` เพิ่ม `fv_`, override `scopeFor_` → เห็นทุกสาขา, ข้อตรวจ IT `role_verifier`
+- หน้าเว็บ `js/role-verifier.js`: `ROLE_NAME`/`UPREFIX`/`DEFAULT_PERMS`/`PERM_ROLES` + override `savePerms` (ของเดิมฮาร์ดโค้ด 4 ระดับ จะตกระดับใหม่) + เพิ่มตัวเลือกในช่อง Role ของฟอร์มพนักงานและฟอร์มผู้ใช้ + เติมหัวคอลัมน์และแถวขอบเขตสาขาในตารางสิทธิ์
+- **ค่าเริ่มต้นสิทธิ์ของ verifier ต้องตรงกันทั้ง 2 ไฟล์เสมอ** (กติกาเดียวกับ mod-settings.js)
+- `js/hr-position-perms.js`: `EMP_ROLES` / `ROLE_TH` / ตัวเลือกใน `openPosition` เพิ่ม verifier (ตำแหน่งตั้ง Role นี้ให้พนักงานได้)
+- `js/perms-positions.js`: ตารางที่ 2 "สิทธิ์เมนูตามตำแหน่ง" (แถว = เมนู, คอลัมน์ = ตำแหน่ง) บันทึกผ่าน `save-template` เฉพาะตำแหน่งที่เปลี่ยน และคง Role/บทบาท Finance ของตำแหน่งไว้
+- ทดสอบ: `tests/role-verifier.test.mjs` (22 ข้อ) + หน้าเว็บ PC/iPad/iPhone 24 ข้อ

@@ -34,7 +34,21 @@
       <p class="note" style="margin-top:0">Role ของพนักงานและบัญชีผู้ใช้ตั้งตามตำแหน่ง · บทบาท Finance (ผู้อนุมัติ / ผู้ตรวจสุดท้าย / บัญชี) ตั้งที่ตำแหน่งเช่นกัน กด "แก้ไข" เพื่อเปลี่ยน ทุกคนในตำแหน่งนั้นเปลี่ยนตาม</p>
       <div class="group"><table class="perm"><thead><tr><th>ตำแหน่ง</th><th>Role หลังร้าน</th><th>บทบาท Finance</th><th>สิทธิ์เมนู</th><th>จัดตารางงาน</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6">ยังไม่มีตำแหน่ง</td></tr>'}</tbody></table></div>
       <p class="note">"จัดตารางงาน" ติ๊กไว้ = ตำแหน่งนี้ขึ้นในตารางงาน (เฉพาะ Role Manager / Staff) · เอาติ๊กออก = ไม่ต้องจัดตาราง (คนที่มีกะอยู่แล้วยังแสดง)</p>
-      <div class="actions"><button class="btn primary" data-a="posSaveSched">บันทึกตำแหน่งที่จัดตารางงาน</button></div>`;
+      <div class="actions"><button class="btn primary" data-a="posSaveSched">บันทึกตำแหน่งที่จัดตารางงาน</button></div>
+      ${menuTable(list)}`;
+  }
+
+  /** ตารางที่ 2: ติ๊กสิทธิ์เมนูให้แต่ละตำแหน่งได้ที่นี่เลย (แถว = เมนู, คอลัมน์ = ตำแหน่ง) */
+  function menuTable(list) {
+    const menus = (S.permList || []).filter(x => !x[2]);        // ตัดสิทธิ์ที่เป็นของ Owner เท่านั้น
+    if (!list.length || !menus.length) return '';
+    const T = {}; list.forEach(p => { T[p.id] = P.tmpl(p.id); });
+    const head = list.map(p => `<th>${esc(p.name_th)}</th>`).join('');
+    const body = menus.map(([k, label]) => `<tr><td>${esc(label)}</td>${list.map(p => `<td><input type="checkbox" data-pperm="${esc(p.id)}:${esc(k)}"${T[p.id].perms.includes(k) ? ' checked' : ''} aria-label="${esc(p.name_th)}: ${esc(label)}"></td>`).join('')}</tr>`).join('');
+    return `<h3 class="h3">สิทธิ์เมนูตามตำแหน่ง</h3>
+      <p class="note" style="margin-top:0">ติ๊กให้ตำแหน่งไหน คนในตำแหน่งนั้นได้สิทธิ์ชุดนี้แทนค่าเริ่มต้นของ Role · ไม่ติ๊กเลยทั้งคอลัมน์ = ใช้ค่าเริ่มต้นของ Role ตามตารางข้างบน</p>
+      <div class="group" style="overflow-x:auto"><table class="perm"><thead><tr><th>ระบบ</th>${head}</tr></thead><tbody>${body}</tbody></table></div>
+      <div class="actions"><button class="btn primary" data-a="posSavePerms">บันทึกสิทธิ์เมนูตามตำแหน่ง</button></div>`;
   }
 
   const ms = modBy('set'), sub = ms && ms.subs && ms.subs.find(s => s.key === 'perms');
@@ -54,7 +68,31 @@
         App.render();
       } catch (x) { toast(x.message); }
     };
-    Object.assign(ACT, { posEdit: ms.acts.posEdit, posReload: ms.acts.posReload, posSaveSched: ms.acts.posSaveSched });   // ACT ถูกคัดลอกตอน defMod แล้ว ต้องใส่เองด้วย
+    // บันทึกเฉพาะตำแหน่งที่เปลี่ยน · คง Role และบทบาท Finance ของตำแหน่งไว้เหมือนเดิม
+    ms.acts.posSavePerms = async (a, b) => {
+      try {
+        const want = {};
+        document.querySelectorAll('[data-pperm]').forEach(c => {
+          const i = c.dataset.pperm.indexOf(':'), id = c.dataset.pperm.slice(0, i), k = c.dataset.pperm.slice(i + 1);
+          (want[id] = want[id] || []).push(...(c.checked ? [k] : []));
+        });
+        const same = (x, y) => x.slice().sort().join(',') === y.slice().sort().join(',');
+        const changed = Object.keys(want).filter(id => !same(want[id], P.tmpl(id).perms));
+        if (!changed.length) return toast('ไม่มีอะไรเปลี่ยน');
+        await busy(b, async () => {
+          for (const id of changed) {
+            const t = P.tmpl(id);
+            await hrPositionRequest('POST', { action: 'save-template', position_id: id, cms_role: t.role || '', cms_perms: want[id], finance_role: t.finance || '' });
+          }
+          HR_POSITION_LOADED = false; HR_POSITION_ERROR = '';
+          await hrLoadPositions().catch(() => { });
+          HR_POSITION_LOADED = true;
+        }, 'กำลังบันทึก…');
+        toast(`บันทึกสิทธิ์ของ ${changed.length} ตำแหน่งแล้ว · กำลังปรับสิทธิ์ของคนในตำแหน่งนั้น`);
+        App.render();
+      } catch (x) { toast(x.message); }
+    };
+    Object.assign(ACT, { posEdit: ms.acts.posEdit, posReload: ms.acts.posReload, posSaveSched: ms.acts.posSaveSched, posSavePerms: ms.acts.posSavePerms });   // ACT ถูกคัดลอกตอน defMod แล้ว ต้องใส่เองด้วย
   }
 
   // ฟอร์มพนักงาน: แสดงบทบาท Finance ใต้ช่อง Role
