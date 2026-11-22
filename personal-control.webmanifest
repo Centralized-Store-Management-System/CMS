@@ -1,0 +1,18 @@
+{
+  "id": "./personal-control.html",
+  "name": "Business Control — Personal",
+  "short_name": "Control",
+  "description": "ศูนย์ควบคุมธุรกิจส่วนตัวสำหรับ Owner",
+  "lang": "th",
+  "start_url": "./personal-control.html?src=app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F7F5",
+  "theme_color": "#102E25",
+  "icons": [
+    { "src": "icons/owner-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/owner-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/owner-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
