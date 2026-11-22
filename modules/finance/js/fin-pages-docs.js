@@ -198,12 +198,15 @@
       const paid = r.payments.filter(p => p.status === 'paid').reduce((a, p) => a + Number(p.amount), 0);
       const committed = r.payments.filter(p => ['pending', 'approved', 'paid'].includes(p.status)).reduce((a, p) => a + Number(p.amount), 0);
       const left = r2(Number(d.grand_total) - committed);
+      // ปุ่มฝั่งผู้บันทึก/ผู้เบิก (แก้ ส่ง ยกเลิก) เฉพาะผู้สร้างเอกสาร หรือ Manager — ผู้อนุมัติเห็นแค่ อนุมัติ / ตีกลับ
+      const maker = F.can('request') && (d.created_by === me || F.session.actor.role === 'manager');
+      const approveLabel = EXPENSE.includes(d.document_type) ? 'อนุมัติคำขอเบิก' : 'อนุมัติ + ลงบัญชี';
       const acts = [];
       if (EXPENSE.includes(d.document_type) && !['voided'].includes(d.status)) acts.push(`<button class="fm-btn fm-btn-primary" data-go="#expflow/${d.id}">ขั้นตอนเบิก–เคลียร์</button>`);
-      if (d.status === 'draft' && F.can('request')) acts.push(`<button class="fm-btn fm-btn-light" data-go="#document/edit:${d.id}">แก้ไข</button>`, '<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>', '<button class="fm-btn fm-btn-primary" data-a="submit">ส่งอนุมัติ</button>');
+      if (d.status === 'draft' && maker) acts.push(`<button class="fm-btn fm-btn-light" data-go="#document/edit:${d.id}">แก้ไข</button>`, '<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>', '<button class="fm-btn fm-btn-primary" data-a="submit">ส่งอนุมัติ</button>');
       if (d.status === 'pending_review') {
-        if (F.can('request')) acts.push('<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>');
-        if (F.can('approve')) acts.push('<button class="fm-btn fm-btn-light" data-a="return">ตีกลับ</button>', mineBlocked ? '<span class="fm-badge warn" title="Maker–Checker">เอกสารของคุณ — ให้ผู้อื่นอนุมัติ</span>' : '<button class="fm-btn fm-btn-primary" data-a="approve">อนุมัติ + ลงบัญชี</button>');
+        if (maker) acts.push('<button class="fm-btn fm-btn-light" data-a="void">ยกเลิกเอกสาร</button>');
+        if (F.can('approve')) acts.push('<button class="fm-btn fm-btn-light" data-a="return">ตีกลับ</button>', mineBlocked ? '<span class="fm-badge warn" title="Maker–Checker">เอกสารของคุณ — ให้ผู้อื่นอนุมัติ</span>' : `<button class="fm-btn fm-btn-primary" data-a="approve">${approveLabel}</button>`);
       }
       if (d.status === 'posted') {
         if (F.can('request') && d.document_type !== 'credit_note' && left > 0.004) acts.push(`<button class="fm-btn fm-btn-primary" data-a="pay">${kind === 'income' ? 'รับเงิน' : 'จ่ายเงิน'}</button>`);
