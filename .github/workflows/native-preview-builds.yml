@@ -21,8 +21,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -61,10 +59,15 @@ jobs:
         run: npx expo prebuild --platform ios --non-interactive
       - name: Build for iOS Simulator without code signing
         working-directory: mobile/ios
+        shell: bash
         run: |
-          xcodebuild -workspace *.xcworkspace -scheme BusinessControl -sdk iphonesimulator -configuration Debug -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-          cd build/Build/Products/Debug-iphonesimulator
-          ditto -c -k --sequesterRsrc --keepParent BusinessControl.app ../../../../../../BusinessControl-ios-simulator.zip
+          set -euo pipefail
+          xcodebuild -list -json -workspace *.xcworkspace > schemes.json
+          SCHEME=$(python3 -c 'import json; d=json.load(open("schemes.json")); print(d["workspace"]["schemes"][0])')
+          xcodebuild -workspace *.xcworkspace -scheme "$SCHEME" -sdk iphonesimulator -configuration Debug -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          APP_PATH=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "*.app" -print -quit)
+          test -n "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$GITHUB_WORKSPACE/mobile/BusinessControl-ios-simulator.zip"
       - name: Upload iOS Simulator app
         uses: actions/upload-artifact@v4
         with:
