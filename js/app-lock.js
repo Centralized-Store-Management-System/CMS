@@ -73,7 +73,10 @@
     const d = dev(), c = code; if (!d) return hide();
     working = true;
     try {
-      const ok = (await derive(c, d.salt)) === d.ph;
+      const pinT0 = performance.now(); let pinOk = false;
+      try { pinOk = (await derive(c, d.salt)) === d.ph; }
+      finally { window.dispatchEvent(new CustomEvent('amz:auth-performance', { detail: { stage: 'staff_pin_verify', ms: performance.now() - pinT0, ok: pinOk } })); }
+      const ok = pinOk;
       if (!ok) {
         fails++; code = ''; dots(); shake();
         if (fails >= 5) { await forget(true, 'ใส่รหัสผิด 5 ครั้ง เข้าด้วยชื่อผู้ใช้ + PIN'); return; }
@@ -102,17 +105,17 @@
   }
   window.addEventListener('pagehide', saveNow);
   async function open(c) {
-    const d = dev();
+    const d = dev(); const landingT0 = performance.now();
     if (clockPage) {
       const m = memGet(MKEY, 12 * 3600e3);
       if (m) {   // ขึ้นหน้าของฉันทันที แล้วรับสิทธิ์ + ข้อมูลล่าสุดเบื้องหลัง
         hide(); enterMe({ token: '', my: { ...m, lite: false } }); C.via = 'app';
         const r = await API.call('devUnlock', { id: d.id, secret: d.secret, code: c, my: 1 });
-        S.token = r.token; setMy(r.my); if (C.step === 'me') render(); saveNow();
+        S.token = r.token; setMy(r.my); if (C.step === 'me') render(); window.dispatchEvent(new CustomEvent('amz:auth-performance', { detail: { stage: 'staff_landing_ready', ms: performance.now() - landingT0, ok: true } })); saveNow();
         return;
       }
       const r = await API.call('devUnlock', { id: d.id, secret: d.secret, code: c, my: 1 });
-      hide(); enterMe({ token: r.token, my: r.my }); C.via = 'app'; saveNow();
+      hide(); enterMe({ token: r.token, my: r.my }); C.via = 'app'; window.dispatchEvent(new CustomEvent('amz:auth-performance', { detail: { stage: 'staff_landing_ready', ms: performance.now() - landingT0, ok: true } })); saveNow();
       return;
     }
     if (forceFreshLogin) {
@@ -135,6 +138,7 @@
       S.token = r.token; SS.set('amz.tok', r.token);
       await (typeof fastResume === 'function' ? fastResume(lb) : bootstrap());
       if (!document.querySelector('.sheet')) App.render();
+      window.dispatchEvent(new CustomEvent('amz:auth-performance', { detail: { stage: 'staff_landing_ready', ms: performance.now() - landingT0, ok: true } }));
       saveNow();
       return;
     }

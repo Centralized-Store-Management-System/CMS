@@ -47,9 +47,12 @@ const OWNER_PWA_LOCK = (() => {
     localStorage.setItem(KEY, JSON.stringify({ v: 2, kdf: 'PBKDF2-SHA256-' + ITER, salt: b64(salt), iv: b64(iv), data: b64(data), name: name || 'Owner', at: Date.now() }));
   }
   async function unseal(pin) {   // รหัสผิด → AES-GCM ถอดไม่ได้ (throw)
-    const v = read(); if (!v) throw new Error('ไม่พบกุญแจในเครื่อง');
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(v.iv) }, await derive(pin, un64(v.salt)), un64(v.data));
-    const c = JSON.parse(dec.decode(plain)); c.pin = pin; return c;
+    const t0 = performance.now(); let ok = false;
+    try {
+      const v = read(); if (!v) throw new Error('ไม่พบกุญแจในเครื่อง');
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(v.iv) }, await derive(pin, un64(v.salt)), un64(v.data));
+      const c = JSON.parse(dec.decode(plain)); c.pin = pin; ok = true; return c;
+    } finally { window.dispatchEvent(new CustomEvent('amz:auth-performance', { detail: { stage: 'owner_pin_verify', ms: performance.now() - t0, ok } })); }
   }
   function setTok(t) {
     S.token = t;
@@ -157,7 +160,9 @@ const OWNER_PWA_LOCK = (() => {
     busyUnlock = true;
     unlockPending = askUnlock(msg, { ...opts, keepOpen: async (c, ctl, done) => {
       try {
-        const r = await call0('devUnlock', { id: c.id, secret: c.secret, code: c.pin });
+        const t0 = performance.now(); let ok = false; let r;
+        try { r = await call0('devUnlock', { id: c.id, secret: c.secret, code: c.pin }); ok = true; }
+        finally { window.dispatchEvent(new CustomEvent('amz:auth-performance', { detail: { stage: 'owner_server_unlock', ms: performance.now() - t0, ok } })); }
         if (!r || r.role !== 'owner' || !r.token) throw new Error('บัญชีนี้ไม่ใช่ Owner');
         mem = c; setTok(r.token); close(); done(c); return true;
       } catch (e) {
