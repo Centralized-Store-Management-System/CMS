@@ -22,7 +22,8 @@
 ## ส่งต่อให้ AI ตัวถัดไป (22 พ.ย. 2569 · Claude) — อ่านก่อนเริ่ม
 - เริ่มทุกครั้ง: `git pull --rebase` → อ่าน `AGENTS.md` + ไฟล์นี้ → ทำงานบน branch ใหม่ → เปิด PR ให้เจ้าของกด merge (merge main ผ่าน API ไม่ได้) → รายงาน commit SHA + รายการไฟล์ที่เปลี่ยน
 - เปิด PR จาก Claude Code: `gh pr create` ใช้ไม่ได้ (GraphQL ถูกบล็อก) ให้ใช้ `gh api repos/Centralized-Store-Management-System/CMS/pulls -f title=… -f head=… -f base=main -F body=@ไฟล์`
-- **ช่องว่างที่ต้องระวัง**: ซอร์ส `.gs` ฝั่งเซิร์ฟเวอร์ไม่อยู่ใน repo (Public) — ต้นฉบับอยู่กับเจ้าของ/repo private `CMS-server-src` (ถ้ามี) ก่อนแก้ logic เซิร์ฟเวอร์ต้องขอซอร์สล่าสุด แล้วเข้ารหัส `server/gas.enc` ใหม่ (AES-256-GCM: base64 ของ IV 12 ไบต์ + tag 16 ไบต์ + ข้อมูลที่ gzip) กุญแจ `CODE_KEY` อยู่ใน `backoffice.kv` ห้ามใส่ใน repo/log · ต้องถอดกลับมาเทียบกับซอร์สก่อนส่ง PR
+- **ซอร์สฝั่งเซิร์ฟเวอร์**: `server/gas.enc` ก็คือซอร์ส `.gs` ทั้งหมดที่เข้ารหัสไว้ — ไม่ต้องมี repo private ก็กู้ได้ ถ้ามีสิทธิ์อ่านกุญแจ `CODE_KEY` (อยู่ใน `backoffice.kv` ns `props` ห้ามใส่ใน repo/log/แชต) ใช้ `tools/gas-crypt.mjs`:
+  `CODE_KEY=… node tools/gas-crypt.mjs decrypt server/gas.enc <ที่นอก repo>/all.gs` → แก้ → `… encrypt <ที่นอก repo>/all.gs server/gas.enc` (ถอดกลับเทียบ + ตรวจ syntax ให้เอง) แล้วส่ง PR · **ห้าม commit ซอร์สที่ถอดแล้วลง repo นี้ (Public)** · ซอร์สในไฟล์เดียวต่อกัน คั่นด้วย `// ===== ชื่อไฟล์.gs =====` (ไฟล์ละบรรทัดเดียว บีบแล้ว) · เพิ่มฟีเจอร์ = เพิ่มไฟล์ใหม่ก่อน `zz_overrides.gs`
 - ทดสอบฝั่งเซิร์ฟเวอร์ได้โดยไม่แตะระบบจริง: ใช้ `compileGas` + `createRuntime` จาก `server/runtime.js` กับ store จำลองในหน่วยความจำ (เซ็ตค่า `BOOK_core`/`BOOK_hr` ในprops, ชีตมี 2 แถวหัว: ป้ายชื่อ + คีย์ ข้อมูลเริ่มแถว 3)
 - ตรวจหน้าจอ: PC 1440 · iPad 820 · iPhone 390 ทั้งหน้าหลังร้าน (`index.html`) และหน้าลงเวลา (`clock.html`) · บางหน้าจอแสดงสิทธิ์/เมนูไม่เหมือนกันตาม Role
 - **สถานะ PR เก่า (ตรวจ 22 พ.ย. 2569 — ยังไม่ได้ merge/ปิดอะไร รอเจ้าของตัดสินใจ)**
