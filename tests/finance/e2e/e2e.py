@@ -346,6 +346,20 @@ ok('ภาษีซื้อ/หัก ณ ที่จ่ายเข้าร�
 s, r = post(OWN, 'document.reverse', document_id=pb, reason='ทดสอบกลับรายการ'); ok('กลับรายการเอกสารที่ปิดเคลียร์แล้วได้ (สมุดรายวันกลับด้าน)', s == 200 and r['data']['reversal_journal'], r)
 s, r = get(OWN, 'trial-balance', **{'from': '2026-11-01', 'to': '2026-12-31'}); ok('งบทดลองยังสมดุลหลังเคลียร์', r['data']['totals']['balanced'], r['data']['totals'])
 
+print('— ผู้อนุมัติไม่เห็น/ทำขั้นของผู้เบิก —')
+s, r = post(STF, 'document.create', idem=k(), document_type='expense', document_date=FD, reference='ร้าน B', lines=[{'description': 'ซื้อนม', 'quantity': 1, 'unit_price': 300}]); sx = r['data']['id']
+s, r = flow(OWN, sx); a = r['data']['actions']
+ok('Owner เปิดร่างของ Staff → ไม่มีปุ่ม แก้/ส่งขออนุมัติ/แนบ/50 ทวิ', s == 200 and not a['edit_request'] and not a['submit_request'] and not a['attach_request'] and not a['wht_create'], a)
+s, r = post(OWN, 'document.submit', document_id=sx); ok('Owner ส่งขออนุมัติแทนผู้เบิกไม่ได้', s == 403, r)
+s, r = post(APR, 'document.update', document_id=sx, document_type='expense', document_date=FD, lines=[{'description': 'x', 'quantity': 1, 'unit_price': 1}]); ok('ผู้อนุมัติแก้คำขอของคนอื่นไม่ได้', s == 403, r)
+s, r = get(APR, 'expense-flow', tab='todo'); ok('งาน "ต้องทำ" ของผู้อนุมัติไม่มีร่างของคนอื่น', s == 200 and sx not in [x['id'] for x in r['data']['items']], r)
+post(STF, 'document.submit', document_id=sx); post(OWN, 'document.approve', document_id=sx)
+s, r = flow(OWN, sx); a = r['data']['actions']
+ok('Owner เปิดคำขอที่รอเคลียร์ → ไม่มีฟอร์มเคลียร์ของผู้เบิก', s == 200 and not a['clear'] and not a['attach_request'], a)
+s, r = post(OWN, 'expense-clearance.submit', document_id=sx, submit=False, actual_paid_amount=300, payment_date=FD, payment_method='cash'); ok('Owner บันทึกเคลียร์แทนผู้เบิกไม่ได้', s == 403, r)
+s, r = post(OWN, 'wht-certificate.save', document_id=sx, issue_date=FD, form_type='pnd3', payer={'name': 'x', 'tax_id': '0105566000001'}, payee={'name': 'y'}, items=[{'code': '5', 'pay_date': FD, 'amount': 300, 'tax': 9}]); ok('Owner ออก 50 ทวิ แทนผู้เบิกไม่ได้', s == 403, r)
+s, r = flow(STF, sx); ok('ผู้เบิกยังทำขั้นเคลียร์ของตัวเองได้', r['data']['actions']['clear'], r['data']['actions'])
+
 print('— หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ผูกกับคำขอเบิก —')
 s, r = post(MGR, 'document.create', idem=k(), document_type='expense', document_date=FD, reference='นายสมชาย ช่างซ่อม', wht_rate=3,
             lines=[{'description': 'ค่าซ่อมเครื่องชงกาแฟ', 'quantity': 1, 'unit_price': 10000}]); wd = r['data']['id']

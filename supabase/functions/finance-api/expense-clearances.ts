@@ -8,9 +8,11 @@ import { EXPENSE_DOCS, postEntry, sysAccount, accountByCode, accountById, Line }
 const METHODS = ["cash", "bank_transfer", "credit_card", "cheque", "other"] as const;
 const EDITABLE = ["draft", "returned"];
 
-// Manager เห็น/จัดการได้เฉพาะคำขอของคนในสาขาเดียวกัน · Staff เฉพาะของตัวเอง · Owner/Approver ทั้งบริษัท
+// ขั้นตอนฝั่งผู้เบิก (แก้/ส่ง/แนบ/เคลียร์/50 ทวิ): ผู้สร้างเอง · Manager ของสาขาเดียวกัน
+// Owner/ผู้อนุมัติ ทำแทนผู้เบิกไม่ได้ (เห็นทั้งบริษัท แต่ใช้ได้เฉพาะ อนุมัติ / ส่งกลับให้แก้) — แยกหน้าที่ตามแผนภาพ
 export async function canManage(sql: Tx, u: User, creator: string) {
-  if (creator === u.actorRef || ["owner", "approver"].includes(u.role)) return;
+  if (creator === u.actorRef) return;
+  if (["owner", "approver"].includes(u.role)) fail(403, "ขั้นตอนนี้เป็นของผู้เบิก — Owner/ผู้อนุมัติ ใช้ได้เฉพาะ อนุมัติ หรือ ส่งกลับให้แก้");
   if (u.role === "manager") {
     const [scope] = await sql`select 1 from public.staff ms
       join public.staff rs on rs.cms_ref = ${creator} and rs.is_active = true
@@ -20,7 +22,7 @@ export async function canManage(sql: Tx, u: User, creator: string) {
   fail(403, "ไม่มีสิทธิ์จัดการรายการนี้ หรือรายการอยู่นอกสาขาที่รับผิดชอบ");
 }
 export async function canSee(sql: Tx, u: User, creator: string) {
-  if (!["staff", "manager"].includes(u.role)) return;   // owner/approver/accountant/viewer/verifier เห็นทั้งบริษัท
+  if (!["staff", "manager"].includes(u.role) || creator === u.actorRef) return;   // owner/approver/accountant/viewer/verifier เห็นทั้งบริษัท
   await canManage(sql, u, creator);
 }
 // สิทธิ์ตามสาขาสำหรับใช้ใน where (Manager / Staff) — ตารางเอกสารต้องใช้ชื่อ d

@@ -154,8 +154,9 @@ export async function voidWht(body: Record<string, unknown>, u: User, rid: strin
       where c.id = ${id}::uuid and c.company_id = ${u.companyId}::uuid for update of c`;
     if (!c) fail(404, "ไม่พบหนังสือรับรองหัก ณ ที่จ่าย");
     if (c.status !== "active") fail(409, "หนังสือฉบับนี้ถูกยกเลิกแล้ว");
-    await canManage(tx, u, c.created_by);
-    if (c.doc_status === "posted" && !["owner", "approver"].includes(u.role)) fail(403, "คำขอนี้ปิดงานแล้ว — ให้ Owner เป็นผู้ยกเลิก");
+    const boss = ["owner", "approver"].includes(u.role);   // Owner/ผู้อนุมัติ ยกเลิกหนังสือที่ออกผิดได้ทุกขั้น
+    if (!boss) await canManage(tx, u, c.created_by);
+    if (c.doc_status === "posted" && !boss) fail(403, "คำขอนี้ปิดงานแล้ว — ให้ Owner เป็นผู้ยกเลิก");
     const [out] = await tx`update finance.wht_certificates set status = 'voided', void_reason = ${reason}, voided_by = ${u.actorRef}, voided_at = now(), updated_at = now()
       where id = ${id}::uuid returning id, cert_number, status`;
     await audit(tx, u, "void_wht_certificate", "document", c.document_id, { ...out, reason }, rid);

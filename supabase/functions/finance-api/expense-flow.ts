@@ -24,8 +24,8 @@ const can = (u: User, cap: keyof typeof CAN) => (CAN[cap] as readonly string[]).
 function mine(u: User, r: Row) {
   const st = stageOf(r);
   const own = r.created_by === u.actorRef;
-  const scoped = own || ["manager", "staff"].includes(u.role) || u.role === "approver";   // รายการที่ query มาแล้วผ่านสิทธิ์สาขาแล้ว
-  if ((st === "draft" || st === "to_clear") && can(u, "request") && scoped && (u.role !== "owner" || own)) return true;
+  const scoped = own || u.role === "manager";   // ขั้นของผู้เบิก: เจ้าของคำขอ หรือ Manager สาขาเดียวกัน (query กรองสาขาแล้ว) — Owner/ผู้อนุมัติไม่ทำแทน
+  if ((st === "draft" || st === "to_clear") && can(u, "request") && scoped) return true;
   if ((st === "request_review" || st === "clear_review") && can(u, "approve")) {
     const maker = st === "request_review" ? r.created_by : r.c_submitted_by;
     return maker !== u.actorRef || u.allowSelfApproval === true;

@@ -67,6 +67,12 @@ with sync_playwright() as p:
     pg.wait_for_function("(document.querySelector('#finSubnav a[data-fin-page=expflow] b')||{}).textContent==='1'", timeout=10000)
     ok('ตัวเลขงานบนเมนูเบิก–เคลียร์ = 1', True)
     pg.click('.ff-item'); wait_page(pg, 'ซื้อแก้วกาแฟ')
+    ok('หน้าอนุมัติของ Owner: มีแค่ อนุมัติ / ส่งกลับ (ไม่มีปุ่มส่งขออนุมัติ แก้ไข แนบไฟล์ แบบผู้เบิก)',
+       pg.locator('[data-do="approve-request"]').count() == 1 and pg.locator('[data-do="return-request"]').count() == 1
+       and pg.locator('[data-do="submit-request"], [data-up], [data-go^="#expflow/edit:"], [data-do="void"], #ffWht [data-go^="#wht50/new:"]').count() == 0)
+    pg.evaluate("location.hash='#fin/document/'+location.hash.split('/').pop()"); wait_page(pg, 'EXP-')
+    ok('หน้าเอกสาร (Owner): ไม่มี ส่งอนุมัติ/ยกเลิก + ปุ่มชื่อ "อนุมัติคำขอเบิก"', pg.locator('#fmContent [data-a="submit"], #fmContent [data-a="void"]').count() == 0 and pg.locator('#fmContent [data-a="approve"]').inner_text().strip() == 'อนุมัติคำขอเบิก')
+    pg.evaluate("history.back()"); wait_page(pg, 'ซื้อแก้วกาแฟ')
     pg.click('[data-do="return-request"]'); answer(pg, 'ขอใบเสนอราคา 2 ร้าน')
     after_action(pg, "document.querySelector('#fmContent .fm-notice.bad')")
     ok('Owner ส่งกลับ → ขั้น "ขอเบิก" สีแดง + เหตุผล', stage_now(pg) == 'ขอเบิก' and pg.locator('.ff-step.back').count() == 1 and 'ขอใบเสนอราคา 2 ร้าน' in pg.inner_text('#fmContent .fm-notice.bad'))
@@ -86,6 +92,8 @@ with sync_playwright() as p:
     pg.click('[data-do="approve-request"]'); answer(pg)
     after_action(pg, "(document.querySelector('.ff-step[aria-current=step] b')||{}).textContent==='จ่ายเงิน + เคลียร์'")
     ok('Owner อนุมัติ → ขั้น "จ่ายเงิน + เคลียร์" (ยังไม่ลงบัญชี)', True)
+    pg.wait_for_selector('#fmContent .fm-notice', timeout=15000)
+    ok('Owner หลังอนุมัติ: ไม่มีฟอร์มเคลียร์ของผู้เบิก (เห็นสถานะรอผู้เบิก)', pg.locator('#ffClr, [data-do="submit-clearance"], [data-up]').count() == 0 and 'รอ ผู้เบิกบันทึกจ่ายเงินและเคลียร์' in pg.inner_text('#fmContent'))
     c.close()
     # ---------- 5) Staff บันทึกจ่าย + สลิป + เคลียร์ (คืนเงิน 200) ----------
     c, pg = open_ctx(p, b, STF, path='index.html#fin/expflow/' + doc)
