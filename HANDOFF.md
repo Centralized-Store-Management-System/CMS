@@ -466,3 +466,12 @@
 - `js/approve-fast.js` (ใหม่): ทับเฉพาะ action ที่ยืนรอผลกลับ — `apFix` (ขอแก้เวลา) และ `apAll` (อนุมัติทั้งหมด หมวด FIX) เปลี่ยนไปใช้ `DB.bg` · เวลาทำงานที่เซิร์ฟเวอร์คำนวณกลับมา (`extra.attendance`) ยังลงครบ แค่ลงเมื่อผลมาถึง · ล้มเหลวเมื่อไร `DB.bg` คืนค่าเดิมและเตือนให้เอง
 - ทุก action อนุมัติ อัปเดตเลขบนกระดิ่งด้วย (เรียก `WorkInbox.refresh(false)` ใช้ค่าที่จำไว้ ไม่ยิงเซิร์ฟเวอร์ซ้ำ)
 - **ฝั่ง Finance ยังไม่แก้**: `fin-pages-flow.js` ทำ `api.post` แล้วตามด้วย `F.reload()` = ไป–กลับ 2 รอบเรียงกัน เป็นดีไซน์ของโมดูลนั้น ถ้าจะทำให้ทันทีต้องแก้แกนกลางของโมดูล Finance — รอเจ้าของร้านตัดสินใจ
+
+## Personal Business Control PWA — เริ่มต้น (22 พ.ย. 2569 · ChatGPT)
+- เพิ่มหน้าแอปแยก `personal-control.html` + `personal-control.webmanifest` + `css/personal-control.css` + `js/personal-control.js` ใน branch `feat/personal-business-control-pwa`
+- แอปใช้ CMS API / Supabase ต้นฉบับเดิมจาก `js/config.js`; ไม่มีการสร้าง Database, ตาราง, Auth provider หรือข้อมูลธุรกิจซ้ำ
+- Login ใช้ `API.call('login')` เดิม และยอมรับเฉพาะ `role === 'owner'`; Session ใช้ sessionStorage keys เดิม `amz.tok` + `amz.it.tok`; ตรวจ session ด้วย `bootstrap` ก่อนแสดงหน้าแอป
+- เมนูเป็นทางลัดไปยังหน้า CMS / Finance / HR / Order / Owner IT เดิม ไม่มีการเขียนข้อมูลธุรกิจจากหน้า launcher โดยตรง ทุกการแก้ไขยังผ่านระบบต้นฉบับและ Permission เดิม
+- PWA ใช้ manifest แยกและ Service Worker `sw.js` เดิม; ใช้ไอคอน Owner ที่มีอยู่ก่อน ไม่แก้ไฟล์เดิม
+- **สถานะ:** เป็น draft สำหรับตรวจสอบเท่านั้น ยังไม่ merge / deploy / เปิดให้ใช้งานจริง · ต้องทดสอบ Owner login, session sharing, deep links, iOS Add to Home Screen, Android install และ logout บนอุปกรณ์จริงก่อน
+- **ข้อจำกัด:** ยังไม่มี KPI aggregator แบบรวมข้อมูลหลายโมดูล; เวอร์ชันแรกเป็น secure launcher ที่รวมทางเข้าแอปเดิมก่อน เพื่อไม่เปลี่ยน schema หรือ API ธุรกิจโดยไม่จำเป็น
