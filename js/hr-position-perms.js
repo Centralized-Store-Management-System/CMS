@@ -261,4 +261,6 @@
       return of0.apply(this, arguments);
     };
   }
+  // ให้ไฟล์อื่น (perms-positions.js) อ่านแม่แบบตำแหน่งได้ — อ่านอย่างเดียว
+  window.PosPerms = { tmpl, posOfEmp, FIN_TH, ROLE_TH, permName, ready: () => ready() };
 })();
