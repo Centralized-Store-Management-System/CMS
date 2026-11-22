@@ -48,7 +48,15 @@
     return `<h3 class="h3">สิทธิ์เมนูตามตำแหน่ง</h3>
       <p class="note" style="margin-top:0">ติ๊กให้ตำแหน่งไหน คนในตำแหน่งนั้นได้สิทธิ์ชุดนี้แทนค่าเริ่มต้นของ Role · ไม่ติ๊กเลยทั้งคอลัมน์ = ใช้ค่าเริ่มต้นของ Role ตามตารางข้างบน</p>
       <div class="group" style="overflow-x:auto"><table class="perm"><thead><tr><th>ระบบ</th>${head}</tr></thead><tbody>${body}</tbody></table></div>
-      <div class="actions"><button class="btn primary" data-a="posSavePerms">บันทึกสิทธิ์เมนูตามตำแหน่ง</button></div>`;
+      <div class="actions"><button class="btn primary" data-a="posSavePerms">บันทึกสิทธิ์เมนูตามตำแหน่ง</button></div>${queue()}`;
+  }
+
+  /** คิวส่งต่อข้อมูลตำแหน่งไประบบอื่น (iam_sync_outbox) — ตอนนี้ยังไม่มีตัวรับ จึงแสดงให้เห็นว่าค้างเท่าไร */
+  function queue() {
+    const q = (typeof HR_POSITION_SYNC !== 'undefined' && HR_POSITION_SYNC) || [];
+    const pend = q.filter(x => String(x.status || '') === 'pending').reduce((n, x) => n + Number(x.count || 0), 0);
+    if (!pend) return '';
+    return `<p class="note">คิวส่งต่อข้อมูลตำแหน่งไประบบอื่น: ค้าง ${pend} รายการ — ยังไม่มีระบบปลายทางมารับ (ไม่กระทบการใช้งานในระบบนี้) ถ้าไม่ได้จะต่อระบบอื่น ปล่อยไว้ได้</p>`;
   }
 
   const ms = modBy('set'), sub = ms && ms.subs && ms.subs.find(s => s.key === 'perms');

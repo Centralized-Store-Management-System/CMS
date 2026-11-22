@@ -1,5 +1,5 @@
 // เชื่อมผู้ใช้หลังร้าน (CMS) → ระบบออเดอร์ (public.staff + Supabase Auth) และเข้าระบบออเดอร์อัตโนมัติ (SSO)
-// - syncAll(roster): ทำให้ public.staff ตรงกับรายชื่อจาก orderRoster_() (54_OrderLink.gs) — เพิ่ม / แก้ Role-สาขา / ปิด
+// - syncAll(roster): ทำให้ public.staff ตรงกับรายชื่อจาก orderRoster_() (54_OrderLink.gs + 64_OrderPosition.gs ส่งตำแหน่งมาด้วย) — เพิ่ม / แก้ Role-สาขา / ปิด
 // - open(user, page): สร้างลิงก์เข้าระบบครั้งเดียว (magic link token_hash) → หน้า Line-Order ยืนยันแล้วเข้าระบบเลย
 // บัญชีที่สร้างใหม่ใช้อีเมลภายใน <ref>@cms.cafe-amazon.local (ไม่ส่งอีเมล ไม่มีรหัสผ่าน เข้าได้ผ่านหลังร้านเท่านั้น)
 const PORTAL = 'https://cafe-order-web-admin-portal.github.io/Line-Order/';
@@ -21,10 +21,28 @@ export function orderLink({ sql, supabaseUrl, serviceKey, portal = PORTAL }) {
   }
   const ban = (id, on) => id ? admin('PUT', 'users/' + id, { ban_duration: on ? BAN : 'none' }).catch(e => console.error('ban', e.message)) : null;
 
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const posCache = new Map();
+  /** ตำแหน่งที่ CMS ส่งมา (รหัส → รหัสตำแหน่ง → ชื่อไทย) → hr_positions.id · ไม่พบ = คงค่าเดิมใน staff */
+  async function posOf(u, cur) {
+    const key = [u.positionId || '', u.positionCode || '', u.position || ''].join('|');
+    if (key === '||') return (cur && cur.position_id) || null;
+    if (posCache.has(key)) return posCache.get(key) ?? ((cur && cur.position_id) || null);
+    let id = null;
+    if (UUID.test(String(u.positionId || ''))) {
+      const [p] = await sql`select id from public.hr_positions where id = ${u.positionId}`;
+      id = p ? p.id : null;
+    }
+    if (!id && u.positionCode) { const [p] = await sql`select id from public.hr_positions where position_code = ${u.positionCode}`; if (p) id = p.id; }
+    if (!id && u.position) { const [p] = await sql`select id from public.hr_positions where name_th = ${u.position}`; if (p) id = p.id; }
+    posCache.set(key, id);
+    return id ?? ((cur && cur.position_id) || null);
+  }
+
   async function apply(B, u) {
-    let [cur] = await sql`select id, auth_user_id, role, branch_id, staff_name, is_active from public.staff where cms_ref = ${u.ref}`;
+    let [cur] = await sql`select id, auth_user_id, role, branch_id, staff_name, is_active, position_id from public.staff where cms_ref = ${u.ref}`;
     if (!cur && u.ref === 'owner') {   // Owner = บัญชี super_admin เดิมของระบบออเดอร์
-      [cur] = await sql`select id, auth_user_id, role, branch_id, staff_name, is_active from public.staff where cms_ref is null and role = 'super_admin' order by created_at limit 1`;
+      [cur] = await sql`select id, auth_user_id, role, branch_id, staff_name, is_active, position_id from public.staff where cms_ref is null and role = 'super_admin' order by created_at limit 1`;
       if (cur) await sql`update public.staff set cms_ref = 'owner' where id = ${cur.id}`;
     }
     if (!u.active) {
@@ -34,16 +52,17 @@ export function orderLink({ sql, supabaseUrl, serviceKey, portal = PORTAL }) {
     }
     const branch = u.ref === 'owner' && cur ? cur.branch_id : branchFor(B, u.branch);
     if (!branch) throw new Error('ระบบออเดอร์ยังไม่มีสาขา');
+    const pos = await posOf(u, cur);   // ตำแหน่งจาก CMS (CMS เป็นเจ้าของข้อมูล) — หาไม่เจอ = คงค่าเดิมไว้
     if (!cur) {
       const email = emailOf(u.ref);
       let id;
       try { id = (await admin('POST', 'users', { email, email_confirm: true, user_metadata: { name: u.name, cms_ref: u.ref }, app_metadata: { source: 'cms' } })).id; }
       catch (e) { const [x] = await sql`select id from auth.users where email = ${email}`; if (!x) throw e; id = x.id; await ban(id, false); }
-      await sql`insert into public.staff (auth_user_id, branch_id, staff_name, role, is_active, cms_ref) values (${id}, ${branch}, ${u.name}, ${u.role}, true, ${u.ref})`;
+      await sql`insert into public.staff (auth_user_id, branch_id, staff_name, role, is_active, cms_ref, position_id) values (${id}, ${branch}, ${u.name}, ${u.role}, true, ${u.ref}, ${pos})`;
       return 'new';
     }
-    if (cur.role === u.role && cur.branch_id === branch && cur.staff_name === u.name && cur.is_active) return 'same';
-    await sql`update public.staff set role = ${u.role}, branch_id = ${branch}, staff_name = ${u.name}, is_active = true where id = ${cur.id}`;
+    if (cur.role === u.role && cur.branch_id === branch && cur.staff_name === u.name && cur.is_active && cur.position_id === pos) return 'same';
+    await sql`update public.staff set role = ${u.role}, branch_id = ${branch}, staff_name = ${u.name}, is_active = true, position_id = ${pos} where id = ${cur.id}`;
     if (!cur.is_active && u.ref !== 'owner') await ban(cur.auth_user_id, false);
     return 'upd';
   }
