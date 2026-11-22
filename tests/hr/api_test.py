@@ -1,0 +1,57 @@
+# ทดสอบ API ตำแหน่ง/แม่แบบสิทธิ์ — รัน hr-position-api ด้วย Deno (SUPABASE_DB_URL=ฐานทดสอบ hrt, SUPABASE_URL=http://127.0.0.1:8798) + python3 tests/hr/mock.py
+import json, urllib.request, subprocess
+B='http://localhost:8000/'; R=[]
+def ok(n,c,x=''): R.append(bool(c)); print(('✓ ' if c else '✗ ')+n, '' if c else x)
+def call(tok, body=None):
+    req=urllib.request.Request(B, data=json.dumps(body).encode() if body else None, headers={'x-cms-session':tok,'content-type':'application/json'}, method='POST' if body else 'GET')
+    try:
+        with urllib.request.urlopen(req) as r: return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e: return e.code, json.loads(e.read())
+def q(s): return subprocess.run(['psql','-h','127.0.0.1','-p','5544','-U','postgres','-d','hrt','-Atc',s],capture_output=True,text=True).stdout.strip()
+s,g=call('tok_owner'); P={p['position_code']:p['id'] for p in g['positions']}
+ok('GET ส่ง me (role/perms) กลับ', g.get('me',{}).get('role')=='owner')
+s,_=call('tok_staff'); ok('Staff ไม่มีสิทธิ์ HR → 403', s==403)
+s,_=call('tok_mgrhr'); ok('Manager ที่มีสิทธิ์ hr → ใช้ได้ (เดิม 403)', s==200)
+# Owner ตั้งแม่แบบ
+s,r=call('tok_owner',{'action':'save-template','position_id':P['MANAGER'],'cms_role':'manager','cms_perms':['time','stock','orders'],'finance_role':'manager'})
+ok('Owner ตั้งแม่แบบ ผู้จัดการร้าน', s==200 and len(r['permissions'])==2, r)
+s,r=call('tok_owner',{'action':'save-template','position_id':P['FINAL_VERIFIER'],'cms_role':'staff','cms_perms':[],'finance_role':'verifier'})
+ok('Owner ตั้ง Final Verifier = verifier', s==200, r)
+# HR
+s,r=call('tok_hr',{'action':'save-template','position_id':P['BARISTA'],'cms_role':'staff','cms_perms':['time'],'finance_role':'staff'})
+ok('HR ตั้งแม่แบบด้วยสิทธิ์ที่ตัวเองมี', s==200, r)
+s,r=call('tok_hr',{'action':'save-template','position_id':P['BARISTA'],'cms_role':'staff','cms_perms':['time','users'],'finance_role':'staff'})
+ok('HR ให้สิทธิ์ที่ตัวเองไม่มี (users) → 403', s==403 and 'users' in r['error'], r)
+s,r=call('tok_hr',{'action':'save-template','position_id':P['BARISTA'],'cms_role':'admin','cms_perms':['time'],'finance_role':'staff'})
+ok('HR ให้ Role Admin → 403', s==403, r)
+s,r=call('tok_hr',{'action':'save-template','position_id':P['BARISTA'],'cms_role':'staff','cms_perms':['time'],'finance_role':'approver'})
+ok('HR ให้ Finance approver → 403', s==403, r)
+s,r=call('tok_hr',{'action':'save-template','position_id':P['MANAGER'],'cms_role':'manager','cms_perms':['time','stock','orders'],'finance_role':'manager'})
+ok('HR แก้แม่แบบที่ Owner ตั้ง โดยคงสิทธิ์เดิม (stock/orders ที่ HR ไม่มี) ได้', s==200, r)
+s,r=call('tok_hr',{'action':'save-template','position_id':P['MANAGER'],'cms_role':'manager','cms_perms':['time'],'finance_role':'manager'})
+ok('HR เอาสิทธิ์ออกได้', s==200 and q(f"select permission_codes from it_position_permissions where position_id='{P['MANAGER']}' and application_key='cms'")=='{role:manager,time}', r)
+s,r=call('tok_hr',{'action':'save-template','position_id':P['FINAL_VERIFIER'],'cms_role':'staff','cms_perms':[],'finance_role':'verifier'})
+ok('HR บันทึกตำแหน่งที่ Owner ให้ verifier ไว้ (ไม่เปลี่ยน) ได้', s==200, r)
+s,r=call('tok_admin',{'action':'save-template','position_id':P['BARISTA'],'cms_role':'staff','cms_perms':['time','users'],'finance_role':'staff'})
+ok('Admin ให้สิทธิ์ users ได้', s==200, r)
+# Finance sync
+co=q("select id from finance.companies limit 1")
+q(f"insert into finance.user_roles(company_id,cms_actor_ref,role_code,is_active,display_name,granted_by) values('{co}','u:MANUAL','approver',true,'x','owner')")
+items=[{'uid':'U10','position_id':P['MANAGER'],'name':'A'},{'uid':'U11','position_id':P['BARISTA'],'name':'B'},{'uid':'U12','position_id':P['FINAL_VERIFIER'],'name':'C'},{'uid':'MANUAL','position_id':P['BARISTA']},{'uid':'H1','position_id':P['MANAGER']}]
+s,r=call('tok_hr',{'action':'sync-finance','items':items})
+ok('HR ซิงก์ Finance: ให้ manager/staff ได้, verifier ข้าม, ของ Owner ตั้งเองคงไว้, ตัวเองข้าม', s==200 and r['granted']==2 and r['kept']==1 and r['skipped']==2, r)
+ok('U10 = manager (position:MANAGER)', q("select role_code||'|'||granted_by from finance.user_roles where cms_actor_ref='u:U10'")=='manager|position:MANAGER')
+ok('U12 ยังไม่ได้ verifier (รอ Owner)', q("select count(*) from finance.user_roles where cms_actor_ref='u:U12'")=='0')
+ok('MANUAL ยังเป็น approver', q("select role_code from finance.user_roles where cms_actor_ref='u:MANUAL'")=='approver')
+s,r=call('tok_owner',{'action':'sync-finance','items':items})
+ok('Owner ซิงก์ → verifier ให้ U12', s==200 and q("select role_code from finance.user_roles where cms_actor_ref='u:U12'")=='verifier', r)
+ok('Owner ซิงก์ H1 (HR) ได้ manager', q("select role_code from finance.user_roles where cms_actor_ref='u:H1'")=='manager')
+s,r=call('tok_owner',{'action':'sync-finance','items':[{'uid':'U10','position_id':P['BARISTA']},{'uid':'U11','position_id':None}]})
+ok('ย้ายตำแหน่ง → เปลี่ยนบทบาท / ไม่มีตำแหน่ง → ปิดสิทธิ์ที่ตำแหน่งให้', r['updated']==1 and r['revoked']==1 and q("select role_code from finance.user_roles where cms_actor_ref='u:U10'")=='staff' and q("select is_active from finance.user_roles where cms_actor_ref='u:U11'")=='f', r)
+s,r=call('tok_owner',{'action':'sync-finance','items':[{'uid':'U10','position_id':P['BARISTA']}]})
+ok('ซิงก์ซ้ำ ไม่เปลี่ยนอะไร', r['granted']==r['updated']==r['revoked']==0, r)
+s,r=call('tok_hr',{'action':'save-department','department_code':'OPS','name':'x'})
+ok('HR สร้างแผนกไม่ได้ (เดิม)', s==403)
+s,r=call('tok_hr',{'action':'save-position','position_code':'SHIFT_LEAD','name_th':'หัวหน้ากะ'})
+ok('HR สร้างตำแหน่งใหม่ได้', s==200 and r['position']['position_code']=='SHIFT_LEAD', r)
+print(f'ผ่าน {sum(R)} / {len(R)}')

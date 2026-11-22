@@ -10,6 +10,16 @@
 - Edge Function `backoffice` = **v10**, import `server/*.js` ผ่าน jsDelivr ปักที่ SHA `600f9eda0ac0d5ae7a8a15b115c2512dc32e7d55`
   (แก้ `server/` แล้วต้อง deploy ใหม่ให้ชี้ SHA ใหม่)
 
+## HR — ตำแหน่งงาน = แม่แบบสิทธิ์ (22 พ.ย. 2569 · Claude) — ต่อจากงาน GPT `ba83cce`/`0280330`
+- **แนวคิด:** ตำแหน่ง (HR › Positions) กำหนด Role ของบัญชี + สิทธิ์เมนู + บทบาท Finance → เลือกตำแหน่งให้พนักงาน (HR › Employees) แล้ว Role พนักงาน / บัญชีผู้ใช้ที่ผูก (`empId`) / `finance.user_roles` ปรับตามเอง · แก้สิทธิ์ตำแหน่ง → ทุกคนในตำแหน่งเปลี่ยนตาม · ระบบออเดอร์ซิงก์ต่อจากสิทธิ์ `orders`/`catalog` (order-link)
+- **หน้าเว็บ:** `js/hr-position-perms.js` (ไฟล์ใหม่ wrap `hrLoadPositions`/`openPosition`/`DB.upsertMany`/`userRow`/`openForm`) · หน้า Positions ภาษาไทย + ป้าย Role/สิทธิ์/Finance/จำนวนคน + รายชื่อพนักงานในตำแหน่ง · หน้า Users มีป้ายตำแหน่ง
+  - ซิงก์เบื้องหลัง (เฉพาะคนที่มี `hr` / `users`): พนักงาน (ต้องมี `hr`), บัญชีผู้ใช้ (ต้องมี `users` — HR ไม่มีโดยค่าเริ่มต้น → ปรับให้เมื่อ Owner/Admin เปิดระบบ), Finance (ผ่าน API) · ชื่อผู้ใช้เดิมไม่เปลี่ยน · Owner/บัญชีหลัก ไม่ถูกปรับ · ตำแหน่งที่ไม่ตั้ง Role/สิทธิ์ = ไม่แตะสิทธิ์ใคร
+  - `mod-hr.js`: เลิกล็อกการบันทึกพนักงานเมื่อโหลดตำแหน่งไม่สำเร็จ (ใช้รายการสำรอง)
+- **API `hr-position-api` v5** (โค้ดอยู่ใน repo แล้ว `supabase/functions/hr-position-api/index.ts` · deploy แบบ jsDelivr ปัก SHA เหมือน finance-api):
+  - แก้ 403 ของ Manager ที่มีสิทธิ์ `hr` · `save-template` (เก็บใน `it_position_permissions` app `cms` = `role:<r>`+สิทธิ์, app `finance` = `role:<r>`) · `sync-finance` (แตะเฉพาะแถว `granted_by='position:<code>'` — สิทธิ์ที่ Owner ตั้งเองใน Finance คงไว้; ไม่ปรับของตัวเอง)
+  - กติกา: HR ให้สิทธิ์ได้ไม่เกินที่ตัวเองมี (คงของเดิมได้) · Role Admin = Owner/Admin · Finance ผู้อนุมัติ/ผู้ตรวจ/บัญชี = Owner เท่านั้น (HR ซิงก์บทบาทระดับนี้ไม่ได้)
+- **ทดสอบ:** `tests/hr/` API 23/23 · UI 19/19 (PC / iPad / iPhone, Owner / HR / Manager+HR)
+
 ## Finance — เบิก–เคลียร์ค่าใช้จ่าย ครบตามแผนภาพ (21 พ.ย. 2569 · Claude) — ใช้งานจริงแล้ว
 - **Live:** Edge Function `finance-api` **v10 = โค้ดใน repo** (VERSION 1.3.0) · migration `finance_expense_flow_complete` apply แล้ว (สำเนา `supabase/migrations/20261121235000_finance_expense_flow_complete.sql`) — รวม PR #18/#19 ของ GPT
 - **ขั้นตอน (เอกสารเดียวตลอดทาง):** Manager/Staff สร้างคำขอ + แนบใบเสนอราคา → ส่ง → Owner อนุมัติ/ตีกลับ (อนุมัติ = `approved` ยังไม่ลงบัญชี) → บันทึกจ่ายเงิน + แนบหลักฐาน + เคลียร์ (ค่าใช้จ่ายจริง/เงินคืน, บันทึกร่างได้) → ส่งเคลียร์ → Owner อนุมัติ/ส่งกลับ → ผู้ตรวจสุดท้าย ยืนยัน/ส่งกลับ → **ปิดงาน = ลงบัญชี + ภาษีซื้อ/หัก ณ ที่จ่าย** (เอกสาร `posted`) → รายงาน/แดชบอร์ดอัปเดตเอง
