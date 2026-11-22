@@ -41,6 +41,7 @@
       <div class="group">${L.length ? L.map(x => { const e = empById(x.r.empId) || {}; return `<div class="row static">${x.r.empId ? avatar(e) : ''}<span class="main"><span class="t">${x.r.empId ? esc(shortName(e)) + ', ' : ''}${esc(x.title)} <span class="chip">${esc(x.kind)}</span></span><span class="s">${esc(x.sub || '')}${x.by ? ' · โดย ' + esc(x.by) : ''}${hm(x.at) ? ' · ' + hm(x.at) : ''}</span></span><span class="chip ${x.status === 'อนุมัติ' ? 'ok' : 'bad'}">${x.status}</span></div>`; }).join('') : `<p class="empty">ไม่มีการอนุมัติ${D === T0 ? 'วันนี้' : 'ในวันนี้'}</p>`}</div>`;
   }
 
+  window.ApproveHistory = { items };   // ให้ today-verifier.js ใช้ชุดข้อมูลเดียวกัน (อ่านอย่างเดียว)
   const m = (typeof MODS !== 'undefined') && MODS.find(x => x.key === 'approve');
   if (m) { const v0 = m.view; m.view = function () { return v0.apply(this, arguments) + html(); }; }
   const repaint = () => { const a = document.getElementById('aph'); if (!a) return App.render(); const box = document.createElement('div'); box.innerHTML = html(); let n = a; const old = [n, n.nextElementSibling, n.nextElementSibling && n.nextElementSibling.nextElementSibling]; old[0].replaceWith(...box.childNodes); old.slice(1).forEach(x => x && x.remove()); };

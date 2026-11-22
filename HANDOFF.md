@@ -439,3 +439,10 @@
 - `backoffice` version 14 — ปักที่ SHA `ac379f700b202502532fc0ad76e5b223a4a25147` (main หลัง merge PR #45) เพื่อให้ `server/order-link.js` ฉบับที่ซิงก์ `staff.position_id` มีผล
   **แก้ `server/*.js` ครั้งต่อไปต้อง deploy ฟังก์ชันใหม่ให้ชี้ SHA ใหม่เสมอ** (ของ `gas.enc` ไม่ต้อง — โหลดเองทุก 60 วิ)
 - `it-monitor` version 6 — ตัดข้อตรวจ `MAIL_NOT_CONFIGURED` ออก
+
+## Role Final Verifier: ปรับให้เป็นงานตรวจสอบล้วน (22 พ.ย. 2569 เย็น)
+1. **ตัดสิทธิ์ `time` (Time Attendance)** ออกจากค่าเริ่มต้นของ verifier — เหลือ `approve_time`, `approve_stock`, `schedule_view` (แก้ทั้ง `63_RoleVerifier.gs` และ `js/role-verifier.js` ให้ตรงกัน)
+2. **ตั้งรหัสปลดล็อกแอป (App Lock) ได้แล้ว** — ต้นเหตุ: `APP_LOCK_ROLES={staff,manager}` ใน `48_AppLock.gs` ไม่มี verifier → `devReg(check)` ตอบ `allowed:false` แอปเลยไม่ชวนตั้งรหัส · เพิ่ม `APP_LOCK_ROLES.verifier = 1` ใน `63_RoleVerifier.gs`
+3. **หน้า Today ของ Role นี้เปลี่ยนใหม่** (`js/today-verifier.js`): ตัด "ของฉัน" (ปุ่มลงเวลา/กะ/ชั่วโมง) และ "วันนี้ของสาขา" ออก · แทนด้วยการ์ดสรุป (อนุมัติ / ไม่อนุมัติ / รออนุมัติ) + เลือกดูย้อนหลังรายวัน + รายการที่ตรวจไปแล้ว · Role อื่นใช้หน้าเดิมไม่เปลี่ยน
+4. **การ์ดหัวหน้าใหม่** gradient เขียวพร้อมตราตรวจสอบ ทักทายตามเวลา บอก Role/สาขา และจำนวนที่ตรวจแล้ว
+- `js/approve-history.js` เปิด `window.ApproveHistory = { items }` (อ่านอย่างเดียว) ให้ today-verifier ใช้ข้อมูลชุดเดียวกับหน้า Approvals
