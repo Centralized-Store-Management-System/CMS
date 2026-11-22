@@ -111,6 +111,13 @@ with sync_playwright() as p:
     ok('มือถือ: มีเมนู Finance บนสุดของหน้า (ย่ออยู่)', pg.locator('.fin-mnav').is_visible() and not pg.locator('.fin-mnav a').first.is_visible())
     pg.click('.fin-mnav summary'); pg.wait_for_timeout(150)
     ok('มือถือ: แตะ "เมนู Finance" → เมนูย่อยลงมา', pg.locator('.fin-mnav a[data-fin-page="expflow"]').is_visible())
+    arrow = "getComputedStyle(document.querySelector('.fin-mnav-group > summary'), '::after').transform"
+    shut = pg.evaluate(arrow)
+    pg.click('.fin-mnav-group > summary'); pg.wait_for_timeout(150)
+    ok('มือถือ: กดกลุ่มเมนู → รายการในกลุ่มลงมา', pg.locator('.fin-mnav-group[open] .fin-mnav-items a').first.is_visible())
+    ok('มือถือ: ลูกศรกลุ่มเปลี่ยนทิศเมื่อกาง/หุบ', pg.evaluate(arrow) != shut, (shut, pg.evaluate(arrow)))
+    pg.evaluate("App.render()"); pg.wait_for_timeout(200)
+    ok('มือถือ: หน้าวาดใหม่ (ข้อมูลเปลี่ยน) เมนู/กลุ่มที่กางไว้ไม่หุบเอง', pg.locator('.fin-mnav-group[open] .fin-mnav-items a').first.is_visible())
     pg.click('.fin-mnav a[data-fin-page="expflow"]'); wait_fin(pg, 'เบิก–เคลียร์')
     ok('มือถือ: เลือกเมนูย่อย → เปิดหน้า แล้วเมนูหุบ', pg.evaluate('location.hash') == '#fin/expflow' and not pg.locator('.fin-mnav a').first.is_visible())
     over = pg.evaluate("document.documentElement.scrollWidth - innerWidth")
