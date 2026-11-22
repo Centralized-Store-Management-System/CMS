@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Business Control",
+    "slug": "personal-business-control",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "businesscontrol",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.personal.businesscontrol"
+    },
+    "android": {
+      "package": "com.personal.businesscontrol",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B211A"
+      }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiBaseUrl": "https://ytxbnqosenolojifeikf.supabase.co/functions/v1/backoffice"
+    }
+  }
+}
