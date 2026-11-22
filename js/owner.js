@@ -98,7 +98,16 @@ async function ocGo(view) {
     if (view === 'events') { OC.events = (await ocCall('events')).events; ocMain(ocEvents()); }
     if (view === 'auth') { OC.auth = await ocCall('authList'); ocMain(ocAuth()); }
     if (view === 'control') { await ocControlLoad(); }
-    if (view === 'network') { if (typeof ocNetworkLoad === 'function') await ocNetworkLoad(); else ocMain('<p class="status bad">ไม่พบ AI Network module</p>'); }
+    if (view === 'network') {
+      if (typeof ocNetworkLoad === 'function') {
+        await ocNetworkLoad();
+        OC.timer = setInterval(async () => {
+          if (document.hidden || OC.view !== 'network' || OC.busy || !ITN.data) return;
+          try { ITN.data = await itnFetch(); if (OC.view === 'network') ocMain(itnPage()); }
+          catch (e) { /* retain the last verified snapshot when the monitor endpoint is temporarily unavailable */ }
+        }, 300000);
+      } else ocMain('<p class="status bad">ไม่พบ AI Network module</p>');
+    }
   } catch (e) {
     if (e.code === 'SESSION') {
       // คงหน้า Owner Console ไว้ ไม่เปลี่ยนไปหน้า Login อัตโนมัติระหว่างงานกำลังทำงาน
