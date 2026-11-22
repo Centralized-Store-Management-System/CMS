@@ -56,10 +56,11 @@
     const can2 = none.filter(e => !legacy(e) && !ownerRole(e));
     const blocked = none.filter(e => ownerRole(e));
     if (!noCode.length && !can2.length && !blocked.length) return '';
+    const hasLine = u => !!(u.lineUserId || (u.empId && (S.t.employees || []).some(e => e.id === u.empId && e.lineUserId)));
     const row = (t, s, btn) => `<div class="row static"><span class="main"><span class="t">${esc(t)}</span><span class="s">${esc(s)}</span></span>${btn || ''}</div>`;
     return `<h3 class="h3">ต้องทำต่อ <span class="muted">(พนักงานจาก HR ที่ยังเข้าระบบไม่ได้)</span></h3><div class="group">
-      ${noCode.map(u => row(u.username + ' · ' + u.name, 'บัญชีสร้างแล้ว แต่ยังไม่มีรหัสเปิดใช้งาน (หรือหมดอายุ)', `<button class="btn primary sm" data-a="hrCode:${esc(u.id)}">ออกรหัส</button>`)).join('')}
-      ${can2.map(e => row(nm(e) + ' ' + (e.code || ''), 'ยังไม่มีบัญชีผู้ใช้', `<button class="btn primary sm" data-a="hrAcc:${esc(e.id)}">สร้างบัญชี + ออกรหัส</button>`)).join('')}
+      ${noCode.map(u => row(u.username + ' · ' + u.name, 'บัญชีสร้างแล้ว แต่ยังไม่มีรหัสเปิดใช้งาน (หรือหมดอายุ)' + (hasLine(u) ? ' · ผูก LINE แล้ว เจ้าตัวพิมพ์ "ขอรหัสเข้าเว็บ" ในแชต LINE ของร้านได้เอง' : ''), `<button class="btn primary sm" data-a="hrCode:${esc(u.id)}">ออกรหัส</button>`)).join('')}
+      ${can2.map(e => row(nm(e) + ' ' + (e.code || ''), 'ยังไม่มีบัญชีผู้ใช้' + (e.lineUserId ? ' · ผูก LINE แล้ว เจ้าตัวพิมพ์ "ขอรหัสเข้าเว็บ" ในแชต LINE ของร้านได้เอง' : ''), `<button class="btn primary sm" data-a="hrAcc:${esc(e.id)}">สร้างบัญชี + ออกรหัส</button>`)).join('')}
       ${blocked.map(e => row(nm(e) + ' ' + (e.code || ''), 'Role Owner — สร้างบัญชีให้อัตโนมัติไม่ได้ ตั้ง Role เป็น Manager / Staff ที่ HR (หรือที่ตำแหน่ง) ก่อน', '')).join('')}
     </div>${can2.length ? '<p class="actions" style="margin:6px 0 14px"><button class="btn" data-a="hrSync">สร้างบัญชีให้ทุกคนที่ยังไม่มี</button></p>' : ''}`;
   }
@@ -77,12 +78,18 @@
     Object.assign(ACT, {
       hrAcc: async (id, b) => { try { await issue(id, b); } catch (x) { toast(x.message); } },
       hrCode: async (id, b) => {
+        // บัญชีที่ผูกกับพนักงาน → ใช้ hrEmpAccess เพื่อให้เซิร์ฟเวอร์ปฏิเสธถ้าเจ้าตัวเพิ่งตั้ง PIN เอง (เช่น ลงทะเบียนทาง LINE) จะได้ไม่ทับ PIN ที่ใช้อยู่
+        const u = (S.t.users || []).find(x => x.id === id) || {};
         try {
-          const u = (S.t.users || []).find(x => x.id === id) || {};
-          const r = await busy(b, () => API.write({ op: 'resetUserPin', id }), '…');
+          const r = u.empId
+            ? await busy(b, () => API.write({ op: 'hrEmpAccess', empId: u.empId }), '…')
+            : await busy(b, () => API.write({ op: 'resetUserPin', id }), '…');
           DB.local('users', { id, pending: true, hasPin: false, pinSetAt: '', noCode: false, setupExpires: new Date(Date.now() + r.days * 864e5).toISOString() });
           App.render(); showSetupCode(r, u);
-        } catch (x) { toast(x.message); }
+        } catch (x) {
+          toast(x.message);
+          if (/ตั้ง PIN แล้ว/.test(x.message || '')) { try { await bootstrap(); App.render(); } catch (_) { /* ไว้โหลดรอบหน้า */ } }   // ข้อมูลในเครื่องเก่า → โหลดใหม่ให้รายการตรง
+        }
       },
       hrSync: async (a, b) => {
         try {
