@@ -1,7 +1,8 @@
-/* ใยแมงมุมระบบ (มุมเจ้าของร้าน) — กดพนักงาน บัญชี ตำแหน่ง เมนู หรือสาขา
+/* ใยแมงมุมคน — กดพนักงาน บัญชี ตำแหน่ง เมนู หรือสาขา
  * แล้วเห็นว่า "สิ่งนี้เชื่อมกับอะไรบ้าง" และ "ตรงไหนยังไม่เชื่อม ต้องไปแก้ที่หน้าไหน"
- * ต่างจาก Owner › ใยแมงมุม (js/it-linkmap.js) ที่เป็นใยของไฟล์โปรแกรมสำหรับคนเขียนระบบ
- * ใช้ข้อมูลที่หน้าเว็บโหลดไว้แล้วทั้งหมด ไม่เรียกเซิร์ฟเวอร์เพิ่ม · ไม่แก้ไฟล์เดิม ไม่แตะ CSS ที่ใช้ร่วม */
+ * อยู่ในแอป Owner › ระบบ IT (เมนู "ใยแมงมุมคน") — js/web-host-owner.js เป็นคนเตรียมข้อมูลให้
+ * ต่างจาก "ใยแมงมุมโค้ด" (js/it-linkmap.js) ที่เป็นใยของไฟล์โปรแกรมสำหรับกันโค้ดพังก่อนขึ้นระบบ
+ * ไฟล์นี้วาดอย่างเดียว ไม่รู้จักที่มาของข้อมูล · ไม่แก้ไฟล์เดิม ไม่แตะ CSS ที่ใช้ร่วม */
 'use strict';
 (function () {
   if (typeof defMod !== 'function' || typeof MODS === 'undefined') return;
@@ -9,6 +10,9 @@
   const KINDS = [['emp', 'พนักงาน'], ['user', 'บัญชีผู้ใช้'], ['pos', 'ตำแหน่ง'], ['menu', 'เมนู / ระบบ'], ['branch', 'สาขา']];
   const esc2 = s => esc(String(s == null ? '' : s));
   const roleName = r => (typeof ROLE_NAME === 'object' && ROLE_NAME[r]) || r;
+  /* หน้าที่ใช้แก้ (HR, Users, Settings) อยู่ในเว็บหลังร้าน ซึ่งเป็นคนละแอปกับที่นี่
+   * ลิงก์จึงต้องพาข้ามแอป ไม่ใช่เปลี่ยน #hash ของแอป Owner */
+  const go = h => 'index.html?from=owner' + h;
 
   /* ---------- อ่านข้อมูลที่โหลดไว้แล้ว ---------- */
   const emps = () => (S.t.employees || []).filter(e => e.status !== 'ลาออก' || WB.id === e.id);
@@ -46,33 +50,33 @@
       const perms = permsOfUser(u), seen = menus().filter(m => u && canSee(m, perms, u.role));
       add(typeof branchBy === 'function' && branchBy(e.branch)
         ? { label: 'สาขา', note: branchName(e.branch), to: { kind: 'branch', id: e.branch } }
-        : { status: 'miss', label: 'สาขา', note: e.branch ? 'รหัสสาขา ' + e.branch + ' ไม่มีในทะเบียนสาขา' : 'ยังไม่ได้ระบุสาขา', fix: 'แก้ที่ HR › พนักงาน หรือเพิ่มสาขาในแอป Owner', href: '#hr' });
+        : { status: 'miss', label: 'สาขา', note: e.branch ? 'รหัสสาขา ' + e.branch + ' ไม่มีในทะเบียนสาขา' : 'ยังไม่ได้ระบุสาขา', fix: 'แก้ที่ HR › พนักงาน หรือเพิ่มสาขาในแอป Owner', href: go('#hr') });
       /* ตำแหน่ง: จับคู่ด้วยชื่อได้ก็จริง แต่ถ้าไม่มี "รหัสตำแหน่ง" ระบบออเดอร์และสิทธิ์ตามตำแหน่งจะไม่เห็น
        * (นี่คือต้นเหตุเดียวกับที่ตำแหน่งไม่ซิงก์ไประบบออเดอร์) จึงต้องแยกจากกรณีที่ผูกครบจริง */
       if (p && e.positionId) add({ label: 'ตำแหน่ง', note: p.name_th + (p.department ? ' · ' + p.department : ''), to: { kind: 'pos', id: p.id } });
-      else if (p) add({ status: 'warn', label: 'ตำแหน่ง', note: p.name_th + ' · ผูกด้วยชื่อเท่านั้น ยังไม่มีรหัสตำแหน่ง', fix: 'ระบบออเดอร์และสิทธิ์ตามตำแหน่งจะยังไม่เห็นตำแหน่งนี้', href: '#hr', to: { kind: 'pos', id: p.id }, do: 'posid', doLabel: 'เติมรหัสตำแหน่งให้', doNote: 'บันทึก positionId และ positionCode ของ "' + p.name_th + '" ลงในประวัติพนักงาน' });
-      else if (e.position) add({ status: 'warn', label: 'ตำแหน่ง', note: '"' + e.position + '" ไม่มีในทะเบียนตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่งจากรายการ หรือเพิ่มตำแหน่งนี้ที่ HR › Positions', href: '#hr' });
-      else add({ status: 'miss', label: 'ตำแหน่ง', note: 'ยังไม่กำหนดตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่ง', href: '#hr' });
-      if (u) add({ label: 'บัญชีเข้าใช้งาน', note: u.username + ' · ' + (u.status === 'active' ? 'เปิดใช้งาน' : 'ปิดอยู่'), status: u.status === 'active' ? 'ok' : 'warn', to: { kind: 'user', id: u.id }, fix: u.status === 'active' ? '' : 'เปิดใช้งานบัญชีคืนเพื่อให้เข้าระบบได้', href: '#users', ...(u.status === 'active' ? {} : { do: 'enable', doLabel: 'เปิดใช้งานบัญชี' }) });
-      else add({ status: 'miss', label: 'บัญชีเข้าใช้งาน', note: 'ยังไม่มีบัญชี — เข้าเว็บหลังร้านและแอปไม่ได้', fix: 'สร้างบัญชีแล้วผูกกับพนักงานคนนี้', href: '#users', do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' });
+      else if (p) add({ status: 'warn', label: 'ตำแหน่ง', note: p.name_th + ' · ผูกด้วยชื่อเท่านั้น ยังไม่มีรหัสตำแหน่ง', fix: 'ระบบออเดอร์และสิทธิ์ตามตำแหน่งจะยังไม่เห็นตำแหน่งนี้', href: go('#hr'), to: { kind: 'pos', id: p.id }, do: 'posid', doLabel: 'เติมรหัสตำแหน่งให้', doNote: 'บันทึก positionId และ positionCode ของ "' + p.name_th + '" ลงในประวัติพนักงาน' });
+      else if (e.position) add({ status: 'warn', label: 'ตำแหน่ง', note: '"' + e.position + '" ไม่มีในทะเบียนตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่งจากรายการ หรือเพิ่มตำแหน่งนี้ที่ HR › Positions', href: go('#hr') });
+      else add({ status: 'miss', label: 'ตำแหน่ง', note: 'ยังไม่กำหนดตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่ง', href: go('#hr') });
+      if (u) add({ label: 'บัญชีเข้าใช้งาน', note: u.username + ' · ' + (u.status === 'active' ? 'เปิดใช้งาน' : 'ปิดอยู่'), status: u.status === 'active' ? 'ok' : 'warn', to: { kind: 'user', id: u.id }, fix: u.status === 'active' ? '' : 'เปิดใช้งานบัญชีคืนเพื่อให้เข้าระบบได้', href: go('#users'), ...(u.status === 'active' ? {} : { do: 'enable', doLabel: 'เปิดใช้งานบัญชี' }) });
+      else add({ status: 'miss', label: 'บัญชีเข้าใช้งาน', note: 'ยังไม่มีบัญชี — เข้าเว็บหลังร้านและแอปไม่ได้', fix: 'สร้างบัญชีแล้วผูกกับพนักงานคนนี้', href: go('#users'), do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' });
       /* ของที่ต่อจากบัญชี: ถ้ายังไม่มีบัญชี ก็ยังแสดงไว้ให้เห็นว่าติดเป็นลูกโซ่ ไม่ใช่ซ่อนหายไป */
-      add(!u ? { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่มีบัญชี จึงยังตั้ง PIN ไม่ได้', fix: 'สร้างบัญชีก่อนที่เมนู Users', href: '#users' }
+      add(!u ? { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่มีบัญชี จึงยังตั้ง PIN ไม่ได้', fix: 'สร้างบัญชีก่อนที่เมนู Users', href: go('#users') }
         : u.pinHash ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' + (u.pinSetAt ? ' · ' + String(u.pinSetAt).slice(0, 10) : '') }
-          : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง PIN เข้าใช้งาน', fix: 'ระบบตั้ง PIN แทนใครไม่ได้ — ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: '#users', do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
+          : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง PIN เข้าใช้งาน', fix: 'ระบบตั้ง PIN แทนใครไม่ได้ — ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: go('#users'), do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
       add(e.lineUserId ? { label: 'LINE', note: 'ผูกแล้ว' + (e.lineName ? ' · ' + e.lineName : '') }
-        : { status: 'warn', label: 'LINE', note: 'ยังไม่ผูก — ลงเวลา ขอลา ดูตารางงานผ่าน LINE ไม่ได้', fix: 'ให้พนักงานขอรหัสผูก LINE ในแอปพนักงาน', href: '#me' });
-      /* ตาราง "เครื่อง" ไม่ได้โหลดมาที่เว็บหลังร้าน (อยู่ในแอป Owner) จึงบอกได้แค่ว่าดูที่ไหน ไม่เดาว่ามีหรือไม่มี */
+        : { status: 'warn', label: 'LINE', note: 'ยังไม่ผูก — ลงเวลา ขอลา ดูตารางงานผ่าน LINE ไม่ได้', fix: 'ให้พนักงานขอรหัสผูก LINE ในแอปพนักงาน', href: go('#me') });
+      /* ตาราง "เครื่อง" มีเฉพาะแอป Owner — ที่นี่อยู่ในแอป Owner แล้ว จึงบอกได้จริงว่ามีกี่เครื่อง */
       add(!u ? { status: 'warn', label: 'เครื่องที่ผูกไว้', note: 'ยังไม่มีบัญชี จึงผูกเครื่องไม่ได้', fix: 'สร้างบัญชีก่อน', do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' }
         : d.length ? { label: 'เครื่องที่ผูกไว้', note: d.length + ' เครื่อง (เปิดแอปไม่ต้องพิมพ์ชื่อผู้ใช้)' }
-          : { label: 'เครื่องที่ผูกไว้', note: 'ดูรายการเครื่องได้ในแอป Owner › อุปกรณ์' });
+          : { status: 'warn', label: 'เครื่องที่ผูกไว้', note: 'ยังไม่ผูกเครื่อง — เปิดแอปทุกครั้งต้องพิมพ์ชื่อผู้ใช้เอง', fix: 'ผูกเครื่องได้ที่แอป Owner › อุปกรณ์ (ทำที่เครื่องของพนักงาน)' });
       const ord = perms.includes('orders') || perms.includes('catalog');
-      add(!u ? { status: 'warn', label: 'ระบบออเดอร์', note: 'ยังไม่มีบัญชี จึงเข้าระบบออเดอร์ไม่ได้', fix: 'สร้างบัญชีก่อนที่เมนู Users', href: '#users' }
+      add(!u ? { status: 'warn', label: 'ระบบออเดอร์', note: 'ยังไม่มีบัญชี จึงเข้าระบบออเดอร์ไม่ได้', fix: 'สร้างบัญชีก่อนที่เมนู Users', href: go('#users') }
         : ord && u.status === 'active' && u.pinHash
           ? { label: 'ระบบออเดอร์', note: 'ใช้งานได้ · ' + [perms.includes('orders') ? 'Live Orders' : '', perms.includes('catalog') ? 'Web Admin Portal' : ''].filter(Boolean).join(' · ') }
-          : { status: 'warn', label: 'ระบบออเดอร์', note: !ord ? 'ระดับ ' + roleName(u.role) + ' ยังไม่มีสิทธิ์ orders' : 'ต้องเปิดใช้งานบัญชีและตั้ง PIN ก่อน', fix: 'ตั้งสิทธิ์ที่ Settings › Permissions', href: '#set/perms', ...(ord ? {} : { do: 'perm:orders:' + u.role, doLabel: 'ให้สิทธิ์ orders กับระดับนี้', doNote: 'ติ๊กสิทธิ์ orders ให้ทุกบัญชีระดับ ' + roleName(u.role) + ' (มีผลตอนเข้าสู่ระบบครั้งถัดไป)' }) });
-      add(!u ? { status: 'miss', label: 'เมนูที่เข้าได้', note: 'ยังไม่มีบัญชี จึงเข้าเมนูใดไม่ได้เลย', fix: 'สร้างบัญชีที่เมนู Users', href: '#users' }
-        : { label: 'เมนูที่เข้าได้', note: seen.length + ' เมนู · ' + seen.slice(0, 4).map(m => m.label).join(', ') + (seen.length > 4 ? ' …' : ''), status: seen.length ? 'ok' : 'miss', fix: seen.length ? '' : 'ระดับนี้ยังไม่ได้รับสิทธิ์เมนูใดเลย', href: '#set/perms' });
-      if (e.status === 'ลาออก' && u && u.status === 'active') add({ status: 'miss', label: 'สถานะ', note: 'ลาออกแล้วแต่บัญชียังเปิดอยู่ — ยังเข้าระบบได้', fix: 'ปิดบัญชีเพื่อตัดการเข้าถึง แล้วไปยกเลิกเครื่องที่ผูกไว้ในแอป Owner', href: '#users', do: 'disable', doLabel: 'ปิดบัญชีให้' });
+          : { status: 'warn', label: 'ระบบออเดอร์', note: !ord ? 'ระดับ ' + roleName(u.role) + ' ยังไม่มีสิทธิ์ orders' : 'ต้องเปิดใช้งานบัญชีและตั้ง PIN ก่อน', fix: 'ตั้งสิทธิ์ที่ Settings › Permissions', href: go('#set/perms'), ...(ord ? {} : { do: 'perm:orders:' + u.role, doLabel: 'ให้สิทธิ์ orders กับระดับนี้', doNote: 'ติ๊กสิทธิ์ orders ให้ทุกบัญชีระดับ ' + roleName(u.role) + ' (มีผลตอนเข้าสู่ระบบครั้งถัดไป)' }) });
+      add(!u ? { status: 'miss', label: 'เมนูที่เข้าได้', note: 'ยังไม่มีบัญชี จึงเข้าเมนูใดไม่ได้เลย', fix: 'สร้างบัญชีที่เมนู Users', href: go('#users') }
+        : { label: 'เมนูที่เข้าได้', note: seen.length + ' เมนู · ' + seen.slice(0, 4).map(m => m.label).join(', ') + (seen.length > 4 ? ' …' : ''), status: seen.length ? 'ok' : 'miss', fix: seen.length ? '' : 'ระดับนี้ยังไม่ได้รับสิทธิ์เมนูใดเลย', href: go('#set/perms') });
+      if (e.status === 'ลาออก' && u && u.status === 'active') add({ status: 'miss', label: 'สถานะ', note: 'ลาออกแล้วแต่บัญชียังเปิดอยู่ — ยังเข้าระบบได้', fix: 'ปิดบัญชีเพื่อตัดการเข้าถึง แล้วไปยกเลิกเครื่องที่ผูกไว้ในแอป Owner', href: go('#users'), do: 'disable', doLabel: 'ปิดบัญชีให้' });
       else if (e.status === 'ลาออก') add({ status: 'warn', label: 'สถานะ', note: 'ลาออกแล้ว · บัญชีปิดแล้ว — เหลือยกเลิกเครื่องที่ผูกไว้ในแอป Owner' });
       return out;
     }
@@ -81,24 +85,24 @@
       const e = empOfUser(u), perms = permsOfUser(u), seen = menus().filter(m => canSee(m, perms, u.role));
       const d = devs().filter(x => x.uid === u.id && x.status === 'active');
       add(e ? { label: 'พนักงาน', note: shortName(e) + ' · ' + (e.code || ''), to: { kind: 'emp', id: e.id } }
-        : { status: u.role === 'owner' ? 'ok' : 'miss', label: 'พนักงาน', note: u.role === 'owner' ? 'บัญชีเจ้าของร้าน ไม่ต้องผูกพนักงาน' : 'ยังไม่ผูกกับพนักงานคนไหน — ตารางงาน เวลาทำงาน และ LINE จะไม่รู้ว่าเป็นใคร', fix: 'แก้บัญชีที่ Users แล้วเลือกพนักงาน', href: '#users' });
+        : { status: u.role === 'owner' ? 'ok' : 'miss', label: 'พนักงาน', note: u.role === 'owner' ? 'บัญชีเจ้าของร้าน ไม่ต้องผูกพนักงาน' : 'ยังไม่ผูกกับพนักงานคนไหน — ตารางงาน เวลาทำงาน และ LINE จะไม่รู้ว่าเป็นใคร', fix: 'แก้บัญชีที่ Users แล้วเลือกพนักงาน', href: go('#users') });
       add({ label: 'ระดับสิทธิ์', note: (typeof ROLE_NAME === 'object' && ROLE_NAME[u.role]) || u.role });
-      add({ label: 'สิทธิ์ที่ได้', note: perms.length + ' สิทธิ์' + (perms.length ? ' · ' + perms.slice(0, 5).join(', ') : ''), status: perms.length ? 'ok' : 'miss', fix: perms.length ? '' : 'ตั้งสิทธิ์ที่ Settings › Permissions', href: '#set/perms' });
-      add({ label: 'เมนูที่เข้าได้', note: seen.length + ' เมนู', status: seen.length ? 'ok' : 'miss', href: '#set/perms' });
-      add(u.pinHash ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' } : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง', fix: 'ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: '#users', do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
-      add(d.length ? { label: 'เครื่องที่ผูกไว้', note: d.length + ' เครื่อง' } : { label: 'เครื่องที่ผูกไว้', note: 'ดูรายการเครื่องได้ในแอป Owner › อุปกรณ์' });
-      add(u.branch || u.branchAccess ? { label: 'ขอบเขตสาขา', note: u.branchAccess === '*' ? 'ทุกสาขา' : branchName(u.branch) } : { status: 'warn', label: 'ขอบเขตสาขา', note: 'ยังไม่ระบุ', href: '#users' });
+      add({ label: 'สิทธิ์ที่ได้', note: perms.length + ' สิทธิ์' + (perms.length ? ' · ' + perms.slice(0, 5).join(', ') : ''), status: perms.length ? 'ok' : 'miss', fix: perms.length ? '' : 'ตั้งสิทธิ์ที่ Settings › Permissions', href: go('#set/perms') });
+      add({ label: 'เมนูที่เข้าได้', note: seen.length + ' เมนู', status: seen.length ? 'ok' : 'miss', href: go('#set/perms') });
+      add(u.pinHash ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' } : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง', fix: 'ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: go('#users'), do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
+      add(d.length ? { label: 'เครื่องที่ผูกไว้', note: d.length + ' เครื่อง' } : { status: 'warn', label: 'เครื่องที่ผูกไว้', note: 'ยังไม่ผูกเครื่อง', fix: 'ผูกเครื่องได้ที่แอป Owner › อุปกรณ์' });
+      add(u.branch || u.branchAccess ? { label: 'ขอบเขตสาขา', note: u.branchAccess === '*' ? 'ทุกสาขา' : branchName(u.branch) } : { status: 'warn', label: 'ขอบเขตสาขา', note: 'ยังไม่ระบุ', href: go('#users') });
       return out;
     }
     if (kind === 'pos') {
       const p = posList().find(x => x.id === id); if (!p) return out;
       const hold = (S.t.employees || []).filter(e => posOf(e) && posOf(e).id === p.id);
-      add(p.department ? { label: 'แผนก', note: p.department } : { status: 'warn', label: 'แผนก', note: 'ยังไม่ผูกแผนก', fix: 'กำหนดแผนกที่ HR › Positions', href: '#hr' });
+      add(p.department ? { label: 'แผนก', note: p.department } : { status: 'warn', label: 'แผนก', note: 'ยังไม่ผูกแผนก', fix: 'กำหนดแผนกที่ HR › Positions', href: go('#hr') });
       add({ label: 'ระดับ', note: p.level || 'ยังไม่ระบุ', status: p.level ? 'ok' : 'warn' });
       add({ label: 'สถานะ', note: p.status === 'active' ? 'เปิดใช้งาน' : 'ปิดอยู่', status: p.status === 'active' ? 'ok' : 'warn' });
       add(hold.length ? { label: 'พนักงานที่ถือตำแหน่งนี้', note: hold.length + ' คน · ' + hold.slice(0, 4).map(shortName).join(', '), to: hold.length === 1 ? { kind: 'emp', id: hold[0].id } : null }
-        : { status: 'warn', label: 'พนักงานที่ถือตำแหน่งนี้', note: 'ยังไม่มีใครถือตำแหน่งนี้', fix: 'กำหนดตำแหน่งให้พนักงานที่ HR › พนักงาน', href: '#hr' });
-      add({ label: 'สิทธิ์ตามตำแหน่ง', note: 'ตั้งได้ที่ Settings › Permissions (ตารางที่สอง)', href: '#set/perms' });
+        : { status: 'warn', label: 'พนักงานที่ถือตำแหน่งนี้', note: 'ยังไม่มีใครถือตำแหน่งนี้', fix: 'กำหนดตำแหน่งให้พนักงานที่ HR › พนักงาน', href: go('#hr') });
+      add({ label: 'สิทธิ์ตามตำแหน่ง', note: 'ตั้งได้ที่ Settings › Permissions (ตารางที่สอง)', href: go('#set/perms') });
       return out;
     }
     if (kind === 'menu') {
@@ -108,11 +112,11 @@
       const who = users().filter(u => canSee(m, permsOfUser(u), u.role));
       add({ label: 'สิทธิ์ที่ต้องมี', note: need.length ? need.join(' หรือ ') : 'ทุกคนเข้าได้' });
       add(roles.length || !need.length ? { label: 'ระดับที่เข้าได้', note: (roles.map(r => (typeof ROLE_NAME === 'object' && ROLE_NAME[r]) || r).join(', ')) || 'ทุกระดับ' }
-        : { status: 'miss', label: 'ระดับที่เข้าได้', note: 'ยังไม่มีระดับไหนได้สิทธิ์นี้เลย — เมนูนี้ไม่มีใครเห็นนอกจากเจ้าของร้าน', fix: 'ติ๊กสิทธิ์ให้ระดับที่ต้องใช้ที่ Settings › Permissions', href: '#set/perms' });
+        : { status: 'miss', label: 'ระดับที่เข้าได้', note: 'ยังไม่มีระดับไหนได้สิทธิ์นี้เลย — เมนูนี้ไม่มีใครเห็นนอกจากเจ้าของร้าน', fix: 'ติ๊กสิทธิ์ให้ระดับที่ต้องใช้ที่ Settings › Permissions', href: go('#set/perms') });
       add(who.length ? { label: 'ผู้ใช้ที่เข้าได้จริง', note: who.length + ' บัญชี · ' + who.slice(0, 4).map(u => u.name || u.username).join(', '), to: who.length === 1 ? { kind: 'user', id: who[0].id } : null }
-        : { status: 'miss', label: 'ผู้ใช้ที่เข้าได้จริง', note: 'ไม่มีบัญชีไหนเข้าเมนูนี้ได้', fix: 'ตรวจสิทธิ์ที่ Settings › Permissions', href: '#set/perms' });
+        : { status: 'miss', label: 'ผู้ใช้ที่เข้าได้จริง', note: 'ไม่มีบัญชีไหนเข้าเมนูนี้ได้', fix: 'ตรวจสิทธิ์ที่ Settings › Permissions', href: go('#set/perms') });
       if (m.subs && m.subs.length) add({ label: 'หน้าย่อย', note: m.subs.length + ' หน้า · ' + m.subs.map(s => s.label).slice(0, 4).join(', ') });
-      add({ label: 'เปิดเมนูนี้', note: m.desc || '', href: '#' + m.key });
+      add({ label: 'เปิดเมนูนี้', note: m.desc || '', href: go('#') + m.key });
       return out;
     }
     if (kind === 'branch') {
@@ -120,8 +124,8 @@
       const us = users().filter(u => u.branch === id);
       const b = typeof branchBy === 'function' ? branchBy(id) : null;
       add(b ? { label: 'ทะเบียนสาขา', note: (b.name || id) + ' · ' + (b.status || '') } : { status: 'miss', label: 'ทะเบียนสาขา', note: 'ไม่พบรหัสสาขานี้ในทะเบียน', fix: 'เพิ่มสาขาในแอป Owner › ระบบ IT › สาขา' });
-      add(es.length ? { label: 'พนักงาน', note: es.length + ' คน · ' + es.slice(0, 4).map(shortName).join(', ') } : { status: 'warn', label: 'พนักงาน', note: 'ยังไม่มีพนักงานในสาขานี้', href: '#hr' });
-      add(us.length ? { label: 'บัญชีผู้ใช้', note: us.length + ' บัญชี' } : { status: 'warn', label: 'บัญชีผู้ใช้', note: 'ยังไม่มีบัญชีผูกกับสาขานี้', href: '#users' });
+      add(es.length ? { label: 'พนักงาน', note: es.length + ' คน · ' + es.slice(0, 4).map(shortName).join(', ') } : { status: 'warn', label: 'พนักงาน', note: 'ยังไม่มีพนักงานในสาขานี้', href: go('#hr') });
+      add(us.length ? { label: 'บัญชีผู้ใช้', note: us.length + ' บัญชี' } : { status: 'warn', label: 'บัญชีผู้ใช้', note: 'ยังไม่มีบัญชีผูกกับสาขานี้', href: go('#users') });
       if (b) add(b.lat && b.lng ? { label: 'พิกัดลงเวลา', note: 'ตั้งแล้ว · รัศมี ' + (b.radius || '-') + ' ม.' } : { status: 'warn', label: 'พิกัดลงเวลา', note: 'ยังไม่ตั้งพิกัด — ลงเวลาด้วย GPS ไม่ได้' });
       return out;
     }
@@ -334,12 +338,12 @@
     const needPos = (WB.kind === 'pos' || WB.kind === 'emp') && !posList().length;
     return CSS
       + '<p class="note">กดชื่อพนักงาน บัญชี ตำแหน่ง เมนู หรือสาขา แล้วดูว่าสิ่งนั้นเชื่อมกับอะไรบ้าง · เส้นประแดง = ยังไม่เชื่อม กดที่กล่องเพื่อดูว่าต้องไปแก้ที่ไหน'
-      + (S.me && S.me.role === 'owner' ? ' · ส่วนใยของ<b>ไฟล์โปรแกรม</b> (ไว้กันโค้ดพังก่อนขึ้นระบบ) อยู่ที่ <a href="owner.html#links">แอป Owner › ใยแมงมุมโค้ด</a>' : '') + '</p>'
+      + (S.me && S.me.role === 'owner' ? ' · ส่วนใยของ<b>ไฟล์โปรแกรม</b> (ไว้กันโค้ดพังก่อนขึ้นระบบ) อยู่ที่เมนู <a href="#links">ใยแมงมุมโค้ด</a>' : '') + '</p>'
       + (rows.length ? '<div class="wb-fix"><b>ทั้งระบบมีจุดที่ยังไม่เชื่อม ' + rows.length + ' จุด · ระบบซ่อมให้ได้เอง ' + rows.filter(r => r.s.do).length + ' จุด</b><p>'
         + rows.slice(0, 6).map(r => esc2(r.who) + ': ' + esc2(r.s.label)).join(' · ') + (rows.length > 6 ? ' และอีก ' + (rows.length - 6) + ' จุด' : '') + '</p></div>'
         : '<div class="note" style="background:#e8f7ef;color:#17673f">ทุกจุดที่ตรวจได้เชื่อมกันครบแล้ว</div>')
       + '<div class="wb-tabs">' + KINDS.map(k => '<button class="wb-tab' + (WB.kind === k[0] ? ' on' : '') + '" data-a="wbKind:' + k[0] + '">' + k[1] + '</button>').join('') + '</div>'
-      + (needPos ? '<p class="note">ยังไม่ได้โหลดทะเบียนตำแหน่ง — เปิด HR › Positions หนึ่งครั้งแล้วกลับมา จะเห็นเส้นตำแหน่งครบ</p>' : '')
+      + (needPos ? '<p class="note">โหลดทะเบียนตำแหน่งไม่สำเร็จ — เส้นตำแหน่งจะยังไม่ครบ ลองกดโหลดใหม่อีกครั้ง</p>' : '')
       + '<div class="wb-grid"><div><div class="wb-top"><input class="field" id="wb-q" placeholder="ค้นหา" value="' + esc2(WB.q) + '"></div>'
       + '<div class="wb-list">' + (list.length ? list.map(x => '<button class="wb-item' + (x.id === WB.id ? ' on' : '') + '" data-a="wbPick:' + esc2(x.id) + '"><i class="' + x.st + '"></i><span>' + esc2(x.label) + (x.sub ? ' <span class="muted">· ' + esc2(x.sub) + '</span>' : '') + '</span>' + (x.n ? '<small>ค้าง ' + x.n + '</small>' : '') + '</button>').join('') : '<p class="note">ไม่พบรายการ</p>') + '</div></div>'
       + '<div>' + panel()
@@ -347,7 +351,7 @@
   }
 
   defMod({
-    key: 'web', mod: 'web', label: 'ใยแมงมุมระบบ', icon: 'admin', group: 'System',
+    key: 'web', mod: 'web', label: 'ใยแมงมุมคน', icon: 'users', group: 'System',
     desc: 'กดพนักงาน บัญชี ตำแหน่ง เมนู หรือสาขา แล้วเห็นว่าเชื่อมกับอะไร และตรงไหนยังไม่เชื่อม',
     perm: ['admin', 'users'],
     view,
@@ -359,17 +363,6 @@
       wbSpoke: i => { const s = spokes(WB.kind, WB.id)[Number(i)]; if (s && s.to) { WB.kind = s.to.kind; WB.id = s.to.id; App.render(); } }
     }
   });
-
-  /* ใส่เมนูเข้ากลุ่ม System — ถ้าไม่ทำตรงนี้ โมดูลจะมีอยู่แต่ไม่โผล่ในเมนูเลย
-   * (js/app.js ไล่คีย์ไว้ใน GROUPS ตายตัว แล้ว NAV_ORDER คำนวณครั้งเดียวตอนโหลด) */
-  if (typeof GROUPS !== 'undefined') {
-    const g = GROUPS.find(x => x[0] === 'System') || GROUPS[GROUPS.length - 1];
-    if (g && !g[1].includes('web')) {
-      g[1].push('web');
-      if (typeof NAV_ORDER !== 'undefined') NAV_ORDER.splice(0, NAV_ORDER.length, ...GROUPS.flatMap(x => x[1]));
-    }
-  }
-
 
   /* กดกล่องในภาพ: ถ้าเป็นสิ่งที่เปิดดูต่อได้ ให้ย้ายศูนย์กลางไปที่นั่น */
   document.addEventListener('click', e => {

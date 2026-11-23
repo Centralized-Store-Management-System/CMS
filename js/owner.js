@@ -50,7 +50,7 @@ function ocLogin(msg) {
   $('#oc-go').onclick = go; $('#oc-pin').onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 function ocShell(main) {
-  const nav = [['dash', 'แดชบอร์ดปัญหารายวัน', 'acct', 'แดชบอร์ด'], ['it', 'ตรวจ & ซ่อมอัตโนมัติ', 'admin', 'ตรวจ/ซ่อม'], ['ai', 'AI Monitoring · Advanced', 'admin', 'AI Monitor'], ['perf', 'ความเร็ว', 'time', 'ความเร็ว'], ['events', 'เหตุการณ์', 'notify', 'เหตุการณ์'], ['auth', 'วิธีเข้าระบบ', 'users', 'เข้าระบบ'], ['control', 'IT Control Center', 'admin', 'IT Control'], ['network', 'AI Intelligence Network', 'admin', 'AI Network'], ['links', 'ใยแมงมุมโค้ด · ตรวจก่อนขึ้นระบบ', 'admin', 'ใยแมงมุมโค้ด']];
+  const nav = [['dash', 'แดชบอร์ดปัญหารายวัน', 'acct', 'แดชบอร์ด'], ['it', 'ตรวจ & ซ่อมอัตโนมัติ', 'admin', 'ตรวจ/ซ่อม'], ['ai', 'AI Monitoring · Advanced', 'admin', 'AI Monitor'], ['perf', 'ความเร็ว', 'time', 'ความเร็ว'], ['events', 'เหตุการณ์', 'notify', 'เหตุการณ์'], ['auth', 'วิธีเข้าระบบ', 'users', 'เข้าระบบ'], ['control', 'IT Control Center', 'admin', 'IT Control'], ['network', 'AI Intelligence Network', 'admin', 'AI Network'], ['people', 'ใยแมงมุมคน · สิทธิ์และการเชื่อมต่อ', 'users', 'ใยแมงมุมคน'], ['links', 'ใยแมงมุมโค้ด · ตรวจก่อนขึ้นระบบ', 'admin', 'ใยแมงมุมโค้ด']];
   const cur = nav.find(n => n[0] === OC.view) || nav[0];
   $('#root').innerHTML = `<div class="oc"><header class="oc-top"><span class="logo">${icon('cup')}</span><span class="t"><small>Owner Console</small><b>${esc(cur[1])}</b></span><button class="oc-top-out" id="oc-out2" aria-label="ออกจากระบบ">${icon('out')}</button></header><aside class="oc-side"><div class="brand"><span class="logo">${icon('cup')}</span><span><b>Owner Console</b><small>${esc((S.settings && S.settings.shopName) || 'Café Amazon')}</small></span></div>
     <h4>Super Advance IT · ระบบหลังร้าน</h4>${nav.map(ocNav).join('')}
@@ -109,6 +109,7 @@ async function ocGo(view) {
       } else ocMain('<p class="status bad">ไม่พบ AI Network module</p>');
     }
     if (view === 'links') { if (typeof ocLinksLoad === 'function') await ocLinksLoad(); else ocMain('<p class="status bad">ไม่พบ Link Map module</p>'); }
+    if (view === 'people') { if (typeof ocPeopleLoad === 'function') await ocPeopleLoad(); else ocMain('<p class="status bad">ไม่พบใยแมงมุมคน (js/web-host-owner.js)</p>'); }
   } catch (e) {
     if (e.code === 'SESSION') {
       // คงหน้า Owner Console ไว้ ไม่เปลี่ยนไปหน้า Login อัตโนมัติระหว่างงานกำลังทำงาน

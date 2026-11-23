@@ -1,0 +1,432 @@
+{
+ "note": "เมนูของเว็บหลังร้าน (index.html) สำหรับให้แอป Owner ใช้ · สร้างด้วย tools/mod-manifest.mjs · แก้ไฟล์ mod-*.js แล้วต้องสร้างใหม่",
+ "generated_at": "2026-11-23T05:16:57.310Z",
+ "nav": [
+  [
+   "",
+   [
+    "today",
+    "dash",
+    "approve"
+   ]
+  ],
+  [
+   "People",
+   [
+    "hr",
+    "sched",
+    "time",
+    "pay"
+   ]
+  ],
+  [
+   "Operations",
+   [
+    "stock",
+    "acct"
+   ]
+  ],
+  [
+   "Order System",
+   [
+    "orders",
+    "catalog"
+   ]
+  ],
+  [
+   "Finance",
+   [
+    "fin"
+   ]
+  ],
+  [
+   "System",
+   [
+    "users",
+    "admin",
+    "notify",
+    "design",
+    "set"
+   ]
+  ]
+ ],
+ "mods": [
+  {
+   "key": "acct",
+   "label": "Accounting",
+   "group": "Operations",
+   "perm": [
+    "sales",
+    "pnl"
+   ],
+   "desc": "ปิดยอดรายวัน รายจ่าย กำไรขาดทุน",
+   "subs": [
+    {
+     "key": "sales",
+     "label": "Daily Sales",
+     "perm": [
+      "sales"
+     ]
+    },
+    {
+     "key": "exp",
+     "label": "Expenses",
+     "perm": [
+      "sales"
+     ]
+    },
+    {
+     "key": "pnl",
+     "label": "P&L",
+     "perm": [
+      "pnl"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "admin",
+   "label": "System Admin",
+   "group": "System",
+   "perm": [
+    "admin"
+   ],
+   "desc": "ตรวจสุขภาพทุกระบบ แก้ไขปัญหา Audit log",
+   "subs": [
+    {
+     "key": "health",
+     "label": "Health Check",
+     "perm": []
+    },
+    {
+     "key": "tools",
+     "label": "Tools",
+     "perm": []
+    },
+    {
+     "key": "log",
+     "label": "Audit Log",
+     "perm": []
+    },
+    {
+     "key": "freeze",
+     "label": "Freeze",
+     "perm": []
+    },
+    {
+     "key": "info",
+     "label": "System Info",
+     "perm": []
+    }
+   ]
+  },
+  {
+   "key": "approve",
+   "label": "Approvals",
+   "group": "",
+   "perm": [
+    "approve_time",
+    "approve_stock"
+   ],
+   "desc": "ใบลา OT แก้เวลา ปรับสต็อก คนไม่มาตามตาราง",
+   "subs": []
+  },
+  {
+   "key": "catalog",
+   "label": "Web Admin Portal",
+   "group": "",
+   "perm": [
+    "catalog"
+   ],
+   "desc": "ระบบออเดอร์ · สินค้า ราคา เปิดขาย",
+   "subs": []
+  },
+  {
+   "key": "dash",
+   "label": "Dashboard",
+   "group": "",
+   "perm": [
+    "dash"
+   ],
+   "desc": "กำไรเดือนนี้ ใครเข้ากะวันนี้ งานค้าง",
+   "subs": []
+  },
+  {
+   "key": "design",
+   "label": "Design",
+   "group": "System",
+   "perm": [
+    "*"
+   ],
+   "desc": "สีแบรนด์ ฟอนต์ ขนาด โลโก้ โหมดมืด ดูผลทันที",
+   "subs": []
+  },
+  {
+   "key": "fin",
+   "label": "Finance & Accounting",
+   "group": "",
+   "perm": [
+    "__fin"
+   ],
+   "desc": "ภาพรวม · การเงิน บัญชี และภาษี",
+   "subs": []
+  },
+  {
+   "key": "hr",
+   "label": "HR",
+   "group": "People",
+   "perm": [
+    "hr"
+   ],
+   "desc": "ประวัติพนักงาน รูป สิทธิ์ใช้งาน ผู้สมัคร",
+   "subs": [
+    {
+     "key": "emp",
+     "label": "Employees",
+     "perm": []
+    },
+    {
+     "key": "positions",
+     "label": "Positions",
+     "perm": []
+    },
+    {
+     "key": "app",
+     "label": "Recruitment",
+     "perm": []
+    },
+    {
+     "key": "docs",
+     "label": "Documents",
+     "perm": []
+    }
+   ]
+  },
+  {
+   "key": "notify",
+   "label": "LINE Alerts",
+   "group": "System",
+   "perm": [
+    "settings",
+    "admin"
+   ],
+   "desc": "อนุมัติจาก LINE แจ้งการลงเวลา สรุปประจำวัน",
+   "subs": [
+    {
+     "key": "setup",
+     "label": "Notifications",
+     "perm": []
+    },
+    {
+     "key": "guide",
+     "label": "Setup Guide",
+     "perm": []
+    }
+   ]
+  },
+  {
+   "key": "orders",
+   "label": "Live Orders",
+   "group": "",
+   "perm": [
+    "orders"
+   ],
+   "desc": "ระบบออเดอร์ · รับและจัดการออเดอร์",
+   "subs": []
+  },
+  {
+   "key": "pay",
+   "label": "Payroll",
+   "group": "People",
+   "perm": [
+    "payroll"
+   ],
+   "desc": "คิดจากเวลาทำงาน OT ขาด ลา สาย",
+   "subs": []
+  },
+  {
+   "key": "sched",
+   "label": "Schedule",
+   "group": "People",
+   "perm": [
+    "schedule_view",
+    "schedule_edit",
+    "time"
+   ],
+   "desc": "ตั้งตารางในระบบ รูปแบบกะ คนที่ต้องการ ยืมคนข้ามสาขา",
+   "subs": [
+    {
+     "key": "month",
+     "label": "Roster",
+     "perm": [
+      "schedule_view",
+      "schedule_edit",
+      "time"
+     ]
+    },
+    {
+     "key": "off",
+     "label": "Days Off",
+     "perm": [
+      "schedule_view",
+      "schedule_edit",
+      "time"
+     ]
+    },
+    {
+     "key": "pattern",
+     "label": "Shift Patterns",
+     "perm": [
+      "schedule_view",
+      "schedule_edit",
+      "time"
+     ]
+    },
+    {
+     "key": "need",
+     "label": "Staffing",
+     "perm": [
+      "schedule_view",
+      "schedule_edit",
+      "time"
+     ]
+    },
+    {
+     "key": "shifts",
+     "label": "Shifts",
+     "perm": [
+      "schedule_view",
+      "schedule_edit"
+     ]
+    },
+    {
+     "key": "import",
+     "label": "Excel Import",
+     "perm": [
+      "schedule_edit"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "set",
+   "label": "Settings",
+   "group": "System",
+   "perm": [
+    "settings"
+   ],
+   "desc": "สาขา พิกัด กฎเวลาและค่าจ้าง วันหยุด แฟรนไชส์ สิทธิ์ ไฟล์",
+   "subs": [
+    {
+     "key": "shop",
+     "label": "Branches",
+     "perm": []
+    },
+    {
+     "key": "rules",
+     "label": "Work Rules",
+     "perm": []
+    },
+    {
+     "key": "holidays",
+     "label": "Holidays",
+     "perm": []
+    },
+    {
+     "key": "franchise",
+     "label": "Franchise",
+     "perm": []
+    },
+    {
+     "key": "perms",
+     "label": "Permissions",
+     "perm": []
+    },
+    {
+     "key": "data",
+     "label": "Data & Connection",
+     "perm": []
+    }
+   ]
+  },
+  {
+   "key": "stock",
+   "label": "Inventory",
+   "group": "Operations",
+   "perm": [
+    "stock"
+   ],
+   "desc": "สินค้า รับเข้า เบิกใช้ ของเสีย ตรวจนับ โอนระหว่างสาขา",
+   "subs": [
+    {
+     "key": "onhand",
+     "label": "On Hand",
+     "perm": []
+    },
+    {
+     "key": "moves",
+     "label": "Movements",
+     "perm": []
+    },
+    {
+     "key": "count",
+     "label": "Stock Count",
+     "perm": []
+    },
+    {
+     "key": "items",
+     "label": "Items",
+     "perm": []
+    }
+   ]
+  },
+  {
+   "key": "time",
+   "label": "Time Attendance",
+   "group": "People",
+   "perm": [
+    "time",
+    "approve_time"
+   ],
+   "desc": "ลงเวลา การลา",
+   "subs": [
+    {
+     "key": "att",
+     "label": "Attendance",
+     "perm": [
+      "time",
+      "approve_time"
+     ]
+    },
+    {
+     "key": "leave",
+     "label": "Leave",
+     "perm": [
+      "time",
+      "approve_time"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "today",
+   "label": "Today",
+   "group": "",
+   "perm": [
+    "*"
+   ],
+   "desc": "งานของฉัน และภาพรวมวันนี้ตามระดับของคุณ",
+   "subs": []
+  },
+  {
+   "key": "users",
+   "label": "Users",
+   "group": "System",
+   "perm": [
+    "users"
+   ],
+   "desc": "สร้างบัญชีผู้ใช้ กำหนด Role สาขา สิทธิ์ และ LINE ของแต่ละคน",
+   "subs": []
+  }
+ ]
+}
