@@ -515,8 +515,23 @@
 - `data/deploy-state.json` — ลายเซ็น sha256 ของซอร์ส Edge Function ที่ตรงกับของที่ deploy จริง · **deploy แล้วต้องอัปเดตไฟล์นี้** · ตอนนี้ `verified: true` เฉพาะ `it-intelligence-network` (ตัวเดียวที่อ่านซอร์สจริงมาเทียบแล้ว) ที่เหลือเป็น `false` รอทยอยเทียบ
 - `data/link-baseline.json` — หนี้เก่า 22 รายการ
 
+### รอบที่ 2 (23 พ.ย. 2569) — เพิ่ม 3 กฎที่ค้างไว้ ครบแล้ว
+1. **`role-drift` — Role / สิทธิ์เริ่มต้น เว็บ ↔ เซิร์ฟเวอร์** (นี่คือบั๊ก "ตั้งรหัสปลดล็อกแอปไม่ได้" เมื่อวาน)
+   โค้ดเซิร์ฟเวอร์อยู่ใน `server/gas.enc` ที่เข้ารหัส และต้นฉบับ .gs อยู่นอก repo → CI อ่านเองไม่ได้
+   จึงเพิ่ม **`tools/role-contract.mjs`** ถอดค่าที่ต้องตรงกันออกจากซอร์ส .gs จริงมาเก็บเป็น **`data/role-contract.json`**
+   แล้ว `link-check` เทียบฝั่งหน้าเว็บ (`ROLE_NAME`, `UPREFIX`, `DEFAULT_PERMS`, `PERM_ROLES` — อ่านทั้งค่าตั้งต้นและที่ไฟล์อื่นเติมทีหลัง เช่น `js/role-verifier.js`) กับไฟล์นี้ทุก PR
+   **แก้ค่าฝั่งเซิร์ฟเวอร์เมื่อไหร่ ต้องรัน `node tools/role-contract.mjs --src <โฟลเดอร์ .gs>` ใหม่แล้ว commit**
+   ตรวจครอบคลุม: Role ที่ขาด/เกิน · ชื่อ Role ไม่ตรง · คำนำหน้าชื่อผู้ใช้ไม่ตรง · สิทธิ์เริ่มต้นไม่ตรง · ตารางสิทธิ์ขาดคอลัมน์ของ Role (ผลคือเจ้าของร้านตั้งสิทธิ์ระดับนั้นไม่ได้)
+2. **`sql-unknown-table` — ชื่อตารางใน SQL ต้องมีจริง** เทียบกับ **`data/schema-tables.json`** (93 ตาราง + 25 ฟังก์ชัน/มุมมอง)
+   นับเฉพาะที่อยู่หลังคำสั่ง SQL จริง (`from` / `join` / `into` / `update` / `rpc`) ในไฟล์ `supabase/functions/**/*.ts` เท่านั้น — ลองแบบกว้างกว่านี้แล้วไปจับ path ไฟล์ (`modules/finance/finance.html`) และ property ของ object ใน js กลายเป็น false positive
+3. **`pin-stale` — commit ที่ `backoffice` ปักไว้ต้องไม่เก่ากว่าไฟล์ใน `server/`**
+   `backoffice` import `server/runtime.js` · `store-pg.js` · `order-link.js` ผ่าน jsDelivr ที่ปัก commit SHA · แก้ไฟล์เหล่านี้แล้วไม่ deploy ใหม่ = โค้ดใหม่ไม่มีผล
+   บันทึก `pinned_commit` + `pinned_files` ไว้ใน `data/deploy-state.json` แล้วให้ตัวตรวจถาม git ว่ามี commit ใหม่กว่าหรือยัง
+   (ไม่นับ `server/gas.enc` เพราะฟังก์ชันโหลดใหม่เองทุก 60 วิ ไม่ต้อง deploy)
+   พร้อมกฎแถม **`fn-missing-in-repo`** — ตอนนี้ฟ้อง `backoffice` ซึ่ง **deploy อยู่ (version 14) แต่ไม่มีซอร์สใน repo เลย**
+
 ### ยังไม่ได้ทำ (รอบถัดไป)
-- เทียบ `DEFAULT_PERMS`/`ROLES` ฝั่งเว็บกับฝั่งเซิร์ฟเวอร์ (อยู่ใน `server/gas.enc` ที่เข้ารหัส — ต้องให้ตัวตรวจอ่านจากต้นฉบับ .gs นอก repo หรือให้เซิร์ฟเวอร์เปิด endpoint บอกค่าเริ่มต้น)
-- เทียบชื่อตาราง/คอลัมน์ใน SQL กับ schema จริง (ต้องมี snapshot schema ใน repo หรือให้หน้า Owner ดึงสดจาก `it-intelligence-network`)
-- `backoffice` import `server/*.js` ผ่าน jsDelivr ที่ปักด้วย commit SHA — ควรมีกฎตรวจว่า SHA ที่ปักไว้ตรงกับ commit ล่าสุดของไฟล์เหล่านั้น
+- **นำซอร์ส `backoffice` (ฟังก์ชันหลักของทั้งระบบ) กลับเข้า repo** — ตอนนี้ขึ้นเป็นหนี้เก่าในตัวตรวจแล้ว
+- เทียบระดับ **คอลัมน์** ไม่ใช่แค่ชื่อตาราง (ต้องเก็บ snapshot คอลัมน์เพิ่มใน `data/schema-tables.json`)
 - รวมข้อมูลฝั่งข้อมูลจริง (IAM grants, org_departments) เข้ามาในใยแมงมุมเดียวกัน โดยดึงจาก `it-intelligence-network` ตอนเปิดหน้า
+- ให้ `tools/role-contract.mjs` รันอัตโนมัติตอน deploy `gas.enc` (ตอนนี้ต้องรันมือ)
