@@ -360,6 +360,17 @@
     }
   });
 
+  /* ใส่เมนูเข้ากลุ่ม System — ถ้าไม่ทำตรงนี้ โมดูลจะมีอยู่แต่ไม่โผล่ในเมนูเลย
+   * (js/app.js ไล่คีย์ไว้ใน GROUPS ตายตัว แล้ว NAV_ORDER คำนวณครั้งเดียวตอนโหลด) */
+  if (typeof GROUPS !== 'undefined') {
+    const g = GROUPS.find(x => x[0] === 'System') || GROUPS[GROUPS.length - 1];
+    if (g && !g[1].includes('web')) {
+      g[1].push('web');
+      if (typeof NAV_ORDER !== 'undefined') NAV_ORDER.splice(0, NAV_ORDER.length, ...GROUPS.flatMap(x => x[1]));
+    }
+  }
+
+
   /* กดกล่องในภาพ: ถ้าเป็นสิ่งที่เปิดดูต่อได้ ให้ย้ายศูนย์กลางไปที่นั่น */
   document.addEventListener('click', e => {
     const g = e.target.closest && e.target.closest('[data-wb-spoke]');
