@@ -103,8 +103,8 @@ async function ocGo(view) {
         await ocNetworkLoad();
         OC.timer = setInterval(async () => {
           if (document.hidden || OC.view !== 'network' || OC.busy || !ITN.data) return;
-          try { ITN.data = await itnFetch(); if (OC.view === 'network') ocMain(itnPage()); }
-          catch (e) { /* retain last verified snapshot on temporary monitor failure */ }
+          // itnAutoRefresh เก็บสิ่งที่กำลังดูอยู่และตำแหน่งเลื่อนจอไว้ และคงภาพเดิมเมื่อเน็ตสะดุด
+          try { await itnAutoRefresh(); } catch (e) { /* retain last verified snapshot on temporary monitor failure */ }
         }, 300000);
       } else ocMain('<p class="status bad">ไม่พบ AI Network module</p>');
     }
