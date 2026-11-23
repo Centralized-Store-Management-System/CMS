@@ -13,6 +13,9 @@
   /* หน้าที่ใช้แก้ (HR, Users, Settings) อยู่ในเว็บหลังร้าน ซึ่งเป็นคนละแอปกับที่นี่
    * ลิงก์จึงต้องพาข้ามแอป ไม่ใช่เปลี่ยน #hash ของแอป Owner */
   const go = h => 'index.html?from=owner' + h;
+  /* เซิร์ฟเวอร์ลบ pinHash ออกก่อนส่งมาเสมอ (stripUser_ / stripEmp_) แล้วส่ง hasPin มาแทน
+   * เช็ค u.pinHash จึงเป็นเท็จกับทุกคน = รายงานผิดว่า "ยังไม่ได้ตั้ง PIN" ทั้งร้าน */
+  const hasPin = x => !!x && (x.hasPin === true || !!x.pinHash);
 
   /* ---------- อ่านข้อมูลที่โหลดไว้แล้ว ---------- */
   const emps = () => (S.t.employees || []).filter(e => e.status !== 'ลาออก' || WB.id === e.id);
@@ -31,6 +34,11 @@
     return byRole[u.role] || [];
   };
   const canSee = (m, perms, role) => role === 'owner' || !m.perm || !m.perm.length || m.perm.some(k => k === '*' || perms.includes(k));
+  /* "ระดับนี้ควรเข้าถึงอะไรได้" = ค่าเริ่มต้นของระดับนั้นที่ฝั่งเซิร์ฟเวอร์กำหนดไว้
+   * ใช้แยก "ควรใช้ได้แต่ใช้ไม่ได้ (ต้องแก้)" ออกจาก "ไม่ได้ตั้งใจให้เข้าอยู่แล้ว"
+   * ถ้าไม่แยก หน้าจะเสนอให้ "ให้สิทธิ์ admin กับระดับ Staff" ซึ่งเป็นการยกระบบทั้งร้านให้บาริสต้า */
+  const meantFor = role => role === 'owner' ? (S.permList || []).map(x => x[0])
+    : ((typeof DEFAULT_PERMS === 'object' && DEFAULT_PERMS && DEFAULT_PERMS[role]) || []);
   const title = (kind, id) => {
     if (kind === 'emp') { const e = empById(id); return e ? shortName(e) + ' · ' + (e.code || '') : ''; }
     if (kind === 'user') { const u = users().find(x => x.id === id); return u ? (u.name || u.username) : ''; }
@@ -61,7 +69,7 @@
       else add({ status: 'miss', label: 'บัญชีเข้าใช้งาน', note: 'ยังไม่มีบัญชี — เข้าเว็บหลังร้านและแอปไม่ได้', fix: 'สร้างบัญชีแล้วผูกกับพนักงานคนนี้', href: go('#users'), do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' });
       /* ของที่ต่อจากบัญชี: ถ้ายังไม่มีบัญชี ก็ยังแสดงไว้ให้เห็นว่าติดเป็นลูกโซ่ ไม่ใช่ซ่อนหายไป */
       add(!u ? { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่มีบัญชี จึงยังตั้ง PIN ไม่ได้', fix: 'สร้างบัญชีก่อนที่เมนู Users', href: go('#users') }
-        : u.pinHash ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' + (u.pinSetAt ? ' · ' + String(u.pinSetAt).slice(0, 10) : '') }
+        : hasPin(u) ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' + (u.pinSetAt ? ' · ' + String(u.pinSetAt).slice(0, 10) : '') }
           : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง PIN เข้าใช้งาน', fix: 'ระบบตั้ง PIN แทนใครไม่ได้ — ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: go('#users'), do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
       add(e.lineUserId ? { label: 'LINE', note: 'ผูกแล้ว' + (e.lineName ? ' · ' + e.lineName : '') }
         : { status: 'warn', label: 'LINE', note: 'ยังไม่ผูก — ลงเวลา ขอลา ดูตารางงานผ่าน LINE ไม่ได้', fix: 'ให้พนักงานขอรหัสผูก LINE ในแอปพนักงาน', href: go('#me') });
@@ -71,7 +79,7 @@
           : { status: 'warn', label: 'เครื่องที่ผูกไว้', note: 'ยังไม่ผูกเครื่อง — เปิดแอปทุกครั้งต้องพิมพ์ชื่อผู้ใช้เอง', fix: 'ผูกเครื่องได้ที่แอป Owner › อุปกรณ์ (ทำที่เครื่องของพนักงาน)' });
       const ord = perms.includes('orders') || perms.includes('catalog');
       add(!u ? { status: 'warn', label: 'ระบบออเดอร์', note: 'ยังไม่มีบัญชี จึงเข้าระบบออเดอร์ไม่ได้', fix: 'สร้างบัญชีก่อนที่เมนู Users', href: go('#users') }
-        : ord && u.status === 'active' && u.pinHash
+        : ord && u.status === 'active' && hasPin(u)
           ? { label: 'ระบบออเดอร์', note: 'ใช้งานได้ · ' + [perms.includes('orders') ? 'Live Orders' : '', perms.includes('catalog') ? 'Web Admin Portal' : ''].filter(Boolean).join(' · ') }
           : { status: 'warn', label: 'ระบบออเดอร์', note: !ord ? 'ระดับ ' + roleName(u.role) + ' ยังไม่มีสิทธิ์ orders' : 'ต้องเปิดใช้งานบัญชีและตั้ง PIN ก่อน', fix: 'ตั้งสิทธิ์ที่ Settings › Permissions', href: go('#set/perms'), ...(ord ? {} : { do: 'perm:orders:' + u.role, doLabel: 'ให้สิทธิ์ orders กับระดับนี้', doNote: 'ติ๊กสิทธิ์ orders ให้ทุกบัญชีระดับ ' + roleName(u.role) + ' (มีผลตอนเข้าสู่ระบบครั้งถัดไป)' }) });
       add(!u ? { status: 'miss', label: 'เมนูที่เข้าได้', note: 'ยังไม่มีบัญชี จึงเข้าเมนูใดไม่ได้เลย', fix: 'สร้างบัญชีที่เมนู Users', href: go('#users') }
@@ -89,7 +97,7 @@
       add({ label: 'ระดับสิทธิ์', note: (typeof ROLE_NAME === 'object' && ROLE_NAME[u.role]) || u.role });
       add({ label: 'สิทธิ์ที่ได้', note: perms.length + ' สิทธิ์' + (perms.length ? ' · ' + perms.slice(0, 5).join(', ') : ''), status: perms.length ? 'ok' : 'miss', fix: perms.length ? '' : 'ตั้งสิทธิ์ที่ Settings › Permissions', href: go('#set/perms') });
       add({ label: 'เมนูที่เข้าได้', note: seen.length + ' เมนู', status: seen.length ? 'ok' : 'miss', href: go('#set/perms') });
-      add(u.pinHash ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' } : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง', fix: 'ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: go('#users'), do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
+      add(hasPin(u) ? { label: 'รหัส PIN', note: 'ตั้งแล้ว' + (u.pinSetAt ? ' · ' + String(u.pinSetAt).slice(0, 10) : '') } : { status: 'miss', label: 'รหัส PIN', note: 'ยังไม่ได้ตั้ง', fix: 'ออกรหัสเปิดใช้งานให้เจ้าตัวไปตั้งเอง', href: go('#users'), do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' });
       add(d.length ? { label: 'เครื่องที่ผูกไว้', note: d.length + ' เครื่อง' } : { status: 'warn', label: 'เครื่องที่ผูกไว้', note: 'ยังไม่ผูกเครื่อง', fix: 'ผูกเครื่องได้ที่แอป Owner › อุปกรณ์' });
       add(u.branch || u.branchAccess ? { label: 'ขอบเขตสาขา', note: u.branchAccess === '*' ? 'ทุกสาขา' : branchName(u.branch) } : { status: 'warn', label: 'ขอบเขตสาขา', note: 'ยังไม่ระบุ', href: go('#users') });
       return out;
@@ -223,8 +231,9 @@
   function features(kind, id) {
     const u = kind === 'user' ? users().find(x => x.id === id) : userOf(empById(id) || {});
     const e = kind === 'emp' ? empById(id) : empOfUser(u || {});
-    const perms = permsOfUser(u), role = u && u.role;
-    const live = !!u && u.status === 'active', ready = live && !!u.pinHash;
+    /* ยังไม่มีบัญชี ก็ยังรู้ระดับได้จากประวัติพนักงาน — ใช้บอกว่าอะไร "ควรได้" อะไร "ไม่ได้ตั้งใจให้" */
+    const perms = permsOfUser(u), role = (u && u.role) || (e && e.role) || '';
+    const live = !!u && u.status === 'active', ready = live && hasPin(u);
     const out = [], mkuser = kind === 'emp' && !u ? { do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' } : null;
     const b = !u ? { why: 'ยังไม่มีบัญชีเข้าใช้งาน', fix: mkuser }
       : !live ? { why: 'บัญชีถูกปิดอยู่', fix: { do: 'enable', doLabel: 'เปิดใช้งานบัญชี' } }
@@ -233,14 +242,22 @@
     add(ready, 'เข้าเว็บหลังร้าน / แอปพนักงาน', b.why, b.fix);
     add(ready, 'ลงเวลาเข้า–ออกด้วย PIN', b.why, b.fix);
     if (e) add(!!e.lineUserId, 'ลงเวลา · ขอลา · ดูกะ ผ่าน LINE', 'ยังไม่ผูก LINE — ต้องให้เจ้าตัวขอรหัสผูกเอง');
+    const want = meantFor(role);
+    /* ของที่ระดับนี้ไม่ได้ตั้งใจให้เข้าอยู่แล้ว ไม่ใช่ "ปัญหา" และต้องไม่มีปุ่มกดให้สิทธิ์ */
+    const byDesign = name => out.push({ ok: false, design: true, name, why: 'ปิดไว้ตามระดับ ' + roleName(role) });
     const ord = perms.includes('orders') || perms.includes('catalog');
-    add(ready && ord, 'ระบบออเดอร์ (Live Orders / Catalog)', !ready ? b.why : 'ระดับ ' + roleName(role) + ' ยังไม่มีสิทธิ์ orders',
+    const ordMeant = want.includes('orders') || want.includes('catalog');
+    if (ready && ord) add(true, 'ระบบออเดอร์ (Live Orders / Catalog)');
+    else if (role && !ordMeant) byDesign('ระบบออเดอร์ (Live Orders / Catalog)');
+    else add(false, 'ระบบออเดอร์ (Live Orders / Catalog)', !ready ? b.why : 'ระดับ ' + roleName(role) + ' ยังไม่มีสิทธิ์ orders',
       !ready ? b.fix : { do: 'perm:orders:' + role, doLabel: 'ให้สิทธิ์ orders กับระดับ ' + roleName(role), doNote: 'ทุกบัญชีระดับ ' + roleName(role) + ' จะเข้าระบบออเดอร์ได้' });
     menus().forEach(m => {
-      const ok = live && canSee(m, perms, role), need = (m.perm || []).filter(k => k !== '*');
-      add(ok, m.label, !u || !live ? b.why : 'ระดับ ' + roleName(role) + ' ไม่มีสิทธิ์ ' + need.join(' / '),
+      const need = (m.perm || []).filter(k => k !== '*');
+      if (live && canSee(m, perms, role)) { add(true, m.label); return; }
+      if (role && !canSee(m, want, role)) { byDesign(m.label); return; }           // ไม่เคยตั้งใจให้ระดับนี้เข้า
+      add(false, m.label, !u || !live ? b.why : 'ระดับ ' + roleName(role) + ' ควรมีสิทธิ์ ' + need.join(' / ') + ' แต่ถูกตั้งค่าไว้ว่าไม่มี',
         !u || !live ? b.fix : (need.length && role && role !== 'owner'
-          ? { do: 'perm:' + need[0] + ':' + role, doLabel: 'ให้สิทธิ์ ' + need[0] + ' กับระดับ ' + roleName(role), doNote: 'ทุกบัญชีระดับ ' + roleName(role) + ' จะเห็นเมนู ' + m.label + ' (มีผลตอนเข้าสู่ระบบครั้งถัดไป)' } : null));
+          ? { do: 'perm:' + need[0] + ':' + role, doLabel: 'คืนสิทธิ์ ' + need[0] + ' ให้ระดับ ' + roleName(role), doNote: 'ทุกบัญชีระดับ ' + roleName(role) + ' จะเห็นเมนู ' + m.label + ' (มีผลตอนเข้าสู่ระบบครั้งถัดไป) · เป็นค่าที่ฝั่งเซิร์ฟเวอร์ตั้งไว้ให้ระดับนี้อยู่แล้ว' } : null));
     });
     return out;
   }
@@ -276,14 +293,19 @@
     if (!WB.id) return '<p class="note">เลือกรายการทางซ้าย</p>';
     const name = title(WB.kind, WB.id), sp = spokes(WB.kind, WB.id), bad = sp.filter(x => x.status !== 'ok');
     const person = WB.kind === 'emp' || WB.kind === 'user';
-    const F = person ? features(WB.kind, WB.id) : [], okF = F.filter(x => x.ok), noF = F.filter(x => !x.ok);
+    const F = person ? features(WB.kind, WB.id) : [], okF = F.filter(x => x.ok);
+    const noF = F.filter(x => !x.ok && !x.design), dsF = F.filter(x => x.design);
     return '<div class="wb-head"><h3>' + esc2(name) + '</h3>'
-      + (person ? '<p>ใช้งานได้ <b class="g">' + okF.length + '</b> อย่าง · ยังใช้ไม่ได้ <b class="r">' + noF.length + '</b> อย่าง</p>'
+      + (person ? '<p>ใช้งานได้ <b class="g">' + okF.length + '</b> อย่าง · ยังใช้ไม่ได้ <b class="r">' + noF.length + '</b> อย่าง'
+        + (dsF.length ? ' · ปิดไว้ตามระดับอีก ' + dsF.length : '') + '</p>'
         : '<p>เชื่อมครบ <b class="g">' + (sp.length - bad.length) + '</b> · ยังไม่เชื่อม <b class="r">' + bad.length + '</b></p>') + '</div>'
       + (person ? '<h4 class="wb-h4">ตอนนี้ใช้งานได้</h4>'
         + (okF.length ? '<div class="wb-chips">' + okF.map(x => '<span class="wb-chip">' + esc2(x.name) + '</span>').join('') + '</div>' : '<div class="note">ยังใช้อะไรไม่ได้เลย</div>')
         + '<h4 class="wb-h4">ยังใช้ไม่ได้ · แก้ที่ต้นเหตุ</h4>'
-        + (noF.length ? groupByCause(noF) : '<div class="note" style="background:#e8f7ef;color:#17673f">ใช้ได้ครบทุกอย่างแล้ว</div>')
+        + (noF.length ? groupByCause(noF) : '<div class="note" style="background:#e8f7ef;color:#17673f">ใช้ได้ครบทุกอย่างที่ระดับนี้ควรใช้ได้</div>')
+        + (dsF.length ? '<details class="wb-more"><summary>ปิดไว้ตามระดับ ' + dsF.length + ' อย่าง (ไม่ใช่ปัญหา)</summary>'
+          + '<p class="note" style="margin-top:8px">ระดับนี้ไม่ได้ตั้งใจให้เข้าถึงตั้งแต่แรก ถ้าจะเปิดจริงต้องไปตั้งที่ <a href="' + go('#set/perms') + '">Settings › Permissions</a> เอง หน้านี้ไม่ยกสิทธิ์ให้โดยกดปุ่มเดียว</p>'
+          + '<div class="wb-chips off">' + dsF.map(x => '<span class="wb-chip">' + esc2(x.name) + '</span>').join('') + '</div></details>' : '')
         : '<h4 class="wb-h4">เชื่อมอยู่กับ</h4>'
         + (sp.length - bad.length ? '<div class="wb-chips">' + sp.filter(x => x.status === 'ok').map(x => '<span class="wb-chip">' + esc2(x.label) + ': ' + esc2(x.note) + '</span>').join('') + '</div>' : '<div class="note">ยังไม่เชื่อมกับอะไรเลย</div>')
         + (bad.length ? '<h4 class="wb-h4">ยังไม่เชื่อม</h4>' + bad.map(x => fixCard(x, x.label + ' — ' + x.note)).join('') : '<div class="note" style="background:#e8f7ef;color:#17673f">เชื่อมครบแล้ว</div>'))
@@ -317,6 +339,7 @@
     + '.wb-chips{display:flex;gap:6px;flex-wrap:wrap}'
     + '.wb-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;background:#e8f5ed;border:1px solid #bcdcc8;font-size:12.5px;color:#17673f}'
     + '.wb-chip::before{content:"\\2713";font-weight:700}'
+    + '.wb-chips.off .wb-chip{background:#f1f3f2;border-color:#dfe4e1;color:#6b7d74}.wb-chips.off .wb-chip::before{content:"\\2014"}'
     + '.wb-more{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:8px 12px}'
     + '.wb-more>summary{cursor:pointer;font:700 13px Prompt;color:#174c35;padding:4px 0}'
     + '</style>';
@@ -331,7 +354,12 @@
     if (WB.kind === 'menu') list = menus().map(m => ({ id: m.key, label: m.label, sub: (m.perm || []).join(', ') }));
     if (WB.kind === 'branch') list = (S.t.branches || []).map(b => ({ id: b.code, label: b.name || b.code, sub: b.status || '' }));
     if (q) list = list.filter(x => (x.label + ' ' + x.sub).toLowerCase().includes(q));
-    list.forEach(x => { const b = broken(WB.kind, x.id); x.st = b.some(s => s.status === 'miss') ? 'miss' : b.length ? 'warn' : 'ok'; x.n = b.length; });
+    list.forEach(x => {
+      const b = broken(WB.kind, x.id);
+      x.st = b.some(s => s.status === 'miss') ? 'miss' : b.length ? 'warn' : 'ok';
+      /* คนและบัญชี: นับเท่ากับที่แผงขวาบอก (ไม่รวมของที่ปิดไว้ตามระดับ) จะได้ไม่ขัดกันเอง */
+      x.n = (WB.kind === 'emp' || WB.kind === 'user') ? features(WB.kind, x.id).filter(f => !f.ok && !f.design).length : b.length;
+    });
     if (!WB.id || !list.some(x => x.id === WB.id)) WB.id = (list.find(x => x.st === 'miss') || list[0] || {}).id || '';
     const sp = WB.id ? spokes(WB.kind, WB.id) : [];
     const bad = sp.filter(s => s.status !== 'ok');
