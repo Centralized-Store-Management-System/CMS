@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-23T00:44:24.568Z",
+ "generated_at": "2026-11-23T00:59:30.888Z",
  "rules": [
   {
    "code": "script-missing",
@@ -74,10 +74,10 @@
  ],
  "summary": {
   "pages": 7,
-  "scripts": 110,
+  "scripts": 111,
   "functions": 13,
   "tables": 64,
-  "edges": 324,
+  "edges": 325,
   "errors": 0,
   "warns": 0,
   "debt": 23,
@@ -565,6 +565,14 @@
    "issues": 0,
    "kind": "script",
    "label": "js/line-reset.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/link-web.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/link-web.js",
    "layer": "ไฟล์โปรแกรม"
   },
   {
@@ -2122,6 +2130,12 @@
    "to": "js/perms-positions.js",
    "kind": "script",
    "note": "v=1.0.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/link-web.js",
+   "kind": "script",
+   "note": "v=1.0.0"
   },
   {
    "from": "index.html",
