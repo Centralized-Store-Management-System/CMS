@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-23T06:29:04.654Z",
+ "generated_at": "2026-11-23T06:50:41.773Z",
  "rules": [
   {
    "code": "script-missing",
@@ -1822,7 +1822,7 @@
    "from": "clock.html",
    "to": "js/order-link.js",
    "kind": "script",
-   "note": "v=4.8.5"
+   "note": "v=4.9.0"
   },
   {
    "from": "index.html",
@@ -2146,7 +2146,7 @@
    "from": "index.html",
    "to": "js/order-link.js",
    "kind": "script",
-   "note": "v=4.8.5"
+   "note": "v=4.9.0"
   },
   {
    "from": "index.html",
@@ -2386,7 +2386,7 @@
    "from": "owner.html",
    "to": "js/order-link.js",
    "kind": "script",
-   "note": "v=4.8.5"
+   "note": "v=4.9.0"
   },
   {
    "from": "owner.html",

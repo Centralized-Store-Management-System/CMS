@@ -20,8 +20,10 @@
     style.id = 'cms-owner-orders-style';
     style.textContent = [
       'body.cms-owner-live-orders .col{min-width:0;min-height:100vh}',
-      'body.cms-owner-live-orders main#view{width:100%;max-width:none;height:calc(100vh - 16px);min-height:0;margin:0;padding:10px 12px 12px;overflow:hidden;display:flex;flex-direction:column}',
-      'body.cms-owner-live-orders .cms-live-orders-frame{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;background:#f4f7f4;border:1px solid #dce7df;border-radius:14px;overflow:hidden}',
+      /* เดิมล็อกไว้ 100vh + overflow:hidden → จอเตี้ยแล้วของที่ล้นออกไปไม่มีทางเลื่อนถึงเลย */
+      'body.cms-owner-live-orders main#view{width:100%;max-width:none;height:calc(100vh - 16px);min-height:0;margin:0;padding:10px 12px 12px;overflow:auto;display:flex;flex-direction:column}',
+      'body.cms-owner-live-orders .cms-live-orders-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
+      'body.cms-owner-live-orders .cms-live-orders-frame{display:flex;flex:1;flex-direction:column;min-width:0;min-height:560px;height:100%;background:#f4f7f4;border:1px solid #dce7df;border-radius:14px;overflow:hidden}',
       'body.cms-owner-live-orders .oc-main{max-width:none;width:100%;min-width:0;min-height:calc(100dvh - 64px);display:flex;flex-direction:column;padding:12px}',
       'body.cms-owner-live-orders .cms-owner-app-frame{min-height:calc(100dvh - 104px)}',
       'body.cms-owner-live-orders .cms-owner-app-frame .cms-live-orders-stage{min-height:65dvh}',
@@ -48,7 +50,9 @@
     setTimeout(() => loadOwnerPortalFrame(page, run), 0);
     return '<section class="cms-live-orders-frame">' +
       '<div class="cms-live-orders-toolbar"><strong>' + esc(PAGES[page]) + ' · Café Amazon</strong>' +
-      '<button type="button" data-a="orderEmbedReload" data-page="' + esc(page) + '">↻ โหลดใหม่</button></div>' +
+      '<span class="cms-live-orders-acts">' +
+      '<button type="button" data-a="orderEmbedOpen" data-page="' + esc(page) + '" title="เปิดในแท็บใหม่ เต็มหน้าจอ — เมนูของระบบออเดอร์จะเลื่อนได้ครบ">⤢ เปิดเต็มจอ</button>' +
+      '<button type="button" data-a="orderEmbedReload" data-page="' + esc(page) + '">↻ โหลดใหม่</button></span></div>' +
       '<div class="cms-live-orders-stage" id="cms-live-orders-stage">' +
       '<div class="cms-live-orders-loading">กำลังเชื่อมต่อ ' + esc(PAGES[page]) + '…</div></div></section>';
   }
@@ -163,6 +167,19 @@
     NAV_ORDER.splice(0, NAV_ORDER.length, ...GROUPS.flatMap(g => g[1]));
     Object.assign(ACT, {
       orderOpen: (a, b) => openOrder(a, b),
+      orderEmbedOpen: async (a, b) => {
+        const page = b?.dataset?.page || 'orders';
+        const win = window.open('', '_blank');                   // เปิดแท็บก่อนรอเซิร์ฟเวอร์ ไม่งั้นเบราว์เซอร์บล็อก
+        try {
+          const ticket = await API.call('orderTicket', { t: S.token, page });   // ตั๋วใช้ได้ครั้งเดียว ต้องขอใหม่ทุกครั้ง
+          const url = typeof ticket === 'string' ? ticket : (ticket && (ticket.url || ticket.href || ticket.redirect_url || ticket.redirectUrl || (ticket.data && ticket.data.url)));
+          if (!url) throw new Error('ระบบไม่ได้ส่งลิงก์กลับมา');
+          if (win) win.location = new URL(url, location.href).href; else location.href = url;
+        } catch (e) {
+          if (win) win.close();
+          toast('เปิดเต็มจอไม่สำเร็จ: ' + (e.message || e));
+        }
+      },
       orderEmbedReload: (a, b) => { const page = b?.dataset?.page || document.querySelector('[data-a="orderEmbedReload"]')?.dataset.page || 'orders'; return loadOwnerPortalFrame(page, ++ownerFrameRequest); }
     });
     // กดเมนูแล้วเปิดระบบออเดอร์เลย (หน้าในหลังร้านเป็นทางสำรอง)
@@ -236,7 +253,9 @@
         '<section class="cms-live-orders-frame cms-owner-app-frame">' +
         '<div class="cms-live-orders-toolbar"><strong>' + esc(PAGES[view]) + ' · Café Amazon</strong>' +
         '<button type="button" data-owner-order-back>← กลับหน้า Owner</button>' +
-        '<button type="button" data-owner-order-reload data-page="' + esc(view) + '">↻ โหลดใหม่</button></div>' +
+        '<span class="cms-live-orders-acts">' +
+        '<button type="button" data-owner-order-open data-page="' + esc(view) + '" title="เปิดในแท็บใหม่ เต็มหน้าจอ">⤢ เปิดเต็มจอ</button>' +
+        '<button type="button" data-owner-order-reload data-page="' + esc(view) + '">↻ โหลดใหม่</button></span></div>' +
         '<div class="cms-live-orders-stage" id="cms-live-orders-stage">' +
         '<div class="cms-live-orders-loading">กำลังยืนยันสิทธิ์ Owner…</div></div></section>'
       );
@@ -244,7 +263,20 @@
       setTimeout(() => loadOwnerPortalFrame(view, run), 0);
     };
 
-    document.addEventListener('click', e => {
+    document.addEventListener('click', async e => {
+      const openButton = e.target.closest('[data-owner-order-open]');
+      if (openButton) {
+        e.preventDefault();
+        const page = openButton.dataset.page || OC.view || 'orders';
+        const win = window.open('', '_blank');                   // เปิดแท็บก่อนรอเซิร์ฟเวอร์ ไม่งั้นเบราว์เซอร์บล็อก
+        try {
+          const ticket = await API.call('orderTicket', { t: S.token, page });   // ตั๋วใช้ได้ครั้งเดียว ต้องขอใหม่ทุกครั้ง
+          const url = typeof ticket === 'string' ? ticket : (ticket && (ticket.url || ticket.href || ticket.redirect_url || ticket.redirectUrl || (ticket.data && ticket.data.url)));
+          if (!url) throw new Error('ระบบไม่ได้ส่งลิงก์กลับมา');
+          if (win) win.location = new URL(url, location.href).href; else location.href = url;
+        } catch (err) { if (win) win.close(); toast('เปิดเต็มจอไม่สำเร็จ: ' + (err.message || err)); }
+        return;
+      }
       const reloadButton = e.target.closest('[data-owner-order-reload]');
       if (reloadButton) {
         e.preventDefault();
