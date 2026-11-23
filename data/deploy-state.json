@@ -55,6 +55,19 @@
    "version": 10,
    "deployed_at": "2026-11-22",
    "verified": false
+  },
+  "backoffice": {
+   "in_repo": false,
+   "version": 14,
+   "deployed_at": "2026-11-22",
+   "verified": true,
+   "pinned_commit": "ac379f700b202502532fc0ad76e5b223a4a25147",
+   "pinned_files": [
+    "server/runtime.js",
+    "server/store-pg.js",
+    "server/order-link.js"
+   ],
+   "note": "import server/*.js ผ่าน jsDelivr ที่ปักด้วย commit SHA · แก้ไฟล์ใน server/ แล้วต้อง deploy ใหม่ให้ชี้ SHA ใหม่"
   }
  }
 }

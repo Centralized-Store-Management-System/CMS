@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-23T00:31:41.316Z",
+ "generated_at": "2026-11-23T00:44:24.568Z",
  "rules": [
   {
    "code": "script-missing",
@@ -45,20 +45,62 @@
    "code": "version-stale",
    "level": "error",
    "title": "แก้ไฟล์แล้วไม่ได้เปลี่ยนเลขเวอร์ชัน"
+  },
+  {
+   "code": "role-drift",
+   "level": "error",
+   "title": "Role / สิทธิ์เริ่มต้น สองฝั่งไม่ตรงกัน"
+  },
+  {
+   "code": "sql-unknown-table",
+   "level": "error",
+   "title": "SQL อ้างตารางที่ไม่มีอยู่จริง"
+  },
+  {
+   "code": "pin-stale",
+   "level": "error",
+   "title": "โค้ดเซิร์ฟเวอร์เปลี่ยนแล้วแต่ฟังก์ชันยังปักที่ commit เก่า"
+  },
+  {
+   "code": "fn-missing-in-repo",
+   "level": "warn",
+   "title": "ฟังก์ชันที่รันอยู่แต่ไม่มีซอร์สใน repo"
+  },
+  {
+   "code": "graph-stale",
+   "level": "error",
+   "title": "ผลตรวจใน repo เก่ากว่าโค้ด"
   }
  ],
  "summary": {
   "pages": 7,
   "scripts": 110,
-  "functions": 10,
-  "tables": 43,
-  "edges": 323,
+  "functions": 13,
+  "tables": 64,
+  "edges": 324,
   "errors": 0,
   "warns": 0,
-  "debt": 22,
+  "debt": 23,
   "version_rule": "ตรวจแล้วเทียบกับ origin/main"
  },
  "nodes": [
+  {
+   "id": "fn:backoffice",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "backoffice",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": null
+  },
+  {
+   "id": "pin:backoffice",
+   "status": "ok",
+   "issues": 0,
+   "kind": "fn",
+   "label": "backoffice → server/runtime.js, server/store-pg.js, server/order-link.js",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)"
+  },
   {
    "id": "fn:finance",
    "status": "warn",
@@ -148,6 +190,14 @@
    "label": "it-ops-orchestrator",
    "layer": "เซิร์ฟเวอร์ (Edge Function)",
    "file": "supabase/functions/it-ops-orchestrator/index.ts"
+  },
+  {
+   "id": "contract:roles",
+   "status": "ok",
+   "issues": 0,
+   "kind": "fn",
+   "label": "Role / สิทธิ์เริ่มต้น (เว็บ ↔ เซิร์ฟเวอร์)",
+   "layer": "สัญญาระหว่างสองฝั่ง"
   },
   {
    "id": "clock.html",
@@ -1102,6 +1152,38 @@
    "layer": "ฐานข้อมูล"
   },
   {
+   "id": "tbl:finance.accounting_periods",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.accounting_periods",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.approval_events",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.approval_events",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.audit_events",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.audit_events",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.chart_of_accounts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.chart_of_accounts",
+   "layer": "ฐานข้อมูล"
+  },
+  {
    "id": "tbl:finance.companies",
    "status": "ok",
    "issues": 0,
@@ -1110,11 +1192,147 @@
    "layer": "ฐานข้อมูล"
   },
   {
+   "id": "tbl:finance.document_files",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.document_files",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.document_lines",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.document_lines",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.document_sequences",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.document_sequences",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.documents",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.documents",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.expense_clearances",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.expense_clearances",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.journal_entries",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.journal_entries",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.journal_lines",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.journal_lines",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.journal_sequences",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.journal_sequences",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.partners",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.partners",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.payment_allocations",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.payment_allocations",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.payment_events",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.payment_events",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.payment_verifications",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.payment_verifications",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.payments",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.payments",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.tax_filing_lines",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.tax_filing_lines",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.tax_filings",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.tax_filings",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.tax_transactions",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.tax_transactions",
+   "layer": "ฐานข้อมูล"
+  },
+  {
    "id": "tbl:finance.user_roles",
    "status": "ok",
    "issues": 0,
    "kind": "table",
    "label": "finance.user_roles",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.wht_certificates",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.wht_certificates",
    "layer": "ฐานข้อมูล"
   },
   {
@@ -3164,6 +3382,12 @@
    "from": "modules/finance/js/fin-core.js",
    "to": "fn:finance-api",
    "kind": "call"
+  },
+  {
+   "from": "fn:backoffice",
+   "to": "pin:backoffice",
+   "kind": "pin",
+   "note": "ac379f7"
   }
  ],
  "issues": [
@@ -3321,6 +3545,19 @@
    "detail": "line.html มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ (เป็นค่าสำรองหลังอ่านจาก config)",
    "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
    "where": "line.html",
+   "baselined": true
+  },
+  {
+   "key": "fn-missing-in-repo|backoffice",
+   "code": "fn-missing-in-repo",
+   "level": "warn",
+   "at": [
+    "fn:backoffice"
+   ],
+   "title": "ฟังก์ชันที่รันอยู่แต่ไม่มีซอร์สใน repo",
+   "detail": "backoffice (deployed version 14) ไม่มีโฟลเดอร์ supabase/functions/backoffice · อ่านรีวิวหรือย้อนรุ่นไม่ได้",
+   "fix": "นำซอร์สที่ deploy อยู่กลับเข้า repo แล้วบันทึกลายเซ็นใน data/deploy-state.json",
+   "where": "data/deploy-state.json",
    "baselined": true
   },
   {

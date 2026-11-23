@@ -183,6 +183,103 @@ for (const f of jsFiles) {
   }
 }
 
+/* ---------- ขั้นที่ 4ข: ฟังก์ชันที่ deploy อยู่แต่ไม่มีซอร์สใน repo + commit ที่ปักไว้ต้องไม่เก่า ----------
+ * ฟังก์ชัน backoffice import server/*.js ผ่าน jsDelivr โดยปักที่ commit SHA
+ * แก้ไฟล์ใน server/ แล้วไม่ deploy ฟังก์ชันใหม่ = โค้ดใหม่ไม่มีผล และไม่มีใครรู้ (กติกาใน AGENTS.md)
+ */
+for (const [slug, rec] of Object.entries(state.functions || {})) {
+  const id = 'fn:' + slug;
+  if (!fnDirs.includes(slug)) {
+    node(id, { kind: 'fn', label: slug, layer: 'เซิร์ฟเวอร์ (Edge Function)', file: null });
+    issue({ key: `fn-missing-in-repo|${slug}`, code: 'fn-missing-in-repo', level: 'warn', at: [id], title: 'ฟังก์ชันที่รันอยู่แต่ไม่มีซอร์สใน repo', detail: `${slug} (deployed version ${rec.version ?? '-'}) ไม่มีโฟลเดอร์ supabase/functions/${slug} · อ่านรีวิวหรือย้อนรุ่นไม่ได้`, fix: 'นำซอร์สที่ deploy อยู่กลับเข้า repo แล้วบันทึกลายเซ็นใน ' + STATE_PATH, where: STATE_PATH });
+  }
+  if (!rec.pinned_commit) continue;
+  const pinFiles = (rec.pinned_files || ['server']).join(' ');
+  let after = '';
+  try { after = execSync(`git log --format=%h ${rec.pinned_commit}..HEAD -- ${pinFiles}`, { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch (_) { continue; }
+  node('pin:' + slug, { kind: 'fn', label: slug + ' → ' + (rec.pinned_files || []).join(', '), layer: 'เซิร์ฟเวอร์ (Edge Function)' });
+  link(id, 'pin:' + slug, 'pin', rec.pinned_commit.slice(0, 7));
+  if (after) {
+    const n = after.split('\n').filter(Boolean).length;
+    issue({ key: `pin-stale|${slug}`, code: 'pin-stale', level: 'error', at: [id, 'pin:' + slug], title: 'โค้ดเซิร์ฟเวอร์เปลี่ยนแล้วแต่ฟังก์ชันยังปักที่ commit เก่า', detail: `${slug} import ${(rec.pinned_files || []).join(', ')} ที่ commit ${rec.pinned_commit.slice(0, 7)} แต่ไฟล์เหล่านี้มี commit ใหม่กว่าอีก ${n} ครั้ง · ของที่รันอยู่จริงยังเป็นโค้ดเก่า`, fix: 'deploy ฟังก์ชัน ' + slug + ' ใหม่ให้ชี้ commit ล่าสุด แล้วอัปเดต pinned_commit ใน ' + STATE_PATH, where: STATE_PATH });
+  }
+}
+
+/* ---------- ขั้นที่ 4ค: ชื่อตารางใน SQL ต้องมีอยู่จริงใน schema ---------- */
+const TBL_PATH = 'data/schema-tables.json';
+const schemaRef = existsSync(join(ROOT, TBL_PATH)) ? JSON.parse(rd(TBL_PATH)) : null;
+const known = schemaRef ? new Set([...(schemaRef.tables || []), ...(schemaRef.routines || [])]) : null;
+if (known) {
+  /* นับเฉพาะที่อยู่หลังคำสั่ง SQL จริง (from / join / into / update / delete from / rpc)
+   * ไม่งั้นจะไปจับ path ของไฟล์อย่าง modules/finance/finance.html หรือ property ของ object ใน js */
+  const SQL_RE = /\b(?:from|join|into|update|rpc\(['"`]?)\s+?(public|finance|backoffice)\.([a-z_][a-z0-9_]*)\b/gi;
+  const seen = new Map();   // ตาราง -> ไฟล์แรกที่อ้าง
+  for (const f of allFiles.filter(x => x.startsWith('supabase/functions/') && x.endsWith('.ts'))) {
+    for (const m of rd(f).matchAll(SQL_RE)) {
+      const t = m[1].toLowerCase() + '.' + m[2];
+      if (!seen.has(t)) seen.set(t, f);
+    }
+  }
+  for (const [t, f] of seen) {
+    const id = 'tbl:' + t;
+    node(id, { kind: 'table', label: t, layer: 'ฐานข้อมูล' });
+    if (known.has(t)) continue;
+    issue({ key: `sql-unknown-table|${t}`, code: 'sql-unknown-table', level: 'error', at: [id, f], title: 'SQL อ้างตารางที่ไม่มีอยู่จริง', detail: `${f} อ้างถึง ${t} แต่ไม่พบตารางนี้ใน schema (${TBL_PATH})`, fix: 'แก้ชื่อตาราง หรือถ้าเพิ่งสร้างตารางใหม่ ให้อัปเดต ' + TBL_PATH, where: f });
+  }
+}
+
+/* ---------- ขั้นที่ 4ง: Role / สิทธิ์เริ่มต้น ฝั่งหน้าเว็บต้องตรงกับฝั่งเซิร์ฟเวอร์ ----------
+ * นี่คือบั๊ก "ตั้งรหัสปลดล็อกแอปไม่ได้" เมื่อวาน: เซิร์ฟเวอร์มี Role ครบ แต่หน้าเว็บมีรายชื่อของตัวเอง
+ * สัญญากลางอยู่ที่ data/role-contract.json (สร้างจากซอร์สเซิร์ฟเวอร์จริงด้วย tools/role-contract.mjs)
+ */
+const CONTRACT_PATH = 'data/role-contract.json';
+if (existsSync(join(ROOT, CONTRACT_PATH))) {
+  const C = JSON.parse(rd(CONTRACT_PATH));
+  const web = { ROLE_NAME: {}, UPREFIX: {}, DEFAULT_PERMS: {}, PERM_ROLES: [] };
+  const W = Object.keys(web);
+  const lit = s => { try { return Function('"use strict";return (' + s + ')')(); } catch (_) { return undefined; } };
+  for (const f of jsFiles) {
+    const src = rd(f);
+    const con = {};   // ค่าคงที่ในไฟล์เดียวกัน เช่น const R = 'verifier'
+    for (const m of src.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*'([^']*)'/g)) con[m[1]] = m[2];
+    for (const m of src.matchAll(/,\s*([A-Za-z_$][\w$]*)\s*=\s*'([^']*)'/g)) con[m[1]] = m[2];
+    for (const m of src.matchAll(new RegExp('(?:const|let|var)\\s+(' + W.join('|') + ')\\s*=\\s*(\\{[^{}]*\\}|\\[[^\\]]*\\])', 'g'))) {
+      const v = lit(m[2]); if (v !== undefined) web[m[1]] = v;
+    }
+    for (const m of src.matchAll(new RegExp('(' + W.join('|') + ')\\[([A-Za-z_$][\\w$]*)\\]\\s*=\\s*(\\[[^\\]]*\\]|\'[^\']*\'|"[^"]*"|[A-Za-z_$][\\w$]*)', 'g'))) {
+      const key = con[m[2]]; if (!key) continue;
+      const raw = m[3];
+      const val = /^[A-Za-z_$]/.test(raw) ? con[raw] : lit(raw);
+      if (val !== undefined) web[m[1]][key] = val;
+    }
+    for (const m of src.matchAll(/PERM_ROLES\.push\(([A-Za-z_$][\w$]*|'[^']*')\)/g)) {
+      const v = /^'/.test(m[1]) ? m[1].slice(1, -1) : con[m[1]];
+      if (v && !web.PERM_ROLES.includes(v)) web.PERM_ROLES.push(v);
+    }
+  }
+  const nd = 'contract:roles';
+  node(nd, { kind: 'fn', label: 'Role / สิทธิ์เริ่มต้น (เว็บ ↔ เซิร์ฟเวอร์)', layer: 'สัญญาระหว่างสองฝั่ง' });
+  const cmp = (what, a, b, fixHint) => {
+    const miss = Object.keys(b).filter(k => !(k in a));
+    const extra = Object.keys(a).filter(k => !(k in b));
+    const diff = Object.keys(b).filter(k => k in a && JSON.stringify(Array.isArray(b[k]) ? [...a[k]].sort() : a[k]) !== JSON.stringify(Array.isArray(b[k]) ? [...b[k]].sort() : b[k]));
+    if (!miss.length && !extra.length && !diff.length) return;
+    issue({
+      key: 'role-drift|' + what, code: 'role-drift', level: 'error', at: [nd],
+      title: 'ค่าสองฝั่งไม่ตรงกัน: ' + what,
+      detail: [miss.length ? 'หน้าเว็บขาด: ' + miss.join(', ') : '', extra.length ? 'หน้าเว็บมีเกิน: ' + extra.join(', ') : '',
+      diff.length ? 'ค่าต่างกัน: ' + diff.map(k => k + ' (เว็บ=' + JSON.stringify(a[k]) + ' เซิร์ฟเวอร์=' + JSON.stringify(b[k]) + ')').join(' · ') : ''].filter(Boolean).join(' · '),
+      fix: fixHint, where: CONTRACT_PATH
+    });
+  };
+  cmp('ชื่อ Role (ROLE_NAME ↔ ROLES)', web.ROLE_NAME, C.roles || {}, 'แก้ ROLE_NAME ฝั่งหน้าเว็บให้ตรง หรือถ้าเซิร์ฟเวอร์เปลี่ยน ให้รัน node tools/role-contract.mjs ใหม่');
+  cmp('คำนำหน้าชื่อผู้ใช้ (UPREFIX ↔ ROLE_PREFIX)', web.UPREFIX, C.role_prefix || {}, 'แก้ UPREFIX ฝั่งหน้าเว็บให้ตรงกับ ROLE_PREFIX ฝั่งเซิร์ฟเวอร์');
+  cmp('สิทธิ์เริ่มต้น (DEFAULT_PERMS)', web.DEFAULT_PERMS, C.default_perms || {}, 'แก้ DEFAULT_PERMS ให้ตรงกันทั้งสองฝั่ง (กติกาใน AGENTS.md)');
+  const needCols = Object.keys(C.roles || {}).filter(r => r !== 'owner');
+  const missCols = needCols.filter(r => !web.PERM_ROLES.includes(r));
+  if (missCols.length) issue({ key: 'role-drift|PERM_ROLES', code: 'role-drift', level: 'error', at: [nd], title: 'ตารางสิทธิ์ขาดคอลัมน์ของบาง Role', detail: 'Settings › Permissions ไม่มีคอลัมน์ของ: ' + missCols.join(', ') + ' · เจ้าของร้านจึงตั้งสิทธิ์ระดับนั้นไม่ได้', fix: 'เพิ่มเข้า PERM_ROLES ฝั่งหน้าเว็บ', where: 'js/mod-settings.js' });
+}
+
 /* ---------- ขั้นที่ 5: ที่อยู่ API ต้องมาจาก config ---------- */
 const CONFIG_OK = new Set(['js/config.js', 'modules/finance/js/fin-config.js', 'tools/link-check.mjs']);
 for (const f of [...jsFiles, ...htmlFiles]) {
@@ -254,7 +351,12 @@ const graph = {
     { code: 'fn-unregistered', level: 'warn', title: 'ยังไม่มีบันทึกการ deploy' },
     { code: 'fn-no-source', level: 'error', title: 'ฟังก์ชันไม่มีซอร์สใน repo' },
     { code: 'api-hardcoded', level: 'error', title: 'ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์' },
-    { code: 'version-stale', level: 'error', title: 'แก้ไฟล์แล้วไม่ได้เปลี่ยนเลขเวอร์ชัน' }
+    { code: 'version-stale', level: 'error', title: 'แก้ไฟล์แล้วไม่ได้เปลี่ยนเลขเวอร์ชัน' },
+    { code: 'role-drift', level: 'error', title: 'Role / สิทธิ์เริ่มต้น สองฝั่งไม่ตรงกัน' },
+    { code: 'sql-unknown-table', level: 'error', title: 'SQL อ้างตารางที่ไม่มีอยู่จริง' },
+    { code: 'pin-stale', level: 'error', title: 'โค้ดเซิร์ฟเวอร์เปลี่ยนแล้วแต่ฟังก์ชันยังปักที่ commit เก่า' },
+    { code: 'fn-missing-in-repo', level: 'warn', title: 'ฟังก์ชันที่รันอยู่แต่ไม่มีซอร์สใน repo' },
+    { code: 'graph-stale', level: 'error', title: 'ผลตรวจใน repo เก่ากว่าโค้ด' }
   ],
   summary: {
     pages: [...nodes.values()].filter(n => n.kind === 'page').length,
