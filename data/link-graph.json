@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-23T06:09:32.030Z",
+ "generated_at": "2026-11-23T06:29:04.654Z",
  "rules": [
   {
    "code": "script-missing",
@@ -79,10 +79,10 @@
  ],
  "summary": {
   "pages": 7,
-  "scripts": 113,
+  "scripts": 114,
   "functions": 13,
   "tables": 64,
-  "edges": 329,
+  "edges": 331,
   "errors": 0,
   "warns": 0,
   "debt": 23,
@@ -850,6 +850,14 @@
    "issues": 0,
    "kind": "script",
    "label": "js/pwa.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/role-no-position.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/role-no-position.js",
    "layer": "ไฟล์โปรแกรม"
   },
   {
@@ -1952,7 +1960,7 @@
    "from": "index.html",
    "to": "js/mod-hr.js",
    "kind": "script",
-   "note": "v=5.0.2"
+   "note": "v=5.1.0"
   },
   {
    "from": "index.html",
@@ -2144,7 +2152,7 @@
    "from": "index.html",
    "to": "js/hr-position-perms.js",
    "kind": "script",
-   "note": "v=1.0.3"
+   "note": "v=1.0.4"
   },
   {
    "from": "index.html",
@@ -2175,6 +2183,12 @@
    "to": "js/role-verifier.js",
    "kind": "script",
    "note": "v=1.0.1"
+  },
+  {
+   "from": "index.html",
+   "to": "js/role-no-position.js",
+   "kind": "script",
+   "note": "v=1.0.0"
   },
   {
    "from": "index.html",
@@ -2406,9 +2420,15 @@
   },
   {
    "from": "owner.html",
+   "to": "js/role-no-position.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "owner.html",
    "to": "js/link-web.js",
    "kind": "script",
-   "note": "v=2.2.0"
+   "note": "v=2.3.0"
   },
   {
    "from": "owner.html",
