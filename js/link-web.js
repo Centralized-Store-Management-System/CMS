@@ -251,7 +251,8 @@
     const bad = sp.filter(s => s.status !== 'ok');
     const needPos = (WB.kind === 'pos' || WB.kind === 'emp') && !posList().length;
     return CSS
-      + '<p class="note">กดชื่อพนักงาน บัญชี ตำแหน่ง เมนู หรือสาขา แล้วดูว่าสิ่งนั้นเชื่อมกับอะไรบ้าง · เส้นประแดง = ยังไม่เชื่อม กดที่กล่องเพื่อดูว่าต้องไปแก้ที่ไหน</p>'
+      + '<p class="note">กดชื่อพนักงาน บัญชี ตำแหน่ง เมนู หรือสาขา แล้วดูว่าสิ่งนั้นเชื่อมกับอะไรบ้าง · เส้นประแดง = ยังไม่เชื่อม กดที่กล่องเพื่อดูว่าต้องไปแก้ที่ไหน'
+      + (S.me && S.me.role === 'owner' ? ' · ส่วนใยของ<b>ไฟล์โปรแกรม</b> (ไว้กันโค้ดพังก่อนขึ้นระบบ) อยู่ที่ <a href="owner.html#links">แอป Owner › ใยแมงมุมโค้ด</a>' : '') + '</p>'
       + (rows.length ? '<div class="wb-fix"><b>ทั้งระบบมีจุดที่ยังไม่เชื่อม ' + rows.length + ' จุด · ระบบซ่อมให้ได้เอง ' + rows.filter(r => r.s.do).length + ' จุด</b><p>'
         + rows.slice(0, 6).map(r => esc2(r.who) + ': ' + esc2(r.s.label)).join(' · ') + (rows.length > 6 ? ' และอีก ' + (rows.length - 6) + ' จุด' : '') + '</p></div>'
         : '<div class="note" style="background:#e8f7ef;color:#17673f">ทุกจุดที่ตรวจได้เชื่อมกันครบแล้ว</div>')
