@@ -77,6 +77,12 @@ with sync_playwright() as p:
     pg.click('.sheet [data-act="save"]'); pg.wait_for_selector('.sheet',state='detached',timeout=15000); pg.wait_for_timeout(500)
     e3=[e for e in st()['db']['employees'] if e['id']=='E3'][0]
     ok('HR เปลี่ยนตำแหน่ง → Role พนักงานเป็น Manager ตามตำแหน่ง', e3['role']=='manager' and e3.get('positionCode')=='MANAGER', e3)
+    # เปลี่ยนตำแหน่งของคนที่มีรหัสตำแหน่งเดิมแล้ว ต้องไม่เด้งกลับ (บาริสต้า → ผู้จัดการร้าน)
+    for target in ('บาริสต้า', 'ผู้จัดการร้าน'):
+        pg.click('#view .row[data-a="emp:E2"]'); pg.wait_for_selector('.sheet [data-k="position"]')
+        pg.select_option('.sheet [data-k="position"]', target); pg.click('.sheet [data-act="save"]'); pg.wait_for_selector('.sheet', state='detached', timeout=15000); pg.wait_for_timeout(400)
+    e2=[e for e in st()['db']['employees'] if e['id']=='E2'][0]
+    ok('เปลี่ยนตำแหน่ง บาริสต้า → ผู้จัดการร้าน แล้วไม่เด้งกลับ', e2['position']=='ผู้จัดการร้าน' and e2['positionCode']=='MANAGER', e2)
     pg.click('#view [data-a="newEmp"]'); pg.wait_for_selector('.sheet [data-k="position"]')
     pg.select_option('.sheet [data-k="position"]','Final Verifier'); pg.wait_for_timeout(100)
     ok('ตำแหน่งที่ยังไม่ตั้ง Role → เลือก Role เองได้', not pg.eval_on_selector('.sheet [data-k="role"]','e=>e.disabled'))

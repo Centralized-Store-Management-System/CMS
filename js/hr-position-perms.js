@@ -109,11 +109,16 @@
     } finally { running = false; }
   }
   // โหลดตำแหน่งเบื้องหลัง (เฉพาะคนที่ดูแล HR / ผู้ใช้) เพื่อให้ซิงก์ได้แม้ไม่ได้เปิดหน้า HR
+  let permTried = false;
   function ensure() {
     if (!S.me || S.demo || !(can('hr') || can('users'))) return;
     if (!HR_POSITION_LOADED && !HR_POSITION_LOADING) {
-      HR_POSITION_LOADING = true;
-      hrLoadPositions().catch(() => {}).finally(() => { HR_POSITION_LOADED = true; HR_POSITION_LOADING = false; if ((location.hash || '').startsWith('#hr')) App.render(); });
+      HR_POSITION_LOADING = true; permTried = true;
+      hrLoadPositions().catch(() => {}).finally(() => { HR_POSITION_LOADED = true; HR_POSITION_LOADING = false; App.render(); });
+    } else if (HR_POSITION_LOADED && !HR_POSITION_LOADING && !permTried) {
+      // ตำแหน่งถูกโหลดโดยไฟล์อื่น (positions-sync.js) ซึ่งไม่ได้ส่งแม่แบบสิทธิ์มาด้วย → โหลดแม่แบบเอง 1 ครั้ง
+      permTried = true;
+      hrLoadPositions().then(() => App.render()).catch(() => {});
     } else schedule();
   }
   if (typeof App === 'object' && typeof App.render === 'function') {
