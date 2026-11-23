@@ -127,6 +127,31 @@ for (const [name, files] of usedAt) {
   issue({ key: 'action-missing|' + name, code: 'action-missing', level: 'error', at: [...new Set(files)], title: 'ปุ่มที่กดแล้วไม่มีอะไรเกิดขึ้น', detail: `มีปุ่ม data-a="${name}" แต่ชื่อนี้ไม่ปรากฏที่อื่นในโปรแกรมเลย จึงไม่มีตัวรับ`, fix: `ประกาศ ACT.${name} หรือใส่ใน acts ของโมดูล · ถ้าเพิ่ม action หลัง defMod ต้อง Object.assign(ACT, {…}) ด้วย`, where: [...new Set(files)][0] });
 }
 
+
+/* ---------- ขั้นที่ 2ข: โมดูลที่ประกาศไว้ ต้องมีทางโผล่ในเมนูจริง ----------
+ * js/app.js ไล่คีย์เมนูไว้ตายตัวใน GROUPS แล้ว NAV_ORDER คำนวณครั้งเดียวตอนโหลด
+ * ประกาศ defMod เฉยๆ โดยไม่ใส่คีย์เข้า GROUPS = โมดูลมีอยู่จริงแต่ไม่มีใครเห็น และไม่มีอะไรฟ้อง
+ * (เจอจริงกับเมนู "ใยแมงมุมระบบ" — เจ้าของร้านหาไม่เจอทุกหน้าจอ) */
+const navKeys = new Set();
+const noComment = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');   // โค้ดที่ถูกคอมเมนต์ไว้ไม่นับว่าใช้งานจริง
+for (const f of jsFiles) {
+  const src = noComment(rd(f));
+  const g = src.match(/const GROUPS\s*=\s*\[[\s\S]*?\];/);
+  if (g) for (const m of g[0].matchAll(/'([a-z][\w-]*)'/g)) navKeys.add(m[1]);
+  for (const m of src.matchAll(/\.push\('([\w-]+)'\)/g)) navKeys.add(m[1]);                       // ต่อเมนูเข้ากลุ่มเดิม
+  for (const m of src.matchAll(/GROUPS\.splice\([^[]*\[[^[]*\[([^\]]*)\]/g)) {                   // เพิ่มกลุ่มใหม่ทั้งกลุ่ม
+    for (const k of m[1].matchAll(/'([\w-]+)'/g)) navKeys.add(k[1]);
+  }
+}
+for (const f of jsFiles) {
+  for (const m of rd(f).matchAll(/defMod\(\{[\s\S]{0,120}?key:\s*'([\w-]+)'/g)) {
+    const key = m[1];
+    node(f, { kind: 'script', label: f, layer: 'ไฟล์โปรแกรม' });
+    if (navKeys.has(key)) continue;
+    issue({ key: `mod-not-in-menu|${key}`, code: 'mod-not-in-menu', level: 'error', at: [f], title: 'โมดูลที่ไม่มีทางโผล่ในเมนู', detail: `${f} ประกาศโมดูล "${key}" ด้วย defMod แต่คีย์นี้ไม่อยู่ใน GROUPS และไม่มีไฟล์ไหนใส่เข้าไป · ผู้ใช้จะไม่เห็นเมนูนี้เลย`, fix: `ใส่ '${key}' เข้ากลุ่มใน GROUPS (js/app.js) หรือให้ไฟล์นั้นต่อเมนูเอง เช่น GROUPS.find(g => g[0] === 'System')[1].push('${key}') แล้วคำนวณ NAV_ORDER ใหม่`, where: f });
+  }
+}
+
 /* ---------- ขั้นที่ 3: ชื่อซ้ำข้ามไฟล์ในหน้าเดียวกัน (classic script ใช้ขอบเขตร่วมกัน) ---------- */
 const DECL_RE = /^(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/gm;
 const declIn = new Map();      // name -> Set(file)
@@ -352,6 +377,7 @@ const graph = {
     { code: 'fn-no-source', level: 'error', title: 'ฟังก์ชันไม่มีซอร์สใน repo' },
     { code: 'api-hardcoded', level: 'error', title: 'ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์' },
     { code: 'version-stale', level: 'error', title: 'แก้ไฟล์แล้วไม่ได้เปลี่ยนเลขเวอร์ชัน' },
+    { code: 'mod-not-in-menu', level: 'error', title: 'โมดูลที่ไม่มีทางโผล่ในเมนู' },
     { code: 'role-drift', level: 'error', title: 'Role / สิทธิ์เริ่มต้น สองฝั่งไม่ตรงกัน' },
     { code: 'sql-unknown-table', level: 'error', title: 'SQL อ้างตารางที่ไม่มีอยู่จริง' },
     { code: 'pin-stale', level: 'error', title: 'โค้ดเซิร์ฟเวอร์เปลี่ยนแล้วแต่ฟังก์ชันยังปักที่ commit เก่า' },
