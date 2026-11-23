@@ -1,0 +1,3457 @@
+{
+ "generated_at": "2026-11-23T00:31:41.316Z",
+ "rules": [
+  {
+   "code": "script-missing",
+   "level": "error",
+   "title": "หน้าเว็บโหลดไฟล์ที่ไม่มีอยู่จริง"
+  },
+  {
+   "code": "script-orphan",
+   "level": "warn",
+   "title": "ไฟล์ที่ไม่มีใครโหลด"
+  },
+  {
+   "code": "action-missing",
+   "level": "error",
+   "title": "ปุ่มที่กดแล้วไม่มีอะไรเกิดขึ้น"
+  },
+  {
+   "code": "dup-global",
+   "level": "error",
+   "title": "ประกาศชื่อซ้ำในหน้าเดียวกัน"
+  },
+  {
+   "code": "fn-drift",
+   "level": "error",
+   "title": "ซอร์สใน repo ไม่ตรงกับที่ deploy จริง"
+  },
+  {
+   "code": "fn-unregistered",
+   "level": "warn",
+   "title": "ยังไม่มีบันทึกการ deploy"
+  },
+  {
+   "code": "fn-no-source",
+   "level": "error",
+   "title": "ฟังก์ชันไม่มีซอร์สใน repo"
+  },
+  {
+   "code": "api-hardcoded",
+   "level": "error",
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์"
+  },
+  {
+   "code": "version-stale",
+   "level": "error",
+   "title": "แก้ไฟล์แล้วไม่ได้เปลี่ยนเลขเวอร์ชัน"
+  }
+ ],
+ "summary": {
+  "pages": 7,
+  "scripts": 110,
+  "functions": 10,
+  "tables": 43,
+  "edges": 323,
+  "errors": 0,
+  "warns": 0,
+  "debt": 22,
+  "version_rule": "ตรวจแล้วเทียบกับ origin/main"
+ },
+ "nodes": [
+  {
+   "id": "fn:finance",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "finance",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/finance/index.ts"
+  },
+  {
+   "id": "fn:finance-api",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "finance-api",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/finance-api/index.ts"
+  },
+  {
+   "id": "fn:hr-documents",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "hr-documents",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/hr-documents/index.ts"
+  },
+  {
+   "id": "fn:hr-position-api",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "hr-position-api",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/hr-position-api/index.ts"
+  },
+  {
+   "id": "fn:it-ai-ops",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "it-ai-ops",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/it-ai-ops/index.ts"
+  },
+  {
+   "id": "fn:it-control-center",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "it-control-center",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/it-control-center/index.ts"
+  },
+  {
+   "id": "fn:it-intelligence-network",
+   "status": "ok",
+   "issues": 0,
+   "kind": "fn",
+   "label": "it-intelligence-network",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/it-intelligence-network/index.ts"
+  },
+  {
+   "id": "fn:it-monitor",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "it-monitor",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/it-monitor/index.ts"
+  },
+  {
+   "id": "fn:it-ops-control-center",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "it-ops-control-center",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/it-ops-control-center/index.ts"
+  },
+  {
+   "id": "fn:it-ops-orchestrator",
+   "status": "warn",
+   "issues": 1,
+   "kind": "fn",
+   "label": "it-ops-orchestrator",
+   "layer": "เซิร์ฟเวอร์ (Edge Function)",
+   "file": "supabase/functions/it-ops-orchestrator/index.ts"
+  },
+  {
+   "id": "clock.html",
+   "status": "ok",
+   "issues": 0,
+   "kind": "page",
+   "label": "clock.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "index.html",
+   "status": "ok",
+   "issues": 0,
+   "kind": "page",
+   "label": "index.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "line.html",
+   "status": "warn",
+   "issues": 1,
+   "kind": "page",
+   "label": "line.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "modules/finance/finance-uat.html",
+   "status": "ok",
+   "issues": 0,
+   "kind": "page",
+   "label": "modules/finance/finance-uat.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "modules/finance/finance.html",
+   "status": "ok",
+   "issues": 0,
+   "kind": "page",
+   "label": "modules/finance/finance.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "owner.html",
+   "status": "ok",
+   "issues": 0,
+   "kind": "page",
+   "label": "owner.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "register.html",
+   "status": "ok",
+   "issues": 0,
+   "kind": "page",
+   "label": "register.html",
+   "layer": "หน้าเว็บ / แอป"
+  },
+  {
+   "id": "js/alert.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/alert.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/app-lock-roles.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/app-lock-roles.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/app-lock.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/app-lock.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/app-scope.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/app-scope.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/app-update.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/app-update.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/app.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/app.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/approve-fast.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/approve-fast.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/approve-history.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/approve-history.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/auth-web.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/auth-web.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/branchscope.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/branchscope.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/calc.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/calc.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/clock-embed.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/clock-embed.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/clock-swap.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/clock-swap.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/clock-ux.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/clock-ux.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/clock.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/clock.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/config.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/config.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/core.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/core.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/duealerts.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/duealerts.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/fast.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/fast.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/fastload.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/fastload.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/finance-embed.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/finance-embed.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/fold.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/fold.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/hr-access.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/hr-access.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/hr-documents.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/hr-documents.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/hr-position-perms.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/hr-position-perms.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/hrsync.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/hrsync.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-ai.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/it-ai.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-control-center.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/it-control-center.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-dialog.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/it-dialog.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-linkmap.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/it-linkmap.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-network.js",
+   "status": "warn",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/it-network.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-ops.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/it-ops.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/it-rum.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/it-rum.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/lean.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/lean.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/leave-check.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/leave-check.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/liff-fast.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/liff-fast.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/liff-focus.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/liff-focus.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/liff-view.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/liff-view.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/line-reset.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/line-reset.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/live.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/live.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-acct.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/mod-acct.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-admin.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-admin.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-approve.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-approve.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-dash.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-dash.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-design.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-design.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-freeze.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-freeze.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-hr.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "js/mod-hr.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-notify.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-notify.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-payroll.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-payroll.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-schedule.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-schedule.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-settings.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-settings.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-stock.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-stock.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-time.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-time.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-today.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-today.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/mod-users.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/mod-users.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/myclock.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/myclock.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/no-auto-ot.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/no-auto-ot.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/onereg.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/onereg.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/order-link.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/order-link.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-back-top.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-back-top.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-back.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-back.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-branches.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-branches.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-devices.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-devices.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-fold.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-fold.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-landing.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-landing.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-purge.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-purge.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner-pwa-lock.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner-pwa-lock.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/owner.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/owner.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/perms-positions.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/perms-positions.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/photo-ux.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/photo-ux.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/pos-id-fix.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/pos-id-fix.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/pwa.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/pwa.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/role-verifier.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/role-verifier.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/scan.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/scan.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/sched-positions.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/sched-positions.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/sched-sum.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/sched-sum.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/schedprint.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/schedprint.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/speed.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/speed.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/supa-ui.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/supa-ui.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/swaps-web.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/swaps-web.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/sync.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/sync.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/theme.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/theme.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/toast-ux.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/toast-ux.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/today-ux.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/today-ux.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/today-verifier.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/today-verifier.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/users-purge.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/users-purge.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "js/work-inbox.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "js/work-inbox.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/cms-theme-bridge.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/cms-theme-bridge.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-core.js",
+   "status": "bad",
+   "issues": 1,
+   "kind": "script",
+   "label": "modules/finance/js/fin-core.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-acct.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-acct.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-admin.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-admin.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-docs.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-docs.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-flow.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-flow.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-main.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-main.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-reports.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-reports.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-tax.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-tax.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-verification.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-verification.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/fin-pages-wht.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/fin-pages-wht.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/finance-calculations.js",
+   "status": "warn",
+   "issues": 1,
+   "kind": "script",
+   "label": "modules/finance/js/finance-calculations.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "modules/finance/js/finance-uat.js",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "modules/finance/js/finance-uat.js",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/finance-api/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/finance-api/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/finance/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/finance/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/hr-documents/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/hr-documents/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/hr-position-api/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/hr-position-api/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/it-ai-ops/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/it-ai-ops/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/it-control-center/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/it-control-center/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/it-intelligence-network/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/it-intelligence-network/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/it-monitor/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/it-monitor/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/it-ops-control-center/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/it-ops-control-center/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "supabase/functions/it-ops-orchestrator/index.ts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "script",
+   "label": "supabase/functions/it-ops-orchestrator/index.ts",
+   "layer": "ไฟล์โปรแกรม"
+  },
+  {
+   "id": "tbl:backoffice.kv",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "backoffice.kv",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:backoffice.outbox_errors",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "backoffice.outbox_errors",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.companies",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.companies",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:finance.user_roles",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "finance.user_roles",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.branches",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.branches",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.hr_employee_document_audit",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.hr_employee_document_audit",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.hr_employee_documents",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.hr_employee_documents",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.hr_position_audit",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.hr_position_audit",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.hr_positions",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.hr_positions",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_applications",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_applications",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_audit_log",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_audit_log",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_permissions",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_permissions",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_position_role_bindings",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_position_role_bindings",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_principal_role_grants",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_principal_role_grants",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_principals",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_principals",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_role_permissions",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_role_permissions",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_roles",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_roles",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.iam_sync_outbox",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.iam_sync_outbox",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_control_audit",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_control_audit",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_control_settings",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_control_settings",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_monitor_runs",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_monitor_runs",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_action_queue",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_action_queue",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_action_runs",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_action_runs",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_alerts",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_alerts",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_anomaly_events",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_anomaly_events",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_audit",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_audit",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_dependency_map",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_dependency_map",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_diagnostics",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_diagnostics",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_forecast_snapshots",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_forecast_snapshots",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_governance",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_governance",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_incidents",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_incidents",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_integration_test_runs",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_integration_test_runs",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_learning_feedback",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_learning_feedback",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_metric_history",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_metric_history",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_notification_deliveries",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_notification_deliveries",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_ops_recovery_plans",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_ops_recovery_plans",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.it_position_permissions",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.it_position_permissions",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.orders",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.orders",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.org_departments",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.org_departments",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.org_organizations",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.org_organizations",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.staff",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.staff",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.staff_position_history",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.staff_position_history",
+   "layer": "ฐานข้อมูล"
+  },
+  {
+   "id": "tbl:public.staff_push_subscriptions",
+   "status": "ok",
+   "issues": 0,
+   "kind": "table",
+   "label": "public.staff_push_subscriptions",
+   "layer": "ฐานข้อมูล"
+  }
+ ],
+ "edges": [
+  {
+   "from": "clock.html",
+   "to": "js/app-scope.js",
+   "kind": "script",
+   "note": "v=1.0.2"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/calc.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/no-auto-ot.js",
+   "kind": "script",
+   "note": "v=4.7.3"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/theme.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/config.js",
+   "kind": "script",
+   "note": "v=4.6.1"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/core.js",
+   "kind": "script",
+   "note": "v=4.6.2"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/toast-ux.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/pwa.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/app-update.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/clock-embed.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/liff-fast.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/auth-web.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/it-rum.js",
+   "kind": "script",
+   "note": "v=4.6.0"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/clock.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/onereg.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/line-reset.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/app-lock.js",
+   "kind": "script",
+   "note": "v=4.6.2"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/clock-ux.js",
+   "kind": "script",
+   "note": "v=4.9.0"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/liff-view.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/clock-swap.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/liff-focus.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/photo-ux.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "clock.html",
+   "to": "js/order-link.js",
+   "kind": "script",
+   "note": "v=4.8.5"
+  },
+  {
+   "from": "index.html",
+   "to": "js/app-scope.js",
+   "kind": "script",
+   "note": "v=1.0.2"
+  },
+  {
+   "from": "index.html",
+   "to": "js/calc.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/no-auto-ot.js",
+   "kind": "script",
+   "note": "v=4.7.3"
+  },
+  {
+   "from": "index.html",
+   "to": "js/theme.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/config.js",
+   "kind": "script",
+   "note": "v=4.6.1"
+  },
+  {
+   "from": "index.html",
+   "to": "js/core.js",
+   "kind": "script",
+   "note": "v=4.6.2"
+  },
+  {
+   "from": "index.html",
+   "to": "js/toast-ux.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "index.html",
+   "to": "js/pwa.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/app-update.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/fast.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/fastload.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/branchscope.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/auth-web.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/it-rum.js",
+   "kind": "script",
+   "note": "v=4.6.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/speed.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/sync.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-schedule.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/sched-sum.js",
+   "kind": "script",
+   "note": "v=4.5.8"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-time.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/leave-check.js",
+   "kind": "script",
+   "note": "v=4.5.8"
+  },
+  {
+   "from": "index.html",
+   "to": "js/scan.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-approve.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-hr.js",
+   "kind": "script",
+   "note": "v=5.0.2"
+  },
+  {
+   "from": "index.html",
+   "to": "js/hr-documents.js",
+   "kind": "script",
+   "note": "v=1.1.1"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-payroll.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-stock.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-acct.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-today.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "index.html",
+   "to": "js/today-ux.js",
+   "kind": "script",
+   "note": "v=4.10.2"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-dash.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-settings.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-users.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-freeze.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-admin.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-notify.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/mod-design.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/swaps-web.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/approve-history.js",
+   "kind": "script",
+   "note": "v=4.7.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/app.js",
+   "kind": "script",
+   "note": "v=4.5.6"
+  },
+  {
+   "from": "index.html",
+   "to": "js/alert.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/live.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/lean.js",
+   "kind": "script",
+   "note": "v=4.5.6"
+  },
+  {
+   "from": "index.html",
+   "to": "js/fold.js",
+   "kind": "script",
+   "note": "v=4.5.6"
+  },
+  {
+   "from": "index.html",
+   "to": "js/myclock.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/hrsync.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/schedprint.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/duealerts.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/owner-back.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/owner-back-top.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/users-purge.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/line-reset.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/app-lock.js",
+   "kind": "script",
+   "note": "v=4.6.2"
+  },
+  {
+   "from": "index.html",
+   "to": "js/photo-ux.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "index.html",
+   "to": "js/order-link.js",
+   "kind": "script",
+   "note": "v=4.8.5"
+  },
+  {
+   "from": "index.html",
+   "to": "js/hr-position-perms.js",
+   "kind": "script",
+   "note": "v=1.0.3"
+  },
+  {
+   "from": "index.html",
+   "to": "js/perms-positions.js",
+   "kind": "script",
+   "note": "v=1.0.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/hr-access.js",
+   "kind": "script",
+   "note": "v=1.0.1"
+  },
+  {
+   "from": "index.html",
+   "to": "js/sched-positions.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/role-verifier.js",
+   "kind": "script",
+   "note": "v=1.0.1"
+  },
+  {
+   "from": "index.html",
+   "to": "js/pos-id-fix.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/today-verifier.js",
+   "kind": "script",
+   "note": "v=1.0.1"
+  },
+  {
+   "from": "index.html",
+   "to": "js/work-inbox.js",
+   "kind": "script",
+   "note": "v=1.2.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/approve-fast.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/app-lock-roles.js",
+   "kind": "script",
+   "note": "v=1.1.0"
+  },
+  {
+   "from": "index.html",
+   "to": "js/finance-embed.js",
+   "kind": "script",
+   "note": "v=1.3.4"
+  },
+  {
+   "from": "index.html",
+   "to": "js/supa-ui.js",
+   "kind": "script",
+   "note": "v=4.7.6"
+  },
+  {
+   "from": "index.html",
+   "to": "js/owner-pwa-lock.js",
+   "kind": "script",
+   "note": "v=2.1.7"
+  },
+  {
+   "from": "modules/finance/finance-uat.html",
+   "to": "modules/finance/js/finance-uat.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "modules/finance/finance.html",
+   "to": "modules/finance/js/cms-theme-bridge.js",
+   "kind": "script",
+   "note": "v=0.1.1"
+  },
+  {
+   "from": "modules/finance/finance.html",
+   "to": "modules/finance/js/fin-core.js",
+   "kind": "script",
+   "note": "v=1.3.1"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/app-scope.js",
+   "kind": "script",
+   "note": "v=1.0.2"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/calc.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/no-auto-ot.js",
+   "kind": "script",
+   "note": "v=4.7.3"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/theme.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/config.js",
+   "kind": "script",
+   "note": "v=4.6.1"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/core.js",
+   "kind": "script",
+   "note": "v=4.6.2"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/toast-ux.js",
+   "kind": "script",
+   "note": "v=4.5.5"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/pwa.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/app-update.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/auth-web.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-rum.js",
+   "kind": "script",
+   "note": "v=4.6.0"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner-pwa-lock.js",
+   "kind": "script",
+   "note": "v=2.1.7"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-ai.js",
+   "kind": "script",
+   "note": "v=1.0.3"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-dialog.js",
+   "kind": "script",
+   "note": "v=1.0.0"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-ops.js",
+   "kind": "script",
+   "note": "v=2.4.2"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-network.js",
+   "kind": "script",
+   "note": "v=1.1.0"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-linkmap.js",
+   "kind": "script",
+   "note": "v=1.0.1"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner.js",
+   "kind": "script",
+   "note": "v=5.0.0"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/it-control-center.js",
+   "kind": "script",
+   "note": "v=1.1.2"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner-purge.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner-devices.js",
+   "kind": "script",
+   "note": "v=4.5.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/order-link.js",
+   "kind": "script",
+   "note": "v=4.8.5"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner-branches.js",
+   "kind": "script",
+   "note": "v=4.7.4"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner-landing.js",
+   "kind": "script",
+   "note": "v=4.7.7"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/supa-ui.js",
+   "kind": "script",
+   "note": "v=4.7.6"
+  },
+  {
+   "from": "owner.html",
+   "to": "js/owner-fold.js",
+   "kind": "script",
+   "note": "v=1.3.0"
+  },
+  {
+   "from": "fn:finance",
+   "to": "supabase/functions/finance/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:finance-api",
+   "to": "supabase/functions/finance-api/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "supabase/functions/hr-documents/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_document_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_documents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_documents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_documents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_document_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_documents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_documents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-documents",
+   "to": "tbl:public.hr_employee_document_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "supabase/functions/hr-position-api/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:finance.user_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.it_position_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.staff_position_history",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.iam_sync_outbox",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.iam_audit_log",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_position_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.iam_sync_outbox",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.iam_audit_log",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.iam_audit_log",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.it_position_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.it_position_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_position_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.it_position_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:finance.companies",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:finance.user_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:finance.user_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:finance.user_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:finance.user_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.iam_audit_log",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.it_position_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:hr-position-api",
+   "to": "tbl:public.hr_position_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ai-ops",
+   "to": "supabase/functions/it-ai-ops/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "supabase/functions/it-control-center/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_settings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_settings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_settings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_settings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_settings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-control-center",
+   "to": "tbl:public.it_control_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "supabase/functions/it-intelligence-network/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_organizations",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.branches",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_role_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_principal_role_grants",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_role_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_position_role_bindings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_applications",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_principals",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_principal_role_grants",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_role_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_applications",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_position_role_bindings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_role_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_applications",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_dependency_map",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_diagnostics",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_action_queue",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.staff_push_subscriptions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_notification_deliveries",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_notification_deliveries",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_ops_alerts",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_applications",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_applications",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_principal_role_grants",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_position_role_bindings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_organizations",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_organizations",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.org_departments",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.hr_positions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.staff",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_applications",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_permissions",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_roles",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_principals",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_principal_role_grants",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.iam_position_role_bindings",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-intelligence-network",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "supabase/functions/it-monitor/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.outbox_errors",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.outbox_errors",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.kv",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.kv",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.kv",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.kv",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:public.orders",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:public.orders",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:public.branches",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-monitor",
+   "to": "tbl:backoffice.kv",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "supabase/functions/it-ops-control-center/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_alerts",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_recovery_plans",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_governance",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_integration_test_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_forecast_snapshots",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_anomaly_events",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_alerts",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_recovery_plans",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_recovery_plans",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_integration_test_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-control-center",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "supabase/functions/it-ops-orchestrator/index.ts",
+   "kind": "source"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_queue",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:backoffice.outbox_errors",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:backoffice.outbox_errors",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_metric_history",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_anomaly_events",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_anomaly_events",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_anomaly_events",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_metric_history",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_metric_history",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_diagnostics",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_monitor_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_queue",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_queue",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:backoffice.kv",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_learning_feedback",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_queue",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_queue",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_incidents",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_audit",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_action_runs",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_diagnostics",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_metric_history",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_anomaly_events",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_dependency_map",
+   "kind": "sql"
+  },
+  {
+   "from": "fn:it-ops-orchestrator",
+   "to": "tbl:public.it_ops_learning_feedback",
+   "kind": "sql"
+  },
+  {
+   "from": "js/app-scope.js",
+   "to": "fn:it-control-center",
+   "kind": "call"
+  },
+  {
+   "from": "js/finance-embed.js",
+   "to": "fn:finance-api",
+   "kind": "call"
+  },
+  {
+   "from": "js/hr-documents.js",
+   "to": "fn:hr-documents",
+   "kind": "call"
+  },
+  {
+   "from": "js/hr-position-perms.js",
+   "to": "fn:finance",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-ai.js",
+   "to": "fn:it-monitor",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-control-center.js",
+   "to": "fn:it-control-center",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-network.js",
+   "to": "fn:finance",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-network.js",
+   "to": "fn:it-intelligence-network",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-ops.js",
+   "to": "fn:it-ai-ops",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-ops.js",
+   "to": "fn:it-ops-control-center",
+   "kind": "call"
+  },
+  {
+   "from": "js/it-ops.js",
+   "to": "fn:it-ops-orchestrator",
+   "kind": "call"
+  },
+  {
+   "from": "js/mod-acct.js",
+   "to": "fn:finance-api",
+   "kind": "call"
+  },
+  {
+   "from": "js/mod-hr.js",
+   "to": "fn:hr-position-api",
+   "kind": "call"
+  },
+  {
+   "from": "js/work-inbox.js",
+   "to": "fn:finance-api",
+   "kind": "call"
+  },
+  {
+   "from": "modules/finance/js/fin-core.js",
+   "to": "fn:finance-api",
+   "kind": "call"
+  }
+ ],
+ "issues": [
+  {
+   "key": "action-missing|lvApp",
+   "code": "action-missing",
+   "level": "error",
+   "at": [
+    "js/liff-view.js"
+   ],
+   "title": "ปุ่มที่กดแล้วไม่มีอะไรเกิดขึ้น",
+   "detail": "มีปุ่ม data-a=\"lvApp\" แต่ชื่อนี้ไม่ปรากฏที่อื่นในโปรแกรมเลย จึงไม่มีตัวรับ",
+   "fix": "ประกาศ ACT.lvApp หรือใส่ใน acts ของโมดูล · ถ้าเพิ่ม action หลัง defMod ต้อง Object.assign(ACT, {…}) ด้วย",
+   "where": "js/liff-view.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/app-scope.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/app-scope.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/app-scope.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/app-scope.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/finance-embed.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/finance-embed.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/finance-embed.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/finance-embed.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/hr-documents.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/hr-documents.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/hr-documents.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/hr-documents.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/it-ai.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/it-ai.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/it-ai.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/it-ai.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/it-control-center.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/it-control-center.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/it-control-center.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/it-control-center.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/it-ops.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/it-ops.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/it-ops.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/it-ops.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/mod-acct.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/mod-acct.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/mod-acct.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/mod-acct.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/mod-hr.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "js/mod-hr.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/mod-hr.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/mod-hr.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|modules/finance/js/fin-core.js",
+   "code": "api-hardcoded",
+   "level": "error",
+   "at": [
+    "modules/finance/js/fin-core.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "modules/finance/js/fin-core.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "modules/finance/js/fin-core.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|js/it-network.js",
+   "code": "api-hardcoded",
+   "level": "warn",
+   "at": [
+    "js/it-network.js"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "js/it-network.js มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ (เป็นค่าสำรองหลังอ่านจาก config)",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "js/it-network.js",
+   "baselined": true
+  },
+  {
+   "key": "api-hardcoded|line.html",
+   "code": "api-hardcoded",
+   "level": "warn",
+   "at": [
+    "line.html"
+   ],
+   "title": "ฝังที่อยู่เซิร์ฟเวอร์ไว้ในไฟล์",
+   "detail": "line.html มี https://ytxbnqosenolojifeikf.supabase.co เขียนไว้ตรงๆ (เป็นค่าสำรองหลังอ่านจาก config)",
+   "fix": "อ่านจาก AMZ_API ใน js/config.js ตามกติกาใน AGENTS.md",
+   "where": "line.html",
+   "baselined": true
+  },
+  {
+   "key": "fn-unregistered|finance",
+   "code": "fn-unregistered",
+   "level": "warn",
+   "at": [
+    "fn:finance"
+   ],
+   "title": "ยังไม่มีบันทึกการ deploy",
+   "detail": "ฟังก์ชัน finance ไม่มีลายเซ็นใน data/deploy-state.json จึงบอกไม่ได้ว่าของที่รันอยู่ตรงกับ repo หรือไม่",
+   "fix": "deploy แล้วบันทึกลายเซ็นด้วย node tools/link-check.mjs --stamp finance",
+   "where": "supabase/functions/finance/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|finance-api",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:finance-api"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ finance-api ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/finance-api/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|hr-documents",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:hr-documents"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ hr-documents ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/hr-documents/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|hr-position-api",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:hr-position-api"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ hr-position-api ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/hr-position-api/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|it-ai-ops",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:it-ai-ops"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ it-ai-ops ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/it-ai-ops/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|it-control-center",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:it-control-center"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ it-control-center ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/it-control-center/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|it-monitor",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:it-monitor"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ it-monitor ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/it-monitor/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|it-ops-control-center",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:it-ops-control-center"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ it-ops-control-center ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/it-ops-control-center/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "fn-unverified|it-ops-orchestrator",
+   "code": "fn-unverified",
+   "level": "warn",
+   "at": [
+    "fn:it-ops-orchestrator"
+   ],
+   "title": "ยังไม่เคยเทียบกับของที่ deploy จริง",
+   "detail": "ลายเซ็นของ it-ops-orchestrator ใน data/deploy-state.json บันทึกจากไฟล์ใน repo แต่ยังไม่เคยอ่านซอร์สที่รันอยู่จริงมาเทียบ",
+   "fix": "อ่านซอร์สที่ deploy อยู่จาก Supabase มาเทียบกับไฟล์ใน repo แล้วตั้ง verified: true",
+   "where": "supabase/functions/it-ops-orchestrator/index.ts",
+   "baselined": true
+  },
+  {
+   "key": "script-orphan|modules/finance/js/finance-calculations.js",
+   "code": "script-orphan",
+   "level": "warn",
+   "at": [
+    "modules/finance/js/finance-calculations.js"
+   ],
+   "title": "ไฟล์ที่ไม่มีใครโหลด",
+   "detail": "modules/finance/js/finance-calculations.js ไม่ถูกโหลดจากหน้า html ใดเลย และไม่มีไฟล์อื่นอ้างถึง",
+   "fix": "เพิ่ม <script src> ในหน้าที่ต้องใช้ หรือลบไฟล์ทิ้งถ้าเลิกใช้แล้ว",
+   "where": "modules/finance/js/finance-calculations.js",
+   "baselined": true
+  }
+ ]
+}
