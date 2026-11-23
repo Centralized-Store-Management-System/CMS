@@ -142,6 +142,9 @@ for (const f of jsFiles) {
   for (const m of src.matchAll(/GROUPS\.splice\([^[]*\[[^[]*\[([^\]]*)\]/g)) {                   // เพิ่มกลุ่มใหม่ทั้งกลุ่ม
     for (const k of m[1].matchAll(/'([\w-]+)'/g)) navKeys.add(k[1]);
   }
+  /* บางโมดูลไม่ได้อยู่ในเมนูเว็บหลังร้าน แต่มีหน้าอื่นหยิบ view ไปวาดเอง
+   * (เช่น ใยแมงมุมคน: js/web-host-owner.js หยิบไปวาดในแอป Owner) — แบบนี้ถือว่ามีทางเข้าถึงแล้ว */
+  for (const m of src.matchAll(/MODS\.find\([^)]*?key\s*===\s*'([\w-]+)'/g)) navKeys.add(m[1]);
 }
 for (const f of jsFiles) {
   for (const m of rd(f).matchAll(/defMod\(\{[\s\S]{0,120}?key:\s*'([\w-]+)'/g)) {
@@ -149,6 +152,35 @@ for (const f of jsFiles) {
     node(f, { kind: 'script', label: f, layer: 'ไฟล์โปรแกรม' });
     if (navKeys.has(key)) continue;
     issue({ key: `mod-not-in-menu|${key}`, code: 'mod-not-in-menu', level: 'error', at: [f], title: 'โมดูลที่ไม่มีทางโผล่ในเมนู', detail: `${f} ประกาศโมดูล "${key}" ด้วย defMod แต่คีย์นี้ไม่อยู่ใน GROUPS และไม่มีไฟล์ไหนใส่เข้าไป · ผู้ใช้จะไม่เห็นเมนูนี้เลย`, fix: `ใส่ '${key}' เข้ากลุ่มใน GROUPS (js/app.js) หรือให้ไฟล์นั้นต่อเมนูเอง เช่น GROUPS.find(g => g[0] === 'System')[1].push('${key}') แล้วคำนวณ NAV_ORDER ใหม่`, where: f });
+  }
+}
+
+/* ---------- ขั้นที่ 2ค: data/mod-manifest.json ต้องรู้จักเมนูหลังร้านครบ ----------
+ * แอป Owner ไม่ได้โหลดไฟล์ mod-*.js จึงรู้จักเมนูหลังร้านจาก manifest นี้อย่างเดียว
+ * เพิ่มเมนูใหม่แล้วไม่สร้าง manifest ใหม่ = ใยแมงมุมคนตอบไม่ครบ โดยไม่มีอะไรฟ้อง */
+const MANIFEST_PATH = 'data/mod-manifest.json';
+if (existsSync(join(ROOT, MANIFEST_PATH))) {
+  let man = null;
+  try { man = JSON.parse(rd(MANIFEST_PATH)); } catch (e) { man = null; }
+  if (!man) {
+    issue({ key: 'manifest-stale|parse', code: 'manifest-stale', level: 'error', at: [MANIFEST_PATH], title: 'รายการเมนูอ่านไม่ออก', detail: MANIFEST_PATH + ' ไม่ใช่ JSON ที่ถูกต้อง', fix: 'รัน node tools/mod-manifest.mjs ใหม่', where: MANIFEST_PATH });
+  } else {
+    const have = new Set((man.mods || []).map(m => m.key));
+    const declared = new Set();
+    /* นับเฉพาะโมดูลที่ index.html โหลดจริง — ตัวที่แอปอื่นโหลด (เช่นใยแมงมุมคนในแอป Owner) ไม่ได้อยู่ในเมนูหลังร้าน */
+    for (const f of jsFiles.filter(f => (loadedBy.get(f) || []).includes('index.html'))) {
+      for (const m of rd(f).matchAll(/defMod\(\{[\s\S]{0,120}?key:\s*'([\w-]+)'/g)) declared.add(m[1]);
+    }
+    const missing = [...declared].filter(k => !have.has(k));
+    const gone = [...have].filter(k => !declared.has(k));
+    if (missing.length || gone.length) {
+      issue({
+        key: 'manifest-stale|mods', code: 'manifest-stale', level: 'error', at: [MANIFEST_PATH],
+        title: 'รายการเมนูไม่ตรงกับของจริง',
+        detail: [missing.length ? 'ยังไม่มีใน manifest: ' + missing.join(', ') : '', gone.length ? 'มีใน manifest แต่ไม่มีเมนูแล้ว: ' + gone.join(', ') : ''].filter(Boolean).join(' · ') + ' · แอป Owner จะตอบเรื่องสิทธิ์เมนูไม่ครบ',
+        fix: 'รัน node tools/mod-manifest.mjs แล้ว commit data/mod-manifest.json', where: MANIFEST_PATH
+      });
+    }
   }
 }
 
