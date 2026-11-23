@@ -37,6 +37,10 @@
   /* "ระดับนี้ควรเข้าถึงอะไรได้" = ค่าเริ่มต้นของระดับนั้นที่ฝั่งเซิร์ฟเวอร์กำหนดไว้
    * ใช้แยก "ควรใช้ได้แต่ใช้ไม่ได้ (ต้องแก้)" ออกจาก "ไม่ได้ตั้งใจให้เข้าอยู่แล้ว"
    * ถ้าไม่แยก หน้าจะเสนอให้ "ให้สิทธิ์ admin กับระดับ Staff" ซึ่งเป็นการยกระบบทั้งร้านให้บาริสต้า */
+  /* ระดับ (Role) กับ ตำแหน่ง (Position) เป็นคนละช่องกัน แต่บางระดับมีตำแหน่งคู่กันตรงๆ ในทะเบียน
+   * เช่น ระดับ manager ↔ ตำแหน่งรหัส MANAGER · ถ้าคนคนนั้นถือระดับนั้นแต่ตำแหน่งเป็นอย่างอื่น
+   * แปลว่าสองช่องไม่ตรงกัน ซึ่งเป็นเรื่องที่เจ้าของร้านควรเห็น ไม่ใช่ให้ระบบเดาแก้เอง */
+  const posForRole = role => role ? posList().find(x => x.status !== 'inactive' && String(x.position_code || '').toUpperCase() === String(role).toUpperCase()) : null;
   const meantFor = role => role === 'owner' ? (S.permList || []).map(x => x[0])
     : ((typeof DEFAULT_PERMS === 'object' && DEFAULT_PERMS && DEFAULT_PERMS[role]) || []);
   const title = (kind, id) => {
@@ -65,6 +69,15 @@
       else if (p) add({ status: 'warn', label: 'ตำแหน่ง', note: p.name_th + ' · ผูกด้วยชื่อเท่านั้น ยังไม่มีรหัสตำแหน่ง', fix: 'ระบบออเดอร์และสิทธิ์ตามตำแหน่งจะยังไม่เห็นตำแหน่งนี้', href: go('#hr'), to: { kind: 'pos', id: p.id }, do: 'posid', doLabel: 'เติมรหัสตำแหน่งให้', doNote: 'บันทึก positionId และ positionCode ของ "' + p.name_th + '" ลงในประวัติพนักงาน' });
       else if (e.position) add({ status: 'warn', label: 'ตำแหน่ง', note: '"' + e.position + '" ไม่มีในทะเบียนตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่งจากรายการ หรือเพิ่มตำแหน่งนี้ที่ HR › Positions', href: go('#hr') });
       else add({ status: 'miss', label: 'ตำแหน่ง', note: 'ยังไม่กำหนดตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่ง', href: go('#hr') });
+      /* ระดับกับตำแหน่งไม่ตรงกัน — เคยทำให้ตำแหน่งที่ถูกต้องถูกเขียนทับมาแล้ว (ดู HANDOFF)
+       * ไม่มีปุ่มซ่อมโดยตั้งใจ: การเปลี่ยนตำแหน่งงานของคนเป็นเรื่องที่เจ้าของร้านต้องตัดสินใจเอง */
+      const rolePos = posForRole(e.role || (u && u.role));
+      if (rolePos && p && rolePos.id !== p.id) add({
+        status: 'warn', label: 'ระดับกับตำแหน่ง',
+        note: 'ระดับ ' + roleName(e.role || (u && u.role)) + ' แต่ตำแหน่งเป็น "' + (p.name_th || '') + '"',
+        fix: 'ถ้าควรเป็น "' + rolePos.name_th + '" ให้แก้ที่ HR › พนักงาน · ถ้าตั้งใจให้ต่างกันก็ปล่อยไว้ได้',
+        href: go('#hr'), to: { kind: 'pos', id: p.id }
+      });
       if (u) add({ label: 'บัญชีเข้าใช้งาน', note: u.username + ' · ' + (u.status === 'active' ? 'เปิดใช้งาน' : 'ปิดอยู่'), status: u.status === 'active' ? 'ok' : 'warn', to: { kind: 'user', id: u.id }, fix: u.status === 'active' ? '' : 'เปิดใช้งานบัญชีคืนเพื่อให้เข้าระบบได้', href: go('#users'), ...(u.status === 'active' ? {} : { do: 'enable', doLabel: 'เปิดใช้งานบัญชี' }) });
       else add({ status: 'miss', label: 'บัญชีเข้าใช้งาน', note: 'ยังไม่มีบัญชี — เข้าเว็บหลังร้านและแอปไม่ได้', fix: 'สร้างบัญชีแล้วผูกกับพนักงานคนนี้', href: go('#users'), do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' });
       /* ของที่ต่อจากบัญชี: ถ้ายังไม่มีบัญชี ก็ยังแสดงไว้ให้เห็นว่าติดเป็นลูกโซ่ ไม่ใช่ซ่อนหายไป */
