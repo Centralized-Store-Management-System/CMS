@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-23T00:59:30.888Z",
+ "generated_at": "2026-11-23T01:08:00.701Z",
  "rules": [
   {
    "code": "script-missing",
@@ -2135,7 +2135,7 @@
    "from": "index.html",
    "to": "js/link-web.js",
    "kind": "script",
-   "note": "v=1.0.0"
+   "note": "v=1.1.0"
   },
   {
    "from": "index.html",
