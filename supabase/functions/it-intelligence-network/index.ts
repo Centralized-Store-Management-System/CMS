@@ -198,6 +198,34 @@ async function readSnapshot() {
       select id, checked_at, risk_score, status, findings, metrics
       from public.it_monitor_runs order by checked_at desc limit 1
     `;
+    const incidents = await tx`
+      select id, fingerprint, severity, code, title, detail, recommendation, status,
+             first_seen_at, last_seen_at, occurrence_count, source_monitor_run_id, evidence, updated_at
+      from public.it_ops_incidents
+      order by case severity when 'critical' then 0 when 'high' then 1 when 'warning' then 2 else 3 end,
+               last_seen_at desc limit 50
+    `;
+    const dependencyMap = await tx`
+      select dependency_key, component, depends_on, dependency_type, criticality,
+             description, verification_hint, enabled, source
+      from public.it_ops_dependency_map where enabled is true
+      order by case criticality when 'critical' then 0 when 'high' then 1 else 2 end, component
+    `;
+    const [latestDiagnostic] = await tx`
+      select id, monitor_run_id, overall_status, root_causes, trends, forecast, confidence, created_at
+      from public.it_ops_diagnostics order by created_at desc limit 1
+    `;
+    const actionQueue = await tx`
+      select status, risk_level, requires_owner_approval, count(*)::int as count
+      from public.it_ops_action_queue group by status, risk_level, requires_owner_approval
+    `;
+    const [notificationReadiness] = await tx`
+      select
+        (select count(*)::int from public.staff_push_subscriptions where is_active is true) as active_push_subscriptions,
+        (select count(*)::int from public.it_ops_notification_deliveries) as delivery_attempts,
+        (select count(*)::int from public.it_ops_notification_deliveries where status = 'sent') as successful_deliveries,
+        (select count(*)::int from public.it_ops_alerts where status not in ('resolved','closed')) as open_alerts
+    `;
     const [counts] = await tx`
       select
         (select count(*)::int from public.staff where is_active is true) as active_staff,
@@ -242,6 +270,14 @@ async function readSnapshot() {
       position_access: positionAccess,
       relationships,
       domains: domainMap,
+      incident_center: {
+        incidents,
+        dependency_map: dependencyMap,
+        latest_diagnostic: latestDiagnostic || null,
+        action_queue: actionQueue,
+        notification_readiness: notificationReadiness || {},
+        routing_policy: "Route to an active HR Department Head when mapped; otherwise Owner Acting escalation. Notification delivery requires a verified recipient/channel and remains disabled when none exists."
+      },
       monitor: latestMonitor ? {
         id: latestMonitor.id, checked_at: latestMonitor.checked_at, risk_score: latestMonitor.risk_score,
         status: latestMonitor.status, findings, metrics: latestMonitor.metrics

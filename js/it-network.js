@@ -1,7 +1,10 @@
 /* PJD WIN · AI Intelligence Network — Owner-only, read-only topology explorer. */
 'use strict';
 
-const ITN_URL = 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/it-intelligence-network';
+/* ที่อยู่ API อ่านจาก js/config.js (กติกาใน AGENTS.md) ไม่ฝังโครงการไว้ในไฟล์นี้ */
+const ITN_URL = (typeof AMZ_API === 'string' && AMZ_API)
+  ? AMZ_API.replace(/\/[^/]+$/, '/it-intelligence-network')
+  : 'https://ytxbnqosenolojifeikf.supabase.co/functions/v1/it-intelligence-network';
 let ITN = { data: null, selected: null };
 
 const ITN_APP_INFO = {
@@ -50,13 +53,22 @@ function itnNode(x,y,w,h,title,sub,kind,id,state) {
     '<text class="itn-node-sub" x="'+(x+w/2)+'" y="'+(y+50)+'">'+itnEsc(sub)+'</text></g>';
 }
 function itnGraph(data) {
-  const xCenters=[190,515,840,1165,1490], edges=[], nodes=[];
-  nodes.push(itnNode(705,32,270,76,'OWNER / CEO',data.owner?data.owner.staff_name+' · '+data.owner.role:'Owner record not found','owner','owner','ok'));
-  edges.push(itnEdge(840,108,840,158,'verified','Owner Console'));
-  nodes.push(itnNode(645,158,390,92,'AI CONTROL TOWER','Monitor · Trace · Incident Return','ai','ai','ok'));
-  data.domains.forEach((d,i)=>{
+  /* ผังคำนวณขนาดเองตามจำนวนแผนกและจำนวนแอปจริง — เพิ่มแผนกที่ 6 หรือแอปตัวที่ 5 แล้วกล่องไม่หายและไม่ทับกัน */
+  const doms=data.domains||[], n=Math.max(doms.length,1), COL=325;
+  const W=Math.max(1680,n*COL+80), cx0=Math.round(W/2), dx=cx0-840;
+  const xCenters=doms.map((_,i)=>Math.round(cx0-(n-1)*COL/2+i*COL));
+  const rowsOf=d=>d.key==='it'?4:(d.applications||[]).length;
+  const maxRows=Math.max(1,...doms.map(rowsOf));
+  const dataY=Math.max(890,510+maxRows*96+24), H=dataY+120;
+  const edges=[], nodes=[];
+  nodes.push(itnNode(cx0-135,32,270,76,'OWNER / CEO',data.owner?data.owner.staff_name+' · '+data.owner.role:'Owner record not found','owner','owner','ok'));
+  edges.push(itnEdge(cx0,108,cx0,158,'verified','Owner Console'));
+  nodes.push(itnNode(cx0-195,158,390,92,'AI CONTROL TOWER','Monitor · Trace · Incident Return','ai','ai','ok'));
+  doms.forEach((d,i)=>{
     const cx=xCenters[i], x=cx-120;
-    edges.push(itnEdge(840,250,cx,322,'missing',''));
+    /* เส้น Owner → แผนก: เขียวเมื่อมี Department Record จริงใน HR · แดงประเมื่อเป็นกลุ่มงานที่ยังไม่มีหน่วยงานในฐานข้อมูล */
+    const hasDept=(d.department_records||[]).length>0;
+    edges.push(itnEdge(cx0,250,cx,322,hasDept?'verified':'missing',hasDept?'':'ไม่มี Department Record'));
     const members=(d.members||[]).filter(s=>s.is_active).length;
     const sub=(d.department_record_count||0)+' HR departments · '+members+' active staff · '+(d.acting_owner?'Acting Owner':'Manager assigned');
     nodes.push(itnNode(x,322,240,92,d.label,sub,'domain',d.key,d.manager_status==='vacant'?'warn':'ok'));
@@ -80,9 +92,9 @@ function itnGraph(data) {
       });
     }
   });
-  nodes.push(itnNode(80,890,380,82,'ORG / HR DATA','org_departments · hr_positions · staff','data','org-hr','ok'));
-  nodes.push(itnNode(470,890,380,82,'IAM REGISTRY','iam_applications · roles · grants','data','iam','ok'));
-  nodes.push(itnNode(900,890,380,82,'ORDER / LINE DATA','orders · items · customers · branches','data','orders','ok'));
+  nodes.push(itnNode(80+dx,dataY,380,82,'ORG / HR DATA','org_departments · hr_positions · staff','data','org-hr','ok'));
+  nodes.push(itnNode(470+dx,dataY,380,82,'IAM REGISTRY','iam_applications · roles · grants','data','iam','ok'));
+  nodes.push(itnNode(900+dx,dataY,380,82,'ORDER / LINE DATA','orders · items · customers · branches','data','orders','ok'));
   // Draw cross-domain database links only when an actual foreign key connects the table groups.
   const tableGroup = table => {
     if (['staff','hr_positions','org_departments','org_organizations'].includes(table)) return 'org-hr';
@@ -90,7 +102,7 @@ function itnGraph(data) {
     if (['orders','order_items','customers','branches','order_status_history','line_channels'].includes(table)) return 'orders';
     return null;
   };
-  const groupCenters = {'org-hr':270,'iam':660,'orders':1090};
+  const groupCenters = {'org-hr':270+dx,'iam':660+dx,'orders':1090+dx};
   const pairs = new Map();
   (data.relationships||[]).forEach(r => {
     const a=tableGroup(r.source_table), b=tableGroup(r.target_table);
@@ -100,9 +112,9 @@ function itnGraph(data) {
   });
   pairs.forEach((count,key)=>{
     const [a,b]=key.split('|');
-    edges.push(itnEdge(groupCenters[a],972,groupCenters[b],972,'verified',count+' actual FK'));
+    edges.push(itnEdge(groupCenters[a],dataY+82,groupCenters[b],dataY+82,'verified',count+' actual FK'));
   });
-  return '<svg class="itn-svg" viewBox="0 0 1680 1010" role="img" aria-label="PJD WIN system topology">'+edges.join('')+nodes.join('')+'</svg>';
+  return '<svg class="itn-svg" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="PJD WIN system topology">'+edges.join('')+nodes.join('')+'</svg>';
 }
 
 function itnDomainDetails(d) {
@@ -279,6 +291,34 @@ function itnPage() {
   setTimeout(itnBind,0);
   return html;
 }
+/* วาดช่องรายละเอียดตามสิ่งที่ผู้ใช้เลือกไว้ล่าสุด — ใช้ทั้งตอนกดและตอนรีเฟรชอัตโนมัติ */
+function itnApplySelection() {
+  const box=document.getElementById('itn-detail'), sel=ITN.selected, D=ITN.data;
+  if(!box||!D)return;
+  try{
+    if(!sel||sel.kind==='owner'||sel.kind==='ai'){box.innerHTML=itnDefaultDetails(D);return;}
+    if(sel.kind==='domain'){const d=(D.domains||[]).find(x=>x.key===sel.id);if(d)box.innerHTML=itnDomainDetails(d);return;}
+    if(sel.kind==='app'){const a=(D.applications||[]).find(x=>x.application_key===sel.id);if(a)box.innerHTML=itnAppDetails(a);return;}
+    if(sel.kind==='code'){box.innerHTML=itnCodeDetails(sel.id);return;}
+    if(sel.kind==='data'){box.innerHTML=itnDataDetails(sel.id);return;}
+    if(sel.kind==='person'){const s=(D.staff||[]).find(x=>x.id===sel.id);if(s)box.innerHTML=itnPersonDetails(s);}
+  }catch(e){box.innerHTML='<div class="itn-note warn">แสดงรายละเอียดไม่สำเร็จ · '+itnEsc(e.message)+'</div>';}
+}
+
+/* รีเฟรชอัตโนมัติทุก 5 นาที (เรียกจาก js/owner.js) — เก็บสิ่งที่กำลังดูอยู่และตำแหน่งเลื่อนจอไว้
+ * ของเดิมวาดใหม่ทั้งหน้า คนที่กำลังอ่านรายละเอียดหรือเลื่อนผังค้างไว้จะถูกดีดกลับไปจุดเริ่มต้น */
+async function itnAutoRefresh() {
+  if(!ITN.data)return;
+  const box=document.querySelector('.itn-canvas'), sx=box?box.scrollLeft:0, sy=window.scrollY;
+  let fresh; try{ fresh=await itnFetch(); }catch(e){ return; }   // เน็ตสะดุด: คงภาพล่าสุดไว้ ไม่ขึ้น error ทับหน้าที่ใช้งานอยู่
+  if(typeof OC==='object'&&OC&&OC.view!=='network')return;
+  ITN.data=fresh;
+  ocMain(itnPage());
+  itnApplySelection();
+  const box2=document.querySelector('.itn-canvas'); if(box2)box2.scrollLeft=sx;
+  window.scrollTo(0,sy);
+}
+
 function itnBind() {
   const root=document.getElementById('oc-main');
   if(!root||root.dataset.itnBound==='1')return;
@@ -290,19 +330,11 @@ function itnBind() {
     const copyBtn=e.target.closest('[data-itn-copy-incident]');
     if(copyBtn){const value=copyBtn.dataset.brief||'';navigator.clipboard?.writeText(value).then(()=>{copyBtn.textContent='คัดลอกแล้ว';}).catch(()=>{const ta=document.createElement('textarea');ta.value=value;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();copyBtn.textContent='คัดลอกแล้ว';});return;}
     const person=e.target.closest('[data-itn-person]');
-    if(person){
-      const s=ITN.data.staff.find(x=>x.id===person.dataset.itnPerson);
-      if(s)document.getElementById('itn-detail').innerHTML=itnPersonDetails(s);
-      return;
-    }
+    if(person){ITN.selected={kind:'person',id:person.dataset.itnPerson};itnApplySelection();return;}
     const node=e.target.closest('[data-itn-kind]');
     if(!node)return;
-    const kind=node.dataset.itnKind,id=node.dataset.itnId,detail=document.getElementById('itn-detail');
-    if(kind==='owner'||kind==='ai')detail.innerHTML=itnDefaultDetails(ITN.data);
-    if(kind==='domain'){const d=ITN.data.domains.find(x=>x.key===id);if(d)detail.innerHTML=itnDomainDetails(d);}
-    if(kind==='app'){const app=ITN.data.applications.find(x=>x.application_key===id);if(app)detail.innerHTML=itnAppDetails(app);}
-    if(kind==='code')detail.innerHTML=itnCodeDetails(id);
-    if(kind==='data')detail.innerHTML=itnDataDetails(id);
+    ITN.selected={kind:node.dataset.itnKind,id:node.dataset.itnId};
+    itnApplySelection();
   });
   root.addEventListener('keydown',e=>{
     if((e.key==='Enter'||e.key===' ')&&e.target.closest('[data-itn-kind]')){e.preventDefault();e.target.closest('[data-itn-kind]').dispatchEvent(new MouseEvent('click',{bubbles:true}));}
