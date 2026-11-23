@@ -20,10 +20,14 @@
     style.id = 'cms-owner-orders-style';
     style.textContent = [
       'body.cms-owner-live-orders .col{min-width:0;min-height:100vh}',
-      /* เดิมล็อกไว้ 100vh + overflow:hidden → จอเตี้ยแล้วของที่ล้นออกไปไม่มีทางเลื่อนถึงเลย */
-      'body.cms-owner-live-orders main#view{width:100%;max-width:none;height:calc(100vh - 16px);min-height:0;margin:0;padding:10px 12px 12px;overflow:auto;display:flex;flex-direction:column}',
+      /* เดิมล็อกไว้ 100vh + overflow:hidden → ทั้งหน้าเลื่อนไม่ได้เลย และล้อเมาส์ที่อยู่เหนือกรอบ
+       * จะถูกส่งเข้าไปในกรอบ (คนละโดเมน) หน้าข้างนอกจึงไม่ขยับ = "เลื่อนไม่ได้"
+       * ตอนนี้ปล่อยให้ "ทั้งหน้า" ยาวได้ตามเนื้อหา → แถบเลื่อนของหน้าต่างทำงานตามปกติ */
+      'body.cms-owner-live-orders main#view{width:100%;max-width:none;min-height:0;margin:0;padding:10px 12px 12px;display:flex;flex-direction:column}',
       'body.cms-owner-live-orders .cms-live-orders-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
-      'body.cms-owner-live-orders .cms-live-orders-frame{display:flex;flex:1;flex-direction:column;min-width:0;min-height:560px;height:100%;background:#f4f7f4;border:1px solid #dce7df;border-radius:14px;overflow:hidden}',
+      /* 164px = ระยะเหนือกรอบ (แถบบน + หัวเรื่อง + ขอบล่าง) วัดจากหน้าจริง · พอดีจอเมื่อจอสูงพอ
+       * min-height 820 = เผื่อให้เมนูของพอร์ทัลข้างในแสดงครบ จอเตี้ยก็เลื่อนทั้งหน้าลงไปดูได้ */
+      'body.cms-owner-live-orders .cms-live-orders-frame{display:flex;flex:1;flex-direction:column;min-width:0;height:calc(100vh - 164px);min-height:820px;background:#f4f7f4;border:1px solid #dce7df;border-radius:14px;overflow:hidden}',
       'body.cms-owner-live-orders .oc-main{max-width:none;width:100%;min-width:0;min-height:calc(100dvh - 64px);display:flex;flex-direction:column;padding:12px}',
       'body.cms-owner-live-orders .cms-owner-app-frame{min-height:calc(100dvh - 104px)}',
       'body.cms-owner-live-orders .cms-owner-app-frame .cms-live-orders-stage{min-height:65dvh}',
@@ -37,7 +41,7 @@
       'body.cms-owner-live-orders .cms-live-orders-loading{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding:24px;background:#f4f7f4;color:#236344;font:500 14px var(--font);text-align:center}',
       'body.cms-owner-live-orders .cms-live-orders-error{max-width:560px;margin:auto;padding:20px;background:#fff;border:1px solid #efd8d4;border-radius:12px;color:#9a342b;text-align:center;line-height:1.7}',
       'body.cms-owner-live-orders .cms-live-orders-error button{margin-top:12px;border:0;border-radius:9px;padding:8px 15px;background:#176b43;color:#fff}',
-      '@media(max-width:959px){body.cms-owner-live-orders main#view{height:calc(100dvh - 128px);padding:8px 8px 10px}body.cms-owner-live-orders .cms-live-orders-iframe{min-height:0}}',
+      '@media(max-width:959px){body.cms-owner-live-orders main#view{padding:8px 8px 10px}body.cms-owner-live-orders .cms-live-orders-frame{height:calc(100dvh - 150px);min-height:720px}}',
       '@media(max-width:520px){body.cms-owner-live-orders .cms-live-orders-toolbar{padding:7px 9px}body.cms-owner-live-orders .cms-live-orders-toolbar strong{font-size:11px}}'
     ].join('\n');
     document.head.appendChild(style);
