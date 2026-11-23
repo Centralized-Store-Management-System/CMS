@@ -214,6 +214,80 @@
       + '<text class="wb-cs" x="' + cx + '" y="' + (cy + 16) + '">' + esc2((KINDS.find(k => k[0] === kind) || [])[1] || '') + (bad ? ' · ค้าง ' + bad : '') + '</text></g></svg>';
   }
 
+  /* ---------- คำตอบหลักที่เจ้าของร้านถาม: คนนี้ใช้ฟังก์ชันอะไรได้บ้าง และอะไรยังใช้ไม่ได้ ----------
+   * แปลงเรื่องเทคนิค (บัญชี / PIN / สิทธิ์ / LINE) เป็นรายการงานที่ใช้ตัดสินใจได้ทันที */
+  function features(kind, id) {
+    const u = kind === 'user' ? users().find(x => x.id === id) : userOf(empById(id) || {});
+    const e = kind === 'emp' ? empById(id) : empOfUser(u || {});
+    const perms = permsOfUser(u), role = u && u.role;
+    const live = !!u && u.status === 'active', ready = live && !!u.pinHash;
+    const out = [], mkuser = kind === 'emp' && !u ? { do: 'mkuser', doLabel: 'สร้างบัญชีให้เลย' } : null;
+    const b = !u ? { why: 'ยังไม่มีบัญชีเข้าใช้งาน', fix: mkuser }
+      : !live ? { why: 'บัญชีถูกปิดอยู่', fix: { do: 'enable', doLabel: 'เปิดใช้งานบัญชี' } }
+        : { why: 'ยังไม่ได้ตั้ง PIN', fix: { do: 'pin', doLabel: 'ออกรหัสเปิดใช้งาน' } };
+    const add = (ok, name, why, fix) => out.push({ ok, name, why: ok ? '' : why, ...(ok ? {} : (fix || {})) });
+    add(ready, 'เข้าเว็บหลังร้าน / แอปพนักงาน', b.why, b.fix);
+    add(ready, 'ลงเวลาเข้า–ออกด้วย PIN', b.why, b.fix);
+    if (e) add(!!e.lineUserId, 'ลงเวลา · ขอลา · ดูกะ ผ่าน LINE', 'ยังไม่ผูก LINE — ต้องให้เจ้าตัวขอรหัสผูกเอง');
+    const ord = perms.includes('orders') || perms.includes('catalog');
+    add(ready && ord, 'ระบบออเดอร์ (Live Orders / Catalog)', !ready ? b.why : 'ระดับ ' + roleName(role) + ' ยังไม่มีสิทธิ์ orders',
+      !ready ? b.fix : { do: 'perm:orders:' + role, doLabel: 'ให้สิทธิ์ orders กับระดับ ' + roleName(role), doNote: 'ทุกบัญชีระดับ ' + roleName(role) + ' จะเข้าระบบออเดอร์ได้' });
+    menus().forEach(m => {
+      const ok = live && canSee(m, perms, role), need = (m.perm || []).filter(k => k !== '*');
+      add(ok, m.label, !u || !live ? b.why : 'ระดับ ' + roleName(role) + ' ไม่มีสิทธิ์ ' + need.join(' / '),
+        !u || !live ? b.fix : (need.length && role && role !== 'owner'
+          ? { do: 'perm:' + need[0] + ':' + role, doLabel: 'ให้สิทธิ์ ' + need[0] + ' กับระดับ ' + roleName(role), doNote: 'ทุกบัญชีระดับ ' + roleName(role) + ' จะเห็นเมนู ' + m.label + ' (มีผลตอนเข้าสู่ระบบครั้งถัดไป)' } : null));
+    });
+    return out;
+  }
+
+  /* รวมสิ่งที่ใช้ไม่ได้ตาม "ต้นเหตุ" — ไม่มีบัญชี 1 อย่าง ทำให้ใช้ไม่ได้ 20 อย่าง
+   * ถ้าแยกเป็นใบละอย่างจะยาวจนอ่านไม่ไหว และมองไม่เห็นว่าแก้จุดเดียวจบ */
+  function groupByCause(list) {
+    const g = new Map();
+    list.forEach(x => {
+      const k = x.why + '|' + (x.do || '');
+      if (!g.has(k)) g.set(k, { why: x.why, do: x.do, doLabel: x.doLabel, doNote: x.doNote, names: [] });
+      g.get(k).names.push(x.name);
+    });
+    return [...g.values()].sort((a, b) => b.names.length - a.names.length).map(c => {
+      const show = c.names.slice(0, 8).join(' · ') + (c.names.length > 8 ? ' และอีก ' + (c.names.length - 8) : '');
+      return fixCard({ status: 'miss', fix: 'ทำให้ใช้ไม่ได้ ' + c.names.length + ' อย่าง: ' + show, do: c.do, doLabel: c.doLabel, doNote: c.doNote }, c.why);
+    }).join('');
+  }
+
+  function fixCard(s, head) {
+    return '<div class="wb-fix' + (s.status === 'warn' ? ' warn' : '') + '"><b>' + esc2(head) + '</b>'
+      + (s.fix ? '<p>' + esc2(s.fix) + '</p>' : '')
+      + (s.do && s.doNote ? '<p class="wb-pre">สิ่งที่จะเกิดขึ้น: ' + esc2(s.doNote) + '</p>' : '')
+      + '<div class="wb-act">'
+      + (s.do && canFix() ? '<button class="btn sm primary" data-a="wbDo:' + esc2(s.do) + '">' + esc2(s.doLabel || 'ซ่อมให้') + '</button>' : '')
+      + (s.href ? '<a class="btn sm" href="' + esc2(s.href) + '">ไปหน้าที่แก้ได้</a>' : '')
+      + (!s.do ? '<span class="wb-manual">ระบบทำแทนไม่ได้ ต้องให้คนทำ</span>' : '')
+      + '</div></div>';
+  }
+
+  /* แผงด้านขวา: ตอบคำถามก่อน (ใช้อะไรได้ / อะไรยังใช้ไม่ได้) แผนผังเก็บไว้ท้ายสุด */
+  function panel() {
+    if (!WB.id) return '<p class="note">เลือกรายการทางซ้าย</p>';
+    const name = title(WB.kind, WB.id), sp = spokes(WB.kind, WB.id), bad = sp.filter(x => x.status !== 'ok');
+    const person = WB.kind === 'emp' || WB.kind === 'user';
+    const F = person ? features(WB.kind, WB.id) : [], okF = F.filter(x => x.ok), noF = F.filter(x => !x.ok);
+    return '<div class="wb-head"><h3>' + esc2(name) + '</h3>'
+      + (person ? '<p>ใช้งานได้ <b class="g">' + okF.length + '</b> อย่าง · ยังใช้ไม่ได้ <b class="r">' + noF.length + '</b> อย่าง</p>'
+        : '<p>เชื่อมครบ <b class="g">' + (sp.length - bad.length) + '</b> · ยังไม่เชื่อม <b class="r">' + bad.length + '</b></p>') + '</div>'
+      + (person ? '<h4 class="wb-h4">ตอนนี้ใช้งานได้</h4>'
+        + (okF.length ? '<div class="wb-chips">' + okF.map(x => '<span class="wb-chip">' + esc2(x.name) + '</span>').join('') + '</div>' : '<div class="note">ยังใช้อะไรไม่ได้เลย</div>')
+        + '<h4 class="wb-h4">ยังใช้ไม่ได้ · แก้ที่ต้นเหตุ</h4>'
+        + (noF.length ? groupByCause(noF) : '<div class="note" style="background:#e8f7ef;color:#17673f">ใช้ได้ครบทุกอย่างแล้ว</div>')
+        : '<h4 class="wb-h4">เชื่อมอยู่กับ</h4>'
+        + (sp.length - bad.length ? '<div class="wb-chips">' + sp.filter(x => x.status === 'ok').map(x => '<span class="wb-chip">' + esc2(x.label) + ': ' + esc2(x.note) + '</span>').join('') + '</div>' : '<div class="note">ยังไม่เชื่อมกับอะไรเลย</div>')
+        + (bad.length ? '<h4 class="wb-h4">ยังไม่เชื่อม</h4>' + bad.map(x => fixCard(x, x.label + ' — ' + x.note)).join('') : '<div class="note" style="background:#e8f7ef;color:#17673f">เชื่อมครบแล้ว</div>'))
+      + (person ? '<details class="wb-more"><summary>รายละเอียดการเชื่อมต่อ (' + sp.length + ' เส้น · ยังไม่เชื่อม ' + bad.length + ')</summary>'
+        + (bad.length ? bad.map(x => fixCard(x, x.label + ' — ' + x.note)).join('') : '<div class="note" style="background:#e8f7ef;color:#17673f">ทุกเส้นเชื่อมครบแล้ว</div>') + '</details>' : '')
+      + '<details class="wb-more"><summary>ดูเป็นแผนผังใยแมงมุม</summary><div class="wb-canvas">' + web(WB.kind, WB.id) + '</div></details>';
+  }
+
   /* ---------- หน้าเว็บ ---------- */
   const CSS = '<style>'
     + '.wb-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.wb-top input{flex:1;min-width:150px;margin:0}'
@@ -233,6 +307,14 @@
     + '.wb-pre{background:#eef4f0;border-radius:8px;padding:7px 9px;font-size:11.5px;color:#2f4a3c}'
     + '.wb-act{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.wb-manual{font-size:11px;color:#8a9790}'
     + '.wb-fix.warn{border-left-color:#d28a20;background:#fffaf1}.wb-fix b{font-size:13px}.wb-fix p{margin:4px 0;font-size:12px;color:#4a5b52;line-height:1.6}'
+    + '.wb-head h3{margin:0;font:700 17px Prompt;color:#174c35}.wb-head p{margin:3px 0 10px;font-size:12.5px;color:var(--muted)}'
+    + '.wb-head b.g{color:#17673f}.wb-head b.r{color:#b42318}'
+    + '.wb-h4{margin:14px 0 6px;font:700 13px Prompt;color:#174c35}'
+    + '.wb-chips{display:flex;gap:6px;flex-wrap:wrap}'
+    + '.wb-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;background:#e8f5ed;border:1px solid #bcdcc8;font-size:12.5px;color:#17673f}'
+    + '.wb-chip::before{content:"\\2713";font-weight:700}'
+    + '.wb-more{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:8px 12px}'
+    + '.wb-more>summary{cursor:pointer;font:700 13px Prompt;color:#174c35;padding:4px 0}'
     + '</style>';
 
   function view() {
@@ -260,17 +342,7 @@
       + (needPos ? '<p class="note">ยังไม่ได้โหลดทะเบียนตำแหน่ง — เปิด HR › Positions หนึ่งครั้งแล้วกลับมา จะเห็นเส้นตำแหน่งครบ</p>' : '')
       + '<div class="wb-grid"><div><div class="wb-top"><input class="field" id="wb-q" placeholder="ค้นหา" value="' + esc2(WB.q) + '"></div>'
       + '<div class="wb-list">' + (list.length ? list.map(x => '<button class="wb-item' + (x.id === WB.id ? ' on' : '') + '" data-a="wbPick:' + esc2(x.id) + '"><i class="' + x.st + '"></i><span>' + esc2(x.label) + (x.sub ? ' <span class="muted">· ' + esc2(x.sub) + '</span>' : '') + '</span>' + (x.n ? '<small>ค้าง ' + x.n + '</small>' : '') + '</button>').join('') : '<p class="note">ไม่พบรายการ</p>') + '</div></div>'
-      + '<div><div class="wb-canvas">' + (WB.id ? web(WB.kind, WB.id) : '') + '</div>'
-      + (bad.length ? '<h3 class="h3">สิ่งที่ยังไม่เชื่อมของ ' + esc2(title(WB.kind, WB.id)) + '</h3>'
-        + bad.map(s => '<div class="wb-fix' + (s.status === 'warn' ? ' warn' : '') + '"><b>' + esc2(s.label) + ' — ' + esc2(s.note) + '</b>'
-          + (s.fix ? '<p>' + esc2(s.fix) + '</p>' : '')
-          + (s.do && s.doNote ? '<p class="wb-pre">สิ่งที่จะเกิดขึ้น: ' + esc2(s.doNote) + '</p>' : '')
-          + '<div class="wb-act">'
-          + (s.do && canFix() ? '<button class="btn sm primary" data-a="wbDo:' + esc2(s.do) + '">' + esc2(s.doLabel || 'ซ่อมให้') + '</button>' : '')
-          + (s.href ? '<a class="btn sm" href="' + esc2(s.href) + '">ไปหน้าที่แก้ได้</a>' : '')
-          + (!s.do ? '<span class="wb-manual">ระบบทำแทนไม่ได้ ต้องให้คนทำ</span>' : '')
-          + '</div></div>').join('')
-        : (WB.id ? '<div class="note" style="background:#e8f7ef;color:#17673f">รายการนี้เชื่อมครบแล้ว</div>' : ''))
+      + '<div>' + panel()
       + '</div></div>';
   }
 
