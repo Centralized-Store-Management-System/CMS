@@ -25,6 +25,8 @@
        * ตอนนี้ปล่อยให้ "ทั้งหน้า" ยาวได้ตามเนื้อหา → แถบเลื่อนของหน้าต่างทำงานตามปกติ */
       'body.cms-owner-live-orders main#view{width:100%;max-width:none;min-height:0;margin:0;padding:10px 12px 12px;display:flex;flex-direction:column}',
       'body.cms-owner-live-orders .cms-live-orders-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
+      /* ขยายกรอบ: เผื่อเมนูข้างในระบบออเดอร์ยาวกว่าที่เราเดาไว้ ให้ผู้ใช้กดเพิ่มเองได้ ไม่ต้องออกจากหน้า */
+      'body.cms-owner-live-orders.cms-portal-tall .cms-live-orders-frame{height:1500px;min-height:1500px}',
       /* 164px = ระยะเหนือกรอบ (แถบบน + หัวเรื่อง + ขอบล่าง) วัดจากหน้าจริง · พอดีจอเมื่อจอสูงพอ
        * min-height 820 = เผื่อให้เมนูของพอร์ทัลข้างในแสดงครบ จอเตี้ยก็เลื่อนทั้งหน้าลงไปดูได้ */
       'body.cms-owner-live-orders .cms-live-orders-frame{display:flex;flex:1;flex-direction:column;min-width:0;height:calc(100vh - 164px);min-height:820px;background:#f4f7f4;border:1px solid #dce7df;border-radius:14px;overflow:hidden}',
@@ -49,13 +51,15 @@
 
   function ownerPortalView(page) {
     document.body.classList.add('cms-owner-live-orders');
+    try { if (localStorage.getItem('amz.portalTall')) document.body.classList.add('cms-portal-tall'); } catch (e) { /* อ่านไม่ได้ก็ใช้ค่าปกติ */ }
     installOwnerOrdersStyles();
     const run = ++ownerFrameRequest;
     setTimeout(() => loadOwnerPortalFrame(page, run), 0);
     return '<section class="cms-live-orders-frame">' +
       '<div class="cms-live-orders-toolbar"><strong>' + esc(PAGES[page]) + ' · Café Amazon</strong>' +
       '<span class="cms-live-orders-acts">' +
-      '<button type="button" data-a="orderEmbedOpen" data-page="' + esc(page) + '" title="เปิดในแท็บใหม่ เต็มหน้าจอ — เมนูของระบบออเดอร์จะเลื่อนได้ครบ">⤢ เปิดเต็มจอ</button>' +
+      '<button type="button" data-a="orderEmbedTall" title="เพิ่มความสูงของกรอบ แล้วเลื่อนหน้าลงไปดูส่วนที่เหลือ">⇕ <span class="cms-tall-label">' + (document.body.classList.contains('cms-portal-tall') ? 'ย่อกรอบ' : 'ขยายกรอบ') + '</span></button>' +
+      '<button type="button" data-a="orderEmbedOpen" data-page="' + esc(page) + '" title="เปิดในแท็บใหม่ เต็มหน้าจอ">⤢ เปิดเต็มจอ</button>' +
       '<button type="button" data-a="orderEmbedReload" data-page="' + esc(page) + '">↻ โหลดใหม่</button></span></div>' +
       '<div class="cms-live-orders-stage" id="cms-live-orders-stage">' +
       '<div class="cms-live-orders-loading">กำลังเชื่อมต่อ ' + esc(PAGES[page]) + '…</div></div></section>';
@@ -171,6 +175,12 @@
     NAV_ORDER.splice(0, NAV_ORDER.length, ...GROUPS.flatMap(g => g[1]));
     Object.assign(ACT, {
       orderOpen: (a, b) => openOrder(a, b),
+      orderEmbedTall: () => {
+        const on = document.body.classList.toggle('cms-portal-tall');
+        try { localStorage.setItem('amz.portalTall', on ? '1' : ''); } catch (e) { /* โหมดส่วนตัวเขียนไม่ได้ ไม่เป็นไร */ }
+        document.querySelectorAll('.cms-tall-label').forEach(n => { n.textContent = on ? 'ย่อกรอบ' : 'ขยายกรอบ'; });
+        if (on) window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
       orderEmbedOpen: async (a, b) => {
         const page = b?.dataset?.page || 'orders';
         const win = window.open('', '_blank');                   // เปิดแท็บก่อนรอเซิร์ฟเวอร์ ไม่งั้นเบราว์เซอร์บล็อก
