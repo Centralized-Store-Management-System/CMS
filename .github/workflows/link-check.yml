@@ -1,0 +1,18 @@
+# ตัวตรวจเส้นใย — ต้องผ่านก่อน merge ทุกครั้ง
+# จับ "ของที่ต้องตรงกัน 2 จุด แต่ไม่ตรงกัน" ซึ่งเป็นต้นเหตุของบั๊กซ้ำๆ ในระบบนี้
+# ปัญหาเก่าที่ยกยอดไว้ใน data/link-baseline.json ไม่บล็อก · บล็อกเฉพาะของที่เกิดใหม่
+name: link-check
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }      # ต้องมีประวัติ เพื่อเทียบกฎ ?v= กับ main
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: ตรวจความเชื่อมโยง + ผลตรวจใน repo ต้องเป็นรุ่นล่าสุด
+        run: node tools/link-check.mjs --check

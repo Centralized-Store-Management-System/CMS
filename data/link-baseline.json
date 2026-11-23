@@ -1,0 +1,28 @@
+{
+ "note": "ของค้างที่มีอยู่ก่อนเริ่มใช้ตัวตรวจ · ทยอยแก้แล้วลบออกทีละบรรทัด · ปัญหาใหม่จะไม่เข้าที่นี่เอง",
+ "updated_at": "2026-11-23",
+ "keys": [
+  "action-missing|lvApp",
+  "api-hardcoded|js/app-scope.js",
+  "api-hardcoded|js/finance-embed.js",
+  "api-hardcoded|js/hr-documents.js",
+  "api-hardcoded|js/it-ai.js",
+  "api-hardcoded|js/it-control-center.js",
+  "api-hardcoded|js/it-network.js",
+  "api-hardcoded|js/it-ops.js",
+  "api-hardcoded|js/mod-acct.js",
+  "api-hardcoded|js/mod-hr.js",
+  "api-hardcoded|line.html",
+  "api-hardcoded|modules/finance/js/fin-core.js",
+  "fn-unregistered|finance",
+  "fn-unverified|finance-api",
+  "fn-unverified|hr-documents",
+  "fn-unverified|hr-position-api",
+  "fn-unverified|it-ai-ops",
+  "fn-unverified|it-control-center",
+  "fn-unverified|it-monitor",
+  "fn-unverified|it-ops-control-center",
+  "fn-unverified|it-ops-orchestrator",
+  "script-orphan|modules/finance/js/finance-calculations.js"
+ ]
+}

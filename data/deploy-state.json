@@ -1,0 +1,60 @@
+{
+ "generated_at": "2026-11-23T00:24:25.862Z",
+ "note": "ลายเซ็นซอร์ส Edge Function ที่ตรงกับของที่ deploy จริง · อัปเดตทุกครั้งที่ deploy",
+ "functions": {
+  "finance-api": {
+   "sha256": "dfd146e5dd99cf55c4e9fea01fb90c818f7bb4a7edadd42c18a2a7b0a3fbcbd9",
+   "version": 12,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "hr-documents": {
+   "sha256": "25f9a468333c32e36c3f38ea96ad5c6b30fb51ada6a256dbe544f17a323c5383",
+   "version": 10,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "hr-position-api": {
+   "sha256": "bcac8689065d5c4de1c7fdd0348b87395059965dd77b5c3f63779574c9967705",
+   "version": 5,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "it-ai-ops": {
+   "sha256": "e9f3005309cf6dc6aeefd6344efd5e264bc7b6fbd906222b05ca9232dbe40e94",
+   "version": 5,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "it-control-center": {
+   "sha256": "5bf19668d29ca66e9f971e2928b15d1df10d0eba045ac1972d9d9dd44179a0d0",
+   "version": 5,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "it-intelligence-network": {
+   "sha256": "7ad9e0a1c193f710844494c988e3657d551ad2309044dc5c036a911598264a3c",
+   "version": 3,
+   "deployed_at": "2026-11-22",
+   "verified": true
+  },
+  "it-monitor": {
+   "sha256": "5e1a2e910b36182aa8fad743757193567fd5bd2e04aabd76f90646b68a76cdc7",
+   "version": 6,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "it-ops-control-center": {
+   "sha256": "11552ca54152cc0fead20d1de25d5d4c9f84b1b5390ea10edc4518a11fcd680c",
+   "version": 5,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  },
+  "it-ops-orchestrator": {
+   "sha256": "92aefc1504292d829766966e2969a80e080b287aff46cd89fbdcd6db0dcca118",
+   "version": 10,
+   "deployed_at": "2026-11-22",
+   "verified": false
+  }
+ }
+}
