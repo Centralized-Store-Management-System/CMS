@@ -68,6 +68,8 @@
       if (p && e.positionId) add({ label: 'ตำแหน่ง', note: p.name_th + (p.department ? ' · ' + p.department : ''), to: { kind: 'pos', id: p.id } });
       else if (p) add({ status: 'warn', label: 'ตำแหน่ง', note: p.name_th + ' · ผูกด้วยชื่อเท่านั้น ยังไม่มีรหัสตำแหน่ง', fix: 'ระบบออเดอร์และสิทธิ์ตามตำแหน่งจะยังไม่เห็นตำแหน่งนี้', href: go('#hr'), to: { kind: 'pos', id: p.id }, do: 'posid', doLabel: 'เติมรหัสตำแหน่งให้', doNote: 'บันทึก positionId และ positionCode ของ "' + p.name_th + '" ลงในประวัติพนักงาน' });
       else if (e.position) add({ status: 'warn', label: 'ตำแหน่ง', note: '"' + e.position + '" ไม่มีในทะเบียนตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่งจากรายการ หรือเพิ่มตำแหน่งนี้ที่ HR › Positions', href: go('#hr') });
+      else if (typeof needsPosition === 'function' && !needsPosition(e.role || (u && u.role)))
+        add({ label: 'ตำแหน่ง', note: 'ไม่มีตำแหน่ง — ระดับ ' + roleName(e.role || (u && u.role)) + ' เป็นสิทธิ์อนุมัติ ไม่ใช่ตำแหน่งงานในร้าน' });
       else add({ status: 'miss', label: 'ตำแหน่ง', note: 'ยังไม่กำหนดตำแหน่ง', fix: 'เปิด HR › พนักงาน แล้วเลือกตำแหน่ง', href: go('#hr') });
       /* ระดับกับตำแหน่งไม่ตรงกัน — เคยทำให้ตำแหน่งที่ถูกต้องถูกเขียนทับมาแล้ว (ดู HANDOFF)
        * ไม่มีปุ่มซ่อมโดยตั้งใจ: การเปลี่ยนตำแหน่งงานของคนเป็นเรื่องที่เจ้าของร้านต้องตัดสินใจเอง */

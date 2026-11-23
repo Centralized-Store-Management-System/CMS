@@ -100,7 +100,7 @@ const F_EMP = e => [
   { k: 'nickname', label: 'ชื่อเล่น', half: 1 }, { k: 'nameEn', label: 'ชื่อ-นามสกุล (อังกฤษ)', half: 1, help: 'ใช้ตรวจตอนลงทะเบียน LINE เช่น Somchai Jaidee' }, { k: 'scanId', label: 'รหัสในเครื่องสแกนนิ้ว', half: 1, help: 'ว่าง = ใช้รหัสพนักงาน (เครื่องที่ใช้เลข 1, 001 จับคู่กับ A001 ให้เอง)' }, { k: 'phone', label: 'เบอร์โทร', half: 1, type: 'tel' }, { k: 'email', label: 'อีเมล', half: 1, type: 'email', help: 'ข้อมูลติดต่อเท่านั้น (ไม่ใช้รับรหัสเข้าระบบ) · ลืม PIN: รับรหัสทาง LINE ที่ผูกไว้ · คนไม่มี LINE ให้ Owner/HR รีเซ็ตรหัสให้' },
   { k: 'idCard', label: 'เลขบัตรประชาชน', half: 1, inputmode: 'numeric' }, { k: 'birthDate', label: 'วันเกิด', half: 1, type: 'date' },
   { k: 'address', label: 'ที่อยู่', type: 'textarea' },
-  { k: 'position', label: 'ตำแหน่ง', half: 1, type: 'select', options: HR_POSITIONS.filter(p=>p.status==='active'||p.name_th===e.position).map(p=>p.name_th) }, { k: 'startDate', label: 'วันเริ่มงาน', half: 1, type: 'date' },
+  { k: 'position', label: 'ตำแหน่ง', half: 1, type: 'select', options: [...(typeof needsPosition==='function'&&!needsPosition(e.role)?[['','ไม่มีตำแหน่ง (เป็นสิทธิ์อนุมัติ)']]:[]), ...HR_POSITIONS.filter(p=>p.status==='active'||p.name_th===e.position).map(p=>p.name_th)] }, { k: 'startDate', label: 'วันเริ่มงาน', half: 1, type: 'date' },
   { k: 'payType', label: 'รูปแบบค่าจ้าง', half: 1, type: 'select', options: PAYTYPES }, { k: 'rate', label: 'อัตราค่าจ้าง (บาท)', half: 1, type: 'number', req: 1 },
   { k: 'endDate', label: 'วันสุดท้าย (ถ้าลาออก)', half: 1, type: 'date' },
   { k: 'probationEnd', label: 'ครบทดลองงาน', half: 1, type: 'date', help: 'เว้นว่าง = วันเริ่มงาน + 119 วัน (แจ้งเตือนเฉพาะสถานะทดลองงาน)' }, { k: 'contractEnd', label: 'สัญญาจ้างสิ้นสุด (ถ้ามี)', half: 1, type: 'date' },
@@ -151,11 +151,15 @@ function openEmp(id, draft) {
       if (!pin) delete v.pin;
       delete v.hasPin; delete v.account;
       if (!v.branch) v.branch = oneBranch();
-      const matchedPosition=HR_POSITIONS.find(p=>p.name_th===v.position)||HR_POSITIONS.find(p=>p.position_code===v.position)||HR_POSITIONS.find(p=>p.id===v.positionId);   // ยึดตำแหน่งที่เลือกในฟอร์มก่อน (เดิมเจอรหัสตำแหน่งเก่าก่อน → เปลี่ยนตำแหน่งแล้วเด้งกลับ)
-      if(!matchedPosition||matchedPosition.status!=='active') throw new Error('กรุณาเลือกตำแหน่งที่ Active จาก Position Master');
-      if(/^[0-9a-f-]{36}$/i.test(String(matchedPosition.id||''))) v.positionId=matchedPosition.id; else delete v.positionId;
-      v.positionCode=matchedPosition.position_code;
-      v.position=matchedPosition.name_th;
+      const noPos=typeof needsPosition==='function'&&!needsPosition(v.role)&&!String(v.position||'').trim();   // ระดับที่เป็นสิทธิ์อนุมัติล้วน ไม่ต้องมีตำแหน่ง (js/role-no-position.js)
+      const matchedPosition=noPos?null:HR_POSITIONS.find(p=>p.name_th===v.position)||HR_POSITIONS.find(p=>p.position_code===v.position)||HR_POSITIONS.find(p=>p.id===v.positionId);   // ยึดตำแหน่งที่เลือกในฟอร์มก่อน (เดิมเจอรหัสตำแหน่งเก่าก่อน → เปลี่ยนตำแหน่งแล้วเด้งกลับ)
+      if(noPos){ v.position=''; v.positionId=''; v.positionCode=''; }
+      else if(!matchedPosition||matchedPosition.status!=='active') throw new Error('กรุณาเลือกตำแหน่งที่ Active จาก Position Master');
+      if(matchedPosition){
+        if(/^[0-9a-f-]{36}$/i.test(String(matchedPosition.id||''))) v.positionId=matchedPosition.id; else delete v.positionId;
+        v.positionCode=matchedPosition.position_code;
+        v.position=matchedPosition.name_th;
+      }
       await DB.upsert('employees', v);
       if (!id) setTimeout(() => toast(can('users') && !pin ? 'เพิ่มแล้ว ต่อไปสร้างชื่อผู้ใช้ให้ที่หน้า Users และตั้งกะที่ ตารางงาน > รูปแบบกะ' : 'เพิ่มแล้ว ตั้งกะและวันหยุดของพนักงานคนนี้ที่ ตารางงาน > รูปแบบกะ'), 300);
       if (belowMin(v)) setTimeout(() => toast('อัตราค่าจ้างนี้ต่ำกว่าค่าแรงขั้นต่ำที่ตั้งไว้ ตรวจอีกครั้ง'), 600);
