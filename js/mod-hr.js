@@ -151,7 +151,7 @@ function openEmp(id, draft) {
       if (!pin) delete v.pin;
       delete v.hasPin; delete v.account;
       if (!v.branch) v.branch = oneBranch();
-      const matchedPosition=HR_POSITIONS.find(p=>p.name_th===v.position||p.position_code===v.position||p.id===v.positionId);
+      const matchedPosition=HR_POSITIONS.find(p=>p.name_th===v.position)||HR_POSITIONS.find(p=>p.position_code===v.position)||HR_POSITIONS.find(p=>p.id===v.positionId);   // ยึดตำแหน่งที่เลือกในฟอร์มก่อน (เดิมเจอรหัสตำแหน่งเก่าก่อน → เปลี่ยนตำแหน่งแล้วเด้งกลับ)
       if(!matchedPosition||matchedPosition.status!=='active') throw new Error('กรุณาเลือกตำแหน่งที่ Active จาก Position Master');
       if(/^[0-9a-f-]{36}$/i.test(String(matchedPosition.id||''))) v.positionId=matchedPosition.id; else delete v.positionId;
       v.positionCode=matchedPosition.position_code;
